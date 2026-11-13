@@ -5,6 +5,7 @@ import { assembleDeck } from './assemble.js';
 import { layoutSlide } from '../library/forms.js';
 import { occasionById } from '../library/occasions.js';
 import { assignMood } from '../library/posters.js';
+import { assignAccents } from '../library/accents.js';
 
 export function buildDirections({ pool, occasionId, density = 'medium', formality = 'neutral', seed, family = 'editorial' }) {
   const occasion = occasionById(occasionId);
@@ -15,7 +16,7 @@ export function buildDirections({ pool, occasionId, density = 'medium', formalit
 }
 
 export function buildDeck({ deck, direction, structure, density = 'medium' }) {
-  const plan = withImageCitations(assignMood(assembleDeck(deck, structure, density), deck, direction), deck);
+  const plan = assignAccents(withImageCitations(assignMood(assembleDeck(deck, structure, density), deck, direction), deck), deck, direction, structure);
   const slides = plan.map((s, i) => ({ ...s, els: layoutSlide(direction, deck, s, i, plan.length, density) }));
   const overflow = slides.flatMap((s, i) => s.els.filter((e) => e.type === 'text' && !e.fits && !e.bleed).map((e) => ({ slide: i + 1, form: s.form, text: e.text.slice(0, 60) })));
   return { direction, structure, density, deck, slides, overflow };

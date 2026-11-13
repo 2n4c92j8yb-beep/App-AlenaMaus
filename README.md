@@ -7,12 +7,23 @@ everyone else's. Based on the idea overview "AI decks that don't look AI-made".
 
 ## Four looks
 
-- **Texture** (new): Survey, Drafting and Grain (`src/library/texture.js`, generators in
-  `src/library/textures.js`). Each direction is built around one generated surface:
-  contour lines on paper, a blueprint grid on cobalt, soft colour fields with film grain.
-  Surfaces are seeded per deck, so no two decks share the same map, and they show strongly
-  on key slides and quietly behind dense content. Five more surfaces are planned
-  (thermal gradients, water ripples, speckled graphite, fluted glass, single-hued landscapes).
+- **Texture** (new): Survey, Drafting and Grain, built around generated surfaces
+  (contour lines, blueprint grid, grainy gradient).
+
+## Design kits: one identity, several effects
+
+Every direction in every look keeps one identity (colours, type) but owns a small kit
+of effects that suit it (`src/library/accents.js`). Nine generated surfaces are shared
+between the kits (`src/library/textures.js`): contour lines, blueprint grid, grainy
+gradient, film grain, thermal gradient, water ripples, single-hued landscape, speckled
+graphite and fluted glass, plus a second background tone (`invert`) and a glowing glass
+panel for key figures. A planner places them per deck:
+
+1. an effect only where it means something (grid behind a process, ripples behind a
+   question, contour lines opening a section, a landscape near the end …)
+2. about a third of the slides; lists, comparisons, works cited and picture slides stay plain
+3. never the same effect twice in a row, never two strong effects side by side
+4. seeded by the deck, so "New directions" gives a new mix
 
 - **Glass** (default): Prism, Pearl and Halo (`src/library/glass.js`).
   Frosted glass over soft coloured light, chrome objects (sphere, capsule, ring),

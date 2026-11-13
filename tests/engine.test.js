@@ -9,6 +9,7 @@ import { STRUCTURES } from '../src/library/structures.js';
 import { FONTS } from '../src/library/fonts.js';
 import { contrast } from '../src/library/forms.js';
 import { SAMPLE_POOL } from '../src/sample/great-vowel-shift.js';
+import { kitFor, invertPalette, SHARE } from '../src/library/accents.js';
 
 const DENSITIES = ['light', 'medium', 'dense'];
 const TONES = ['formal', 'neutral', 'relaxed'];
@@ -151,27 +152,62 @@ test('glass directions: holo letters only where every gradient stop reads on the
   }
 });
 
-test('texture decks: three texture directions, fitted text, a seeded surface on every slide', () => {
+test('texture decks: three texture directions with fitted text', () => {
   for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 3; s++) {
     const decks = buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family: 'texture' });
     assert.deepEqual(decks.map((d) => d.direction.family), ['texture', 'texture', 'texture']);
     assert.equal(new Set(decks.map((d) => d.direction.id)).size, 3);
-    for (const deck of decks) {
-      const name = `${deck.direction.id}/${deck.structure.id}/${density}`;
-      assert.deepEqual(deck.overflow, [], name);
-      for (const sl of deck.slides) {
+    for (const deck of decks) assert.deepEqual(deck.overflow, [], `${deck.direction.id}/${deck.structure.id}/${density}`);
+  }
+});
+
+test('design kits: every direction has a kit of at least two effects', () => {
+  for (const d of DIRECTIONS) assert.ok(kitFor(d).length >= 2, `${d.id} kit`);
+});
+
+test('design kits: effects on about a third of the slides, never on dense slides, never twice in a row', () => {
+  const plain = new Set(['points', 'comparison', 'references', 'photo', 'photoSplit']);
+  for (const family of ['editorial', 'poster', 'glass', 'texture']) for (const o of OCCASIONS) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, seed: s, family })) {
+      const name = `${deck.direction.id}/${deck.structure.id}`;
+      const acc = deck.slides.map((x) => x.accent);
+      const n = acc.filter(Boolean).length;
+      assert.ok(n >= 1, `${name}: no effect at all`);
+      assert.ok(n <= Math.round(deck.slides.length * SHARE), `${name}: ${n} of ${deck.slides.length} slides carry an effect`);
+      deck.slides.forEach((sl, i) => {
+        if (sl.accent) assert.ok(!plain.has(sl.form), `${name}: effect on a ${sl.form} slide`);
+        if (i && sl.accent && acc[i - 1]) {
+          assert.notEqual(sl.accent.id, acc[i - 1].id, `${name}: ${sl.accent.id} twice in a row`);
+          assert.ok(!(sl.accent.strong && acc[i - 1].strong), `${name}: two strong effects side by side`);
+        }
         const tex = sl.els.filter((e) => e.type === 'svg');
-        assert.equal(tex.length, 1, `${name} ${sl.form}: one texture`);
-        assert.ok(sl.els.indexOf(tex[0]) <= 1, `${name} ${sl.form}: texture sits behind the content`);
-        assert.ok(tex[0].svg.startsWith('<svg') && tex[0].svg.length < 120000, `${name}: texture size ${tex[0].svg.length}`);
-      }
+        assert.ok(tex.length <= 1, `${name} ${sl.form}: ${tex.length} textures`);
+        if (tex.length) assert.ok(sl.els.indexOf(tex[0]) <= 1, `${name} ${sl.form}: texture sits behind the content`);
+      });
     }
+  }
+});
+
+test('design kits: a deck is not one look repeated (most slides differ from their neighbour)', () => {
+  for (let s = 0; s < 6; s++) for (const deck of buildDirections({ pool: SAMPLE_POOL, occasionId: 'seminar', seed: s, family: 'texture' })) {
+    const plainCount = deck.slides.filter((x) => !x.accent).length;
+    assert.ok(plainCount >= deck.slides.length / 2, `${deck.direction.id}: only ${plainCount} plain slides`);
+  }
+});
+
+test('design kits: the second tone stays readable in every direction', () => {
+  for (const d of DIRECTIONS) {
+    if (!kitFor(d).some((a) => a.kind === 'invert')) continue;
+    const c = invertPalette({ ...d.colors }, contrast);
+    assert.ok(contrast(c.ink, c.bg) >= 7, `${d.id} inverted ink`);
+    assert.ok(contrast(c.muted, c.bg) >= 4.5, `${d.id} inverted muted ${contrast(c.muted, c.bg).toFixed(2)}`);
+    assert.ok(contrast(c.accentText, c.bg) >= 3, `${d.id} inverted accent`);
   }
 });
 
 test('textures are reproducible from their seed and differ between decks', async () => {
   const { textureSvg } = await import('../src/library/textures.js');
-  for (const kind of ['contour', 'grid', 'grain']) {
+  for (const kind of ['contour', 'grid', 'grain', 'film', 'heat', 'ripple', 'landscape', 'graphite', 'fluted']) {
     const o = { color: '#336655', colors: ['#F6A27E', '#B9A4FF'] };
     assert.equal(textureSvg(kind, { ...o, seed: 'a' }), textureSvg(kind, { ...o, seed: 'a' }), `${kind} same seed`);
     assert.notEqual(textureSvg(kind, { ...o, seed: 'a' }), textureSvg(kind, { ...o, seed: 'b' }), `${kind} new seed`);

@@ -22,7 +22,7 @@ import { FONTS } from './fonts.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
-import { texturize } from './texture.js';
+import { applyAccent, invertPalette } from './accents.js';
 
 // ---------- colour helpers ----------
 
@@ -45,7 +45,8 @@ const onColor = (hex, a, b) => (contrast(hex, a) >= contrast(hex, b) ? a : b);
 function makeCtx(dir, deck, slide, index, total, density) {
   // Accent colours too light for text (e.g. mustard) keep their role in
   // blocks and shapes; text uses a darker version of the same hue.
-  const c = { ...dir.colors };
+  // a slide planned with the `invert` accent uses the direction's second tone
+  const c = slide?.accent?.kind === 'invert' ? invertPalette({ ...dir.colors }, contrast) : { ...dir.colors };
   c.accentText = c.accentText ?? (contrast(c.accent, c.bg) >= 3 ? c.accent : c.ink);
   return {
     dir, L: dir.layout, c, deck, slide, slideIndex: index, total, density,
@@ -336,8 +337,10 @@ function cover(ctx) {
       label(ctx, deck.occasionLabel, { x: m, y, w: W - 2 * m, h: 0.3 }, { align: 'center', seq: 1 });
       const th = img ? H * 0.26 : H * 0.36;
       text(ctx, 'display', deck.title, { x: m + 0.6, y: y + 0.45, w: W - 2 * m - 1.2, h: th }, { max: titleMax, min: 26, align: 'center', valign: 'middle', maxLines: 3 });
-      text(ctx, 'body', deck.subtitle ?? '', { x: m + 1, y: y + 0.6 + th, w: W - 2 * m - 2, h: 0.8 }, { max: 20, min: 14, align: 'center', color: c.muted });
-      label(ctx, meta, { x: m, y: H - m - 0.35, w: W - 2 * m, h: 0.3 }, { align: 'center', maxLines: 1, seq: 3 });
+      const sub = text(ctx, 'body', deck.subtitle ?? '', { x: m + 1, y: y + 0.6 + th, w: W - 2 * m - 2, h: 0.8 }, { max: 20, min: 14, align: 'center', color: c.muted });
+      // the author line sits below the subtitle even when wide margins push it down
+      const my = Math.min(H - 0.5, Math.max(H - m - 0.35, y + 0.6 + th + sub.height + 0.2));
+      label(ctx, meta, { x: m, y: my, w: W - 2 * m, h: 0.3 }, { align: 'center', maxLines: 1, seq: 3 });
       return;
     }
     case 'top': {
@@ -736,14 +739,14 @@ export const FORM_NAMES = Object.keys(FORMS);
 export function layoutSlide(dir, deck, slide, index, total, density = 'medium') {
   const ctx = makeCtx(dir, deck, slide, index, total, density);
   const poster = posterForm(dir, slide.form);
-  if (poster && poster(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return ctx.els;
+  if (poster && poster(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return applyAccent(ctx);
   const glass = glassForm(dir, slide.form);
-  if (glass && glass(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return ctx.els;
+  if (glass && glass(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return applyAccent(ctx);
   const fn = FORMS[slide.form];
   if (!fn) throw new Error(`Unknown slide form: ${slide.form}`);
   fn(ctx, slide.item ?? slide, slide.kicker);
-  // Glass directions reuse the regular content forms, re-dressed in glass; Texture ones get their surface
-  if (dir.family === 'glass') return glassify(ctx);
-  if (dir.family === 'texture') return texturize(ctx);
-  return ctx.els;
+  // Glass directions reuse the regular content forms, re-dressed in glass
+  if (dir.family === 'glass') glassify(ctx);
+  // then the slide's planned effect from the direction's kit (accents.js), if it has one
+  return applyAccent(ctx);
 }

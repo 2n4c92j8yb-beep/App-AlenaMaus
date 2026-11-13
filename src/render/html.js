@@ -34,6 +34,7 @@ function draw(el) {
     case 'ellipse': return drawBox(el, true);
     case 'image': return drawImage(el);
     case 'chrome': return drawChrome(el);
+    case 'svg': return drawSvg(el);
     case 'line':
     case 'arrow': return drawLine(el);
     default: return document.createComment(`unknown ${el.type}`);
@@ -70,6 +71,24 @@ function drawBox(el, round) {
 }
 
 const cssGradient = (g) => `linear-gradient(${g.angle ?? 115}deg, ${g.stops.map((c, i) => `${c} ${Math.round((i / (g.stops.length - 1)) * 100)}%`).join(', ')})`;
+
+// A generated texture (contour lines, drafting grid, grain …), drawn from its SVG string.
+let svgInstance = 0;
+function drawSvg(el) {
+  const d = document.createElement('div');
+  // the same texture is drawn many times on one page (thumbnails, list, presenter):
+  // give each copy its own gradient and pattern ids, or hidden copies would swallow the references
+  const n = svgInstance++;
+  const svgText = el.svg.replace(/(id="|url\(#)(tx[0-9a-z]+[A-Za-z0-9]*)/g, `$1$2_${n}`);
+  Object.assign(d.style, {
+    position: 'absolute', left: `${el.x * PX}px`, top: `${el.y * PX}px`, width: `${el.w * PX}px`, height: `${el.h * PX}px`,
+    opacity: el.alpha ?? 1, pointerEvents: 'none',
+  });
+  d.innerHTML = svgText;
+  const svg = d.firstElementChild;
+  if (svg) { svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); svg.style.display = 'block'; }
+  return d;
+}
 
 // Chrome objects (sphere, capsule, ring) as vector drawings. PowerPoint export turns them into pictures.
 const CHROME = {

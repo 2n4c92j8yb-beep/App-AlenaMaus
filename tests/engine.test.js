@@ -17,7 +17,8 @@ test('library is complete and consistent', () => {
   assert.equal(DIRECTIONS.filter((d) => !d.family || d.family === 'editorial').length, 15);
   assert.equal(DIRECTIONS.filter((d) => d.family === 'poster').length, 3);
   assert.equal(DIRECTIONS.filter((d) => d.family === 'glass').length, 3);
-  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 21);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'texture').length, 3);
+  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 24);
   for (const d of DIRECTIONS) {
     for (const role of ['display', 'body', 'label', ...(d.family === 'poster' || d.family === 'glass' ? ['poster'] : [])]) assert.ok(FONTS[d.fonts[role]], `${d.id} ${role} font`);
     for (const o of OCCASIONS) assert.ok(o.id in d.suits, `${d.id} has weight for ${o.id}`);
@@ -147,6 +148,44 @@ test('glass decks: three glass directions, fitted text, chrome and glass on ever
 test('glass directions: holo letters only where every gradient stop reads on the background', () => {
   for (const d of DIRECTIONS.filter((x) => x.family === 'glass')) {
     if (d.fx.titleGradient) for (const stop of d.fx.holo) assert.ok(contrast(stop, d.colors.bg) >= 4.5, `${d.id} holo stop ${stop}`);
+  }
+});
+
+test('texture decks: three texture directions, fitted text, a seeded surface on every slide', () => {
+  for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 3; s++) {
+    const decks = buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family: 'texture' });
+    assert.deepEqual(decks.map((d) => d.direction.family), ['texture', 'texture', 'texture']);
+    assert.equal(new Set(decks.map((d) => d.direction.id)).size, 3);
+    for (const deck of decks) {
+      const name = `${deck.direction.id}/${deck.structure.id}/${density}`;
+      assert.deepEqual(deck.overflow, [], name);
+      for (const sl of deck.slides) {
+        const tex = sl.els.filter((e) => e.type === 'svg');
+        assert.equal(tex.length, 1, `${name} ${sl.form}: one texture`);
+        assert.ok(sl.els.indexOf(tex[0]) <= 1, `${name} ${sl.form}: texture sits behind the content`);
+        assert.ok(tex[0].svg.startsWith('<svg') && tex[0].svg.length < 120000, `${name}: texture size ${tex[0].svg.length}`);
+      }
+    }
+  }
+});
+
+test('textures are reproducible from their seed and differ between decks', async () => {
+  const { textureSvg } = await import('../src/library/textures.js');
+  for (const kind of ['contour', 'grid', 'grain']) {
+    const o = { color: '#336655', colors: ['#F6A27E', '#B9A4FF'] };
+    assert.equal(textureSvg(kind, { ...o, seed: 'a' }), textureSvg(kind, { ...o, seed: 'a' }), `${kind} same seed`);
+    assert.notEqual(textureSvg(kind, { ...o, seed: 'a' }), textureSvg(kind, { ...o, seed: 'b' }), `${kind} new seed`);
+  }
+});
+
+test('phonetic forms keep their case: capitals-only faces never set the before/after tokens', () => {
+  for (const family of ['poster', 'texture', 'editorial', 'glass']) for (let s = 0; s < 6; s++) {
+    for (const deck of buildDirections({ pool: SAMPLE_POOL, occasionId: 'seminar', seed: s, family })) {
+      for (const sl of deck.slides.filter((x) => x.form === 'pair')) {
+        const tokens = sl.els.filter((e) => e.type === 'text' && e.text.startsWith('/'));
+        for (const t of tokens) assert.ok(!FONTS[t.font].capsOnly && !t.caps, `${deck.direction.id}: ${t.text} in ${t.font}`);
+      }
+    }
   }
 });
 

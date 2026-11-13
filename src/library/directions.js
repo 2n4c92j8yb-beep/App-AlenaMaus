@@ -277,4 +277,45 @@ DIRECTIONS.push(
   },
 );
 
+// Texture look: each direction is built around one generated surface (texture.js,
+// textures.js). `texture` names the generator, its colours and how strongly it shows.
+DIRECTIONS.push(
+  {
+    id: 'survey',
+    family: 'texture',
+    name: 'Survey',
+    blurb: 'Paper and ink-green contour lines, like a topographic map. Palatino headlines, Gill Sans text.',
+    fonts: { display: 'palatino', body: 'gillSans', label: 'gillSans' },
+    colors: { bg: '#EFEBE1', ink: '#1F2A24', muted: '#525C56', accent: '#2F6B57', soft: '#E3DED1' },
+    texture: { kind: 'contour', color: '#2F6B57', alpha: 0.42, content: 0.4 },
+    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', labelTracking: 0.14, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.05, footer: true },
+    tags: { tone: 'formal', mode: 'light', type: 'mixed' },
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'drafting',
+    family: 'texture',
+    name: 'Drafting',
+    blurb: 'Cobalt drafting sheet with a fine white grid, registration marks, narrow title-block capitals and typewriter labels.',
+    fonts: { display: 'bebas', body: 'arial', label: 'courier' },
+    colors: { bg: '#1D3B8B', ink: '#F3F6FF', muted: '#C3D0F4', accent: '#9FC4FF', soft: '#26479C' },
+    texture: { kind: 'grid', color: '#FFFFFF', alpha: 1, content: 0.75 },
+    layout: { margin: 0.95, align: 'left', titlePos: 'side', numbers: 'large', cover: 'top', labels: 'upper', labelTracking: 0.12, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.2, footer: true, upperDisplay: true },
+    tags: { tone: 'neutral', mode: 'dark', type: 'sans' },
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'grain',
+    family: 'texture',
+    name: 'Grain',
+    blurb: 'Soft peach, lilac and butter colour fields with film grain, bold rounded headlines, everything centred.',
+    fonts: { display: 'manrope', body: 'manrope', label: 'manrope' },
+    colors: { bg: '#F3ECE6', ink: '#221E26', muted: '#4A4350', accent: '#A63D63', soft: '#EADFD7' },
+    texture: { kind: 'grain', colors: ['#F6A27E', '#B9A4FF', '#FFD58A', '#F29BB8'], alpha: 0.7, content: 0.5 },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'round', scale: 1.0, footer: false, boldDisplay: true },
+    tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
+    suits: ALL_OCCASIONS,
+  },
+);
+
 export const byId = (id) => DIRECTIONS.find((d) => d.id === id);

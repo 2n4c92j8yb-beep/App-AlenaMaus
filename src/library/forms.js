@@ -8,6 +8,7 @@
 //   rect    { x, y, w, h, fill, alpha, rotate }
 //   ellipse { x, y, w, h, fill, alpha }
 //   image   { x, y, w, h, src, alt, fit: 'cover' | 'contain', round, radius, natW, natH }
+//   svg     { x, y, w, h, svg, alpha }   a generated texture (textures.js), exported as a picture
 //   chrome  { x, y, w, h, kind: 'sphere' | 'capsule' | 'ring', tint: 'silver' | 'gold', holo: [colours], rotate }
 // Glass look extras (see glass.js): rect/ellipse `radius`, `gradient` { angle, stops },
 // `glass` { edge, rim } (frosted, blurs what is behind), `glow` { color, blur, edge }, `float` (shadow colour),
@@ -21,6 +22,7 @@ import { FONTS } from './fonts.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
+import { texturize } from './texture.js';
 
 // ---------- colour helpers ----------
 
@@ -620,7 +622,9 @@ function pair(ctx, item, kick) {
     const x = i === 0 ? b.x : b.x + b.w - colW;
     const seq = i === 0 ? 2 : 4;
     if (i === 1 && !isLedger(ctx)) rect(ctx, x, ty, colW, tokenH, c.soft, { seq });
-    text(ctx, 'display', s.text, { x: x + 0.2, y: ty, w: colW - 0.4, h: tokenH }, { max: 66, min: 30, align: 'center', valign: 'middle', italic: false, caps: false, maxLines: 2, color: i === 1 ? c.accentText : c.ink, seq });
+    // forms like /huːs/ must keep their case and symbols: a capitals-only face hands them to the text face
+    const tokenFont = FONTS[ctx.dir.fonts.display].capsOnly ? ctx.dir.fonts.body : undefined;
+    text(ctx, 'display', s.text, { x: x + 0.2, y: ty, w: colW - 0.4, h: tokenH }, { max: 66, min: 30, align: 'center', valign: 'middle', italic: false, caps: false, maxLines: 2, color: i === 1 ? c.accentText : c.ink, seq, ...(tokenFont ? { font: tokenFont } : {}) });
     label(ctx, s.label, { x, y: ty + tokenH + 0.08, w: colW, h: 0.35 }, { align: 'center', maxLines: 1, max: 13, seq });
   });
   const ay = ty + tokenH / 2;
@@ -738,6 +742,8 @@ export function layoutSlide(dir, deck, slide, index, total, density = 'medium') 
   const fn = FORMS[slide.form];
   if (!fn) throw new Error(`Unknown slide form: ${slide.form}`);
   fn(ctx, slide.item ?? slide, slide.kicker);
-  // Glass directions reuse the regular content forms, re-dressed in glass
-  return dir.family === 'glass' ? glassify(ctx) : ctx.els;
+  // Glass directions reuse the regular content forms, re-dressed in glass; Texture ones get their surface
+  if (dir.family === 'glass') return glassify(ctx);
+  if (dir.family === 'texture') return texturize(ctx);
+  return ctx.els;
 }

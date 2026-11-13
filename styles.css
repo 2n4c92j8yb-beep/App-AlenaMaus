@@ -173,16 +173,16 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .results-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position: relative; }
 
 .looks {
-  --i: 0; position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px; justify-self: start;
+  --i: 0; position: relative; display: grid; grid-template-columns: repeat(4, 1fr); padding: 5px; justify-self: start; max-width: 100%;
   border-radius: var(--pill); background: rgba(255, 255, 255, 0.6); border: 1px solid var(--line); box-shadow: var(--shadow-soft);
 }
 @media (min-width: 1024px) { .looks { justify-self: center; } }
 .looks::before {
-  content: ""; position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3);
+  content: ""; position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 4);
   border-radius: var(--pill); background: var(--night); transform: translateX(calc(var(--i) * 100%));
   transition: transform 340ms var(--ease);
 }
-.looks button { position: relative; min-height: 44px; min-width: 104px; padding: 8px 20px; border: 0; border-radius: var(--pill); background: transparent; font: 650 0.95rem var(--font-ui); color: var(--night); transition: color 240ms var(--ease); }
+.looks button { position: relative; min-height: 44px; min-width: 0; padding: 8px clamp(10px, 2vw, 20px); border: 0; border-radius: var(--pill); background: transparent; font: 650 0.95rem var(--font-ui); color: var(--night); transition: color 240ms var(--ease); }
 .looks button[aria-pressed="true"] { color: var(--snow); }
 
 .adjust { position: relative; }

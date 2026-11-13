@@ -97,3 +97,23 @@ test('the server asks Claude for JSON with the fallback on, and handles refusals
   await assert.rejects(writeDeck('notes', 'seminar', fake(text('{"deck":', 'max_tokens'))), /too much content/);
   await assert.rejects(writeDeck('notes', 'seminar', fake(text('Sorry, no JSON here.'))), /could not be read/);
 });
+
+test('German decks: the app\'s own labels follow the notes, numbers keep their unit', () => {
+  const de = structuredClone(ANSWER);
+  de.deck.language = 'de';
+  de.figures[0].value = '40,5 %';
+  const pool = toPool(de);
+  assert.equal(pool.language, 'de');
+  assert.equal(pool.items.find((i) => i.kind === 'figure').value, '40,5 %');
+  assert.equal(pool.items.find((i) => i.kind === 'sources').title, 'Literaturverzeichnis');
+  for (const family of ['editorial', 'poster', 'glass', 'texture']) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool, occasionId: 'seminar', seed: s, family })) {
+      assert.equal(deck.deck.occasionLabel, 'Seminarvortrag');
+      assert.deepEqual(deck.overflow, [], `${family}/${deck.direction.id}`);
+      const words = deck.slides.flatMap((x) => x.els).filter((e) => e.type === 'text').map((e) => e.text);
+      for (const english of ['Step by step', 'Two positions', 'Weighing up', 'For discussion', 'Seminar presentation']) {
+        assert.ok(!words.includes(english), `${deck.direction.id}: "${english}" left in English`);
+      }
+    }
+  }
+});

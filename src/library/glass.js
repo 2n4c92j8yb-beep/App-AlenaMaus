@@ -13,6 +13,7 @@
 //   one hero effect per slide; text never sits on chrome or on a holo fill;
 //   a single glowing card per slide; light blobs are quieter on content slides.
 
+import { t as label_ } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
 import { text, label, rect, background } from './forms.js';
 
@@ -119,7 +120,7 @@ const prism = {
     chrome(ctx, 'ring', W - 3.3, -1.1, 4.2, 4.2, { holo: true });
     glassPanel(ctx, m, 1.35, 3.9, 3.9, { radius: 0.4, seq: 1 });
     text(ctx, 'display', String(s.number).padStart(2, '0'), { x: m + 0.2, y: 1.35, w: 3.5, h: 3.9 }, titleOpts(ctx, { max: 116, min: 80, align: 'center', valign: 'middle', maxLines: 1, caps: false, seq: 1 }));
-    micro(ctx, `Part ${String(s.number).padStart(2, '0')}`, { x: m + 4.5, y: 2.4, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });
+    micro(ctx, `${label_(ctx.deck.language, 'Part')} ${String(s.number).padStart(2, '0')}`, { x: m + 4.5, y: 2.4, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });
     text(ctx, 'display', s.label, { x: m + 4.5, y: 2.8, w: W - m - 4.5 - m - 1.2, h: 2.0 }, { max: 44, min: 24, maxLines: 3, seq: 2 });
     corner(ctx);
   },
@@ -130,7 +131,7 @@ const prism = {
     const x = m + 0.3;
     const w = W - 2 * m - 1.6;
     glassPanel(ctx, m, 1.2, W - 2 * m - 1.0, H - 2.6, { radius: 0.4 });
-    micro(ctx, kick ?? 'Thesis', { x, y: 1.6, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x, y: 1.6, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x, y: 2.05, w, h: H - 4.3 }, { max: 36, min: 20, valign: 'middle', maxLines: 5, lineHeight: 1.15, seq: 1 });
     if (item.note) text(ctx, 'body', item.note, { x, y: H - 2.2, w, h: 0.55 }, { max: 16, min: 12, color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -141,7 +142,7 @@ const prism = {
     chrome(ctx, 'sphere', W - 4.5, 1.4, 3.6, 3.6, { holo: true });
     chrome(ctx, 'capsule', W - 1.9, H - 2.6, 2.4, 0.75, { rotate: -18 });
     const w = W * 0.56;
-    micro(ctx, kick ?? 'Question', { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: m, y: 1.95, w, h: 3.3 }, { max: 40, min: 22, valign: 'middle', maxLines: 5, lineHeight: 1.1, seq: 1 });
     holoRule(ctx, m, 5.45, 1.4, 2);
     if (item.hint) text(ctx, 'body', item.hint, { x: m, y: 5.7, w, h: 0.7 }, { max: 17, min: 12, color: c.muted, maxLines: 2, seq: 3 });
@@ -197,7 +198,7 @@ const pearl = {
     const [px, py, pw, ph] = [1.4, 1.1, W - 2.8, H - 2.5];
     glassPanel(ctx, px, py, pw, ph, { radius: 0.5 });
     chrome(ctx, 'sphere', px + pw - 0.9, py + ph - 1.0, 1.6, 1.6, { holo: true });
-    micro(ctx, kick ?? 'Thesis', { x: px + 0.8, y: py + 0.55, w: pw - 1.6, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: px + 0.8, y: py + 0.55, w: pw - 1.6, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: px + 0.9, y: py + 1.0, w: pw - 1.8, h: ph - 2.0 }, { max: 32, min: 18, align: 'center', valign: 'middle', maxLines: 5, lineHeight: 1.18, seq: 1 });
     if (item.note) text(ctx, 'body', item.note, { x: px + 1.2, y: py + ph - 0.95, w: pw - 2.4, h: 0.55 }, { max: 15, min: 11, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -206,7 +207,7 @@ const pearl = {
     const { c } = ctx;
     ground(ctx);
     chrome(ctx, 'capsule', W / 2 - 1.6, 0.7, 3.2, 0.9, { holo: true });
-    micro(ctx, kick ?? 'Question', { x: 1, y: 2.0, w: W - 2, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 1, y: 2.0, w: W - 2, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: 1.6, y: 2.45, w: W - 3.2, h: 2.9 }, { max: 38, min: 20, align: 'center', valign: 'middle', maxLines: 4, lineHeight: 1.12, seq: 1 });
     if (item.hint) text(ctx, 'body', item.hint, { x: 2.2, y: 5.6, w: W - 4.4, h: 0.7 }, { max: 17, min: 12, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -248,7 +249,7 @@ const halo = {
     background(ctx);
     light(ctx, -2.2, H / 2 - 4.2, 8.4, fx(ctx).aurora[0], 0.26);
     text(ctx, 'display', String(s.number).padStart(2, '0'), { x: m, y: 0.9, w: 6.2, h: 4.6 }, { font: ctx.dir.fonts.poster, max: 230, min: 140, maxLines: 1, caps: false, bold: false, valign: 'middle', gradient: holo(ctx, 160), seq: 1 });
-    micro(ctx, `Part ${String(s.number).padStart(2, '0')}`, { x: m + 6.6, y: 2.8, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });
+    micro(ctx, `${label_(ctx.deck.language, 'Part')} ${String(s.number).padStart(2, '0')}`, { x: m + 6.6, y: 2.8, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });
     text(ctx, 'display', s.label, { x: m + 6.6, y: 3.2, w: W - m - 6.6 - m, h: 1.8 }, { max: 40, min: 22, maxLines: 3, seq: 2 });
     corner(ctx);
   },
@@ -258,7 +259,7 @@ const halo = {
     light(ctx, W / 2 - 4.5, H / 2 - 4.5, 9, fx(ctx).aurora[0], 0.2);
     const w = W - 2 * m - 2.4;
     const x = (W - w) / 2;
-    micro(ctx, kick ?? 'Thesis', { x, y: 1.55, w, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x, y: 1.55, w, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x, y: 2.0, w, h: 3.4 }, { max: 38, min: 20, align: 'center', valign: 'middle', maxLines: 5, lineHeight: 1.15, seq: 1 });
     holoRule(ctx, W / 2 - 0.6, 5.65, 1.2, 2);
     if (item.note) text(ctx, 'body', item.note, { x, y: 5.9, w, h: 0.6 }, { max: 15, min: 11, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
@@ -271,7 +272,7 @@ const halo = {
     stage(ctx, W - 4.4, 1.6, 2.6, 4.0);
     chrome(ctx, 'sphere', W - 4.0, 2.6, 1.9, 1.9);
     const w = W * 0.56;
-    micro(ctx, kick ?? 'Question', { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: m, y: 1.95, w, h: 3.4 }, { max: 40, min: 22, valign: 'middle', maxLines: 5, lineHeight: 1.12, seq: 1 });
     if (item.hint) text(ctx, 'body', item.hint, { x: m, y: 5.65, w, h: 0.7 }, { max: 17, min: 12, color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);

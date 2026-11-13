@@ -19,6 +19,7 @@
 // (0 = with the slide, 1 = headline, 2+ = content, one step per item).
 
 import { FONTS } from './fonts.js';
+import { t as label_ } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
@@ -395,7 +396,8 @@ function section(ctx, s) {
       max: 130, min: 90, color: full ? ink : c.accentText, align: center ? 'center' : 'left', italic: false, caps: false, seq: 1,
     });
   }
-  text(ctx, 'display', s.label, { x: m, y: H * 0.42, w: W * 0.6, h: 1.6 }, { max: Math.round(48 * scale), min: 28, color: bandInk, align: center ? 'center' : 'left', maxLines: 2, seq: 2 });
+  // centred directions centre the section name under the number, across the full width
+  text(ctx, 'display', s.label, { x: m, y: H * 0.42, w: center ? W - 2 * m : W * 0.6, h: 1.6 }, { max: Math.round(48 * scale), min: 28, color: bandInk, align: center ? 'center' : 'left', maxLines: 2, seq: 2 });
   footer(ctx, full ? ink : undefined);
 }
 
@@ -651,7 +653,7 @@ function question(ctx, item, kick) {
   const w = center ? W - 2 * m - 1.5 : W * 0.72;
   const x = center ? (W - w) / 2 : m;
   note(ctx, x, H * 0.2, w, H * 0.62);
-  kicker(ctx, kick ?? 'Question', x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
+  kicker(ctx, kick ?? label_(ctx.deck.language, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
   text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.42 }, { max: Math.round(44 * scale), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5 });
   if (item.hint) text(ctx, 'body', item.hint, { x, y: H * 0.74, w, h: 0.8 }, { max: 20, min: 13, color: full ? ink : c.muted, align: center ? 'center' : 'left', seq: 3 });
   footer(ctx, full ? ink : undefined);

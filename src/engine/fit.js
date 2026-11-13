@@ -14,7 +14,7 @@ export function countLines(text, widthIn, sizePt, widthFactor) {
   let lines = 0;
   let longestWord = 0;
   for (const para of String(text).split('\n')) {
-    const words = para.split(/\s+/).filter(Boolean);
+    const words = para.split(/[ \t\r\f\v]+/).filter(Boolean); // no-break spaces keep a number and its unit together
     if (!words.length) { lines += 1; continue; }
     let cur = 0;
     for (const w of words) {

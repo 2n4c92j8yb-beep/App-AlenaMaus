@@ -6,6 +6,8 @@
 // The model writes content only. Layout, type, colour and slide order come from the
 // curated library, which is what keeps decks from looking generated.
 
+import { t } from '../library/labels.js';
+
 // ---------------------------------------------------------------- prompt
 
 export const SYSTEM_PROMPT = `You turn a student's notes into the content of a presentation. A separate design engine lays the content out, so you only write words, sorted into slide-sized pieces.
@@ -19,7 +21,7 @@ How to write:
 - Sources: one entry per source named in the notes, formatted in MLA style as far as the notes allow. No invented details.
 
 What to produce:
-- deck: title (a statement, up to 10 words), shortTitle (2 to 4 words, the topic), subtitle, author, course, date (empty strings if the notes don't say), worksCitedTitle (the usual heading for a list of sources in the notes' language, e.g. "Works Cited" or "Literaturverzeichnis"), posterWords (three single strong words from the topic), posterLines (up to five short facts of 2 to 5 words each, for small labels), placeShort (a place connected to the topic, or empty).
+- deck: language (the two-letter code of the notes' language, e.g. "en" or "de"), title (a statement, up to 10 words), shortTitle (2 to 4 words, the topic), subtitle, author, course, date (empty strings if the notes don't say), worksCitedTitle (the usual heading for a list of sources in the notes' language, e.g. "Works Cited" or "Literaturverzeichnis"), posterWords (three single strong words from the topic), posterLines (up to five short facts of 2 to 5 words each, for small labels), placeShort (a place connected to the topic, or empty).
 - claims: the thesis (role "thesis", exactly one), background facts (role "context"), counter-arguments (role "counter"), the takeaway (role "takeaway"), other claims (role "claim").
 - definitions, figures (only numbers that appear in the notes), pairs (before/after or two forms of one thing), timelines (dated events in order), processes (steps in order), comparisons (two sides with up to three points each), quotes (exact wording from the notes), questions (role "hook" to open, "discussion" to close, "task" for an activity), pointLists (three or four parallel points), sources, pictureCaptions (up to three title and caption pairs that could go with pictures the student adds).
 - year: the year a piece belongs to, or 0.`;
@@ -46,7 +48,7 @@ ${userPrompt(notes, occasionName)}`;
 }
 
 const EXAMPLE_SHAPE = {
-  deck: { title: '', shortTitle: '', subtitle: '', author: '', course: '', date: '', worksCitedTitle: '', posterWords: ['', '', ''], posterLines: [''], placeShort: '' },
+  deck: { language: 'en', title: '', shortTitle: '', subtitle: '', author: '', course: '', date: '', worksCitedTitle: '', posterWords: ['', '', ''], posterLines: [''], placeShort: '' },
   claims: [{ text: '', role: 'thesis', note: '' }],
   definitions: [{ term: '', gloss: '', text: '' }],
   figures: [{ title: '', value: '', label: '', caption: '', source: '', year: 0 }],
@@ -75,6 +77,9 @@ export function clip(text, max) {
   const at = cut.lastIndexOf(' ');
   return `${(at >= max * 0.5 ? cut.slice(0, at) : cut).replace(/[,;:\s]+$/, '')}…`;
 }
+
+/** Keep a number and its unit together: "40,5 %" must not break before the "%". */
+const keepNumber = (t) => t.replace(/(\d)\s+(%|‰|°|€|\$|£|km|kg|m|cm|mm|h|min|s|bpm)(?=$|[^\p{L}])/gu, '$1\u202F$2');
 
 // limits that keep every slide form readable at its minimum font size
 const L = { title: 90, deckTitle: 80, short: 40, claim: 190, note: 180, caption: 200, item: 95, head: 60, quote: 200, question: 150, value: 9, label: 60, term: 50, gloss: 60, defText: 260, source: 220 };
@@ -110,7 +115,7 @@ export function toPool(answer) {
     if (term && text) items.push({ kind: 'definition', weight: weighted(a.definitions, i), term, text, ...(str(x?.gloss) ? { gloss: clip(x.gloss, L.gloss) } : {}) });
   });
   list(a.figures).forEach((x, i) => {
-    const value = str(x?.value);
+    const value = keepNumber(str(x?.value));
     if (!value || value.length > L.value || !/\d/.test(value)) return; // a key figure is a number from the notes
     items.push({
       kind: 'figure', tags: ['evidence'], weight: weighted(a.figures, i), year: yearOf(x?.year),
@@ -119,8 +124,8 @@ export function toPool(answer) {
     });
   });
   list(a.pairs).forEach((x, i) => {
-    const before = clip(x?.before?.text, 24);
-    const after = clip(x?.after?.text, 24);
+    const before = keepNumber(clip(x?.before?.text, 24));
+    const after = keepNumber(clip(x?.after?.text, 24));
     if (!before || !after) return;
     items.push({
       kind: 'pair', tags: ['evidence'], weight: weighted(a.pairs, i), year: yearOf(x?.year),
@@ -170,7 +175,7 @@ export function toPool(answer) {
   });
   const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, 10);
   // Works Cited is always there; with no sources in the notes it says so instead of inventing any
-  items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || 'Works Cited', entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
+  items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || t(d.language, 'Works Cited'), entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
 
   if (items.filter((it) => it.kind !== 'sources').length < 3) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
   if (!thesisSeen) {
@@ -180,7 +185,9 @@ export function toPool(answer) {
   }
 
   const words = list(d.posterWords).map((w) => clip(w, 16).split(' ')[0]).filter(Boolean).slice(0, 3);
+  const language = /^[a-z]{2}$/i.test(str(d.language)) ? str(d.language).toLowerCase() : 'en';
   return {
+    language,
     title,
     shortTitle,
     subtitle: clip(d.subtitle, 90) || shortTitle,

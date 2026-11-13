@@ -13,15 +13,29 @@ import { t as label_ } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
 import { text, label, rect, background } from './forms.js';
 
-/** URL of a mood photo in the direction's colour grade (optionally the cut-out layer). */
+/**
+ * URL of a mood photo in the direction's colour grade (optionally the cut-out layer).
+ * Bundled photos exist as three graded files; photos found online (`src`) are graded
+ * with a filter instead (GRADE_FILTER), which the PowerPoint export bakes in.
+ */
 export function moodSrc(mood, grade, cut = false) {
+  if (mood.src) return mood.src;
   return `${mood.base}-${grade}${cut ? '-cut.png' : '.jpg'}`;
 }
 
+export const GRADE_FILTER = {
+  warm: 'sepia(0.35) saturate(1.25) contrast(1.05)',
+  mono: 'grayscale(1) contrast(1.15)',
+  night: 'brightness(0.62) contrast(1.15) saturate(0.75)',
+};
+
 function photo(ctx, mood, box = { x: 0, y: 0, w: W, h: H }, o = {}) {
+  if (o.cut && !mood.cut) return;
+  const filter = mood.src ? GRADE_FILTER[ctx.dir.grade] : undefined;
   ctx.els.push({
     type: 'image', ...box, src: moodSrc(mood, ctx.dir.grade, o.cut), alt: o.cut ? '' : mood.alt,
     fit: 'cover', pos: o.pos ?? mood.pos ?? 'center', natW: mood.w, natH: mood.h, seq: o.seq ?? 0, mood: true,
+    ...(filter ? { filter } : {}),
   });
 }
 

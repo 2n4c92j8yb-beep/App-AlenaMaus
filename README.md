@@ -118,10 +118,22 @@ preview and the PowerPoint export draw from the same data.
 2. Poster look: 3 test directions done; extend after review
 2b. Glass look: 3 directions done (Prism, Pearl, Halo)
 2c. Texture look: 3 of 8 directions done (Survey, Drafting, Grain)
-3. Deployed on Vercel: done (deck-app-two.vercel.app). Still open: photos for other topics
-   (Unsplash, ImageKit cut-outs and colour grades)
+3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
+   (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)
 5. PowerPoint export: done (fonts are linked, not embedded)
+
+## Pictures for any topic
+
+The writing step also suggests up to five photographable subjects from the notes
+(e.g. "Machu Picchu", "Lake Titicaca"). `src/engine/pictures.js` looks each one up on
+Wikimedia Commons from the browser (no key needed) and keeps only free licences
+(CC0, public domain, CC BY, CC BY-SA), large photos and no maps, flags or logos.
+The first photo becomes the cover, up to three more become picture slides, and all of
+them serve as mood photos in the Poster look (graded with a CSS filter that the
+PowerPoint export bakes in). Each photo has a credit line, and every photo the deck
+shows is cited in MLA style on the Works Cited slide. If Commons cannot be reached,
+the deck is made without pictures. Your own uploaded pictures still take priority.
 
 ## Run locally
 

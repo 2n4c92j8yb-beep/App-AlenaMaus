@@ -46,6 +46,7 @@ function col(c, alpha = 1) {
 
 const loadImage = (src) => new Promise((resolve, reject) => {
   const img = new Image();
+  if (/^https?:/.test(src)) img.crossOrigin = 'anonymous'; // online photos (Wikimedia Commons) must stay readable for the canvas
   img.onload = () => resolve(img);
   img.onerror = () => reject(new Error(`Picture could not be loaded: ${src.slice(0, 60)}`));
   img.src = src;
@@ -94,6 +95,7 @@ async function chromePicture(e) {
 /** A photo with its colour grade baked in (PowerPoint has no CSS filters). */
 async function photoPicture(e) {
   if (!e.filter && /^data:/.test(e.src)) return e.src;
+  // online photos are drawn onto a canvas too, so the file holds the picture itself, not a link
   const img = await loadImage(e.src);
   const c = Object.assign(document.createElement('canvas'), { width: img.naturalWidth, height: img.naturalHeight });
   const g = c.getContext('2d');

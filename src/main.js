@@ -7,6 +7,7 @@ import { playSlide, transition, hasGsap } from './render/present.js';
 import { upgradeChrome } from './render/chrome3d.js';
 import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
 import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
+import { attachPictures } from './engine/pictures.js';
 import { occasionById } from './library/occasions.js';
 import { exportPptx, bundledFontsOf } from './export/pptx.js';
 
@@ -179,7 +180,9 @@ async function write() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? `The writing step failed (${res.status}).`);
     if (!data.pool?.items?.length) throw new Error('The server sent no slide content.');
-    state.pool = data.pool; // already cleaned on the server with the same rules (toPool)
+    // already cleaned on the server with the same rules (toPool); now the pictures
+    setBusy(true, 'pictures');
+    state.pool = await attachPictures(data.pool);
     state.poolKey = notesKey();
     setBusy(false);
     generate(true);
@@ -189,13 +192,16 @@ async function write() {
   }
 }
 
-function setBusy(on) {
+function setBusy(on, phase = 'writing') {
   state.busy = on;
   const btn = $('submit-btn');
   btn.disabled = on;
   btn.classList.toggle('is-busy', on);
-  btn.querySelector('.label').textContent = on ? 'Writing your slides…' : 'Show three directions';
+  btn.querySelector('.label').textContent = !on ? 'Show three directions' : phase === 'pictures' ? 'Finding pictures…' : 'Writing your slides…';
   $('busy-note').hidden = !on;
+  $('busy-note').textContent = phase === 'pictures'
+    ? 'Looking for freely licensed photos on Wikimedia Commons. Each one is credited on its slide and in Works Cited.'
+    : 'Claude is writing the content of your slides. This usually takes under a minute.';
 }
 
 function openFallback(message) {
@@ -214,15 +220,20 @@ async function copyPrompt() {
   catch { box.select(); $('fallback-status').textContent = 'Select the prompt and copy it (Ctrl or Cmd + C).'; }
 }
 
-function useAnswer() {
+async function useAnswer() {
+  let pool;
   try {
-    state.pool = toPool(parseAnswer($('fallback-answer').value));
-    state.poolKey = notesKey();
-    hideFallback();
-    generate(true);
+    pool = toPool(parseAnswer($('fallback-answer').value));
   } catch (err) {
     $('fallback-status').textContent = `That answer could not be used: ${err.message}`;
+    return;
   }
+  hideFallback();
+  setBusy(true, 'pictures');
+  state.pool = await attachPictures(pool);
+  state.poolKey = notesKey();
+  setBusy(false);
+  generate(true);
 }
 
 // ---------- views ----------

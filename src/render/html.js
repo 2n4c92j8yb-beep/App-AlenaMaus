@@ -76,7 +76,7 @@ function drawBox(el, round) {
   return d;
 }
 
-const cssGradient = (g) => `linear-gradient(${g.angle ?? 115}deg, ${g.stops.map((c, i) => `${c} ${Math.round((i / (g.stops.length - 1)) * 100)}%`).join(', ')})`;
+export const cssGradient = (g) => `linear-gradient(${g.angle ?? 115}deg, ${g.stops.map((c, i) => `${c} ${Math.round((i / (g.stops.length - 1)) * 100)}%`).join(', ')})`;
 
 // A generated texture (contour lines, drafting grid, grain …), drawn from its SVG string.
 let svgInstance = 0;
@@ -102,9 +102,10 @@ const CHROME = {
   gold: ['#FFF6E2', '#F3DDB0', '#C9A15F', '#5A4220', '#160F06', '#5A4220', '#E7C98F', '#FFF6E2'],
 };
 let chromeId = 0;
-function drawChrome(el) {
+/** A chrome object as a self-contained SVG string (also rasterised for the PowerPoint export). */
+export function chromeSvg(el, scale = 1) {
   const id = `chr${chromeId++}`;
-  const [w, h] = [el.w * PX, el.h * PX];
+  const [w, h] = [el.w * PX * scale, el.h * PX * scale];
   const stops = CHROME[el.tint] ?? CHROME.silver;
   const lin = (gid, dir) => `<linearGradient id="${gid}" x1="0" y1="0" x2="${dir === 'down' ? 0 : 1}" y2="${dir === 'across' ? 0 : 1}">${stops.map((c, i) => `<stop offset="${(i / (stops.length - 1)).toFixed(2)}" stop-color="${c}"/>`).join('')}</linearGradient>`;
   const holo = el.holo ? `<linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1">${el.holo.map((c, i) => `<stop offset="${(i / (el.holo.length - 1)).toFixed(2)}" stop-color="${c}"/>`).join('')}</linearGradient>` : '';
@@ -129,13 +130,18 @@ function drawChrome(el) {
     shape = `<defs>${lin(`${id}g`, vertical ? 'across' : 'down')}${holo}</defs><rect x="0" y="0" width="${w}" height="${h}" rx="${rr}" fill="url(#${id}g)"/>`;
     if (el.holo) film = `<rect x="0" y="0" width="${w}" height="${h}" rx="${rr}" fill="url(#${id}h)" style="mix-blend-mode:color" opacity="0.5"/>`;
   }
+  return `<svg xmlns="${SVG_NS}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${shape}${film}</svg>`;
+}
+
+function drawChrome(el) {
+  const [w, h] = [el.w * PX, el.h * PX];
   const wrap = document.createElement('div');
   Object.assign(wrap.style, {
     position: 'absolute', left: `${el.x * PX}px`, top: `${el.y * PX}px`, width: `${w}px`, height: `${h}px`,
     transform: el.rotate ? `rotate(${el.rotate}deg)` : 'none', opacity: el.alpha ?? 1,
     filter: `drop-shadow(0 ${0.25 * PX}px ${0.3 * PX}px rgba(0,0,0,0.45))`,
   });
-  wrap.innerHTML = `<svg xmlns="${SVG_NS}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${shape}${film}</svg>`;
+  wrap.innerHTML = chromeSvg(el);
   return wrap;
 }
 

@@ -7,6 +7,7 @@ import { playSlide, transition, hasGsap } from './render/present.js';
 import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
 import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
 import { occasionById } from './library/occasions.js';
+import { exportPptx, bundledFontsOf } from './export/pptx.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -52,6 +53,7 @@ function init() {
   document.addEventListener('click', (e) => { const d = document.querySelector('.adjust[open]'); if (d && !d.contains(e.target)) d.open = false; });
   $('clear-pictures').addEventListener('click', () => { state.uploads = []; $('pictures').value = ''; renderThumbs(); if (!$('results').hidden) generate(); });
   $('present').addEventListener('click', () => startPresenting(state.decks[state.openIndex]));
+  $('export-pptx').addEventListener('click', downloadPptx);
   $('p-next').addEventListener('click', () => step(1));
   $('p-prev').addEventListener('click', () => step(-1));
   $('p-close').addEventListener('click', stopPresenting);
@@ -126,6 +128,34 @@ function currentPool() {
   if (base.generated) items = [...items, ...ups.splice(0, 2).map((u) => ({ kind: 'image', tags: ['evidence'], weight: 2, ...own(u) }))];
   const coverImage = ups.length ? { ...own(ups.shift()), citation: undefined } : base.coverImage;
   return { ...base, items, coverImage };
+}
+
+// ---------- PowerPoint ----------
+
+async function downloadPptx() {
+  const deck = state.decks[state.openIndex];
+  if (!deck) return;
+  const btn = $('export-pptx');
+  const note = $('export-note');
+  btn.disabled = true;
+  note.hidden = false;
+  note.textContent = 'Preparing the PowerPoint file…';
+  try {
+    const name = await exportPptx(deck, { onProgress: (d, t) => { note.textContent = `Preparing the PowerPoint file: slide ${d} of ${t}…`; } });
+    const fonts = bundledFontsOf(deck);
+    note.replaceChildren(document.createTextNode(`Downloaded “${name}”. All text stays editable. `));
+    if (fonts.length) {
+      note.append(document.createTextNode('This deck uses free fonts that are not part of Office; install them on the presenting computer: '));
+      fonts.forEach((f, i) => {
+        const a = Object.assign(document.createElement('a'), { href: f.file, textContent: f.name, download: '' });
+        note.append(a, document.createTextNode(i < fonts.length - 1 ? ', ' : '.'));
+      });
+    }
+  } catch (err) {
+    note.textContent = `The PowerPoint file could not be made: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ---------- writing step ----------
@@ -480,6 +510,7 @@ function openDetail(i, focus) {
   const fill = () => {
     $('detail-title').textContent = d.name;
     $('detail-meta').textContent = `Story: ${s.name}. ${s.blurb} ${slides.length} slides.`;
+    $('export-note').hidden = true;
     const check = $('detail-check');
     check.hidden = overflow.length === 0;
     check.textContent = `${overflow.length} text box(es) may be too full (marked with a dashed outline).`;

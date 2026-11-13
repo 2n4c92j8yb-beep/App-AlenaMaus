@@ -4,6 +4,7 @@ import { OCCASIONS } from './library/occasions.js';
 import { buildDirections } from './engine/build.js';
 import { renderSlide } from './render/html.js';
 import { playSlide, transition, hasGsap } from './render/present.js';
+import { upgradeChrome } from './render/chrome3d.js';
 import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
 import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
 import { occasionById } from './library/occasions.js';
@@ -308,6 +309,7 @@ function showSlide(complete = false) {
   const { deck, index, dir } = p;
   const sl = deck.slides[index];
   p.ctl?.stop();
+  p.chrome?.stop();
   const frame = renderSlide(sl.els, { present: true, label: `Slide ${index + 1} of ${deck.slides.length}: ${FORM_LABELS[sl.form]}` });
   if (dir < 0) frame.classList.add('from-left');
   const stage = $('stage');
@@ -317,6 +319,10 @@ function showSlide(complete = false) {
   if (hasGsap()) transition(old, frame, deck.direction.family ?? 'editorial', dir);
   else old?.remove();
   p.ctl = playSlide(frame, sl, { complete });
+  // real 3D chrome for the slide on screen (vector drawings stay as the fallback)
+  const handle = { stop() { this.stopped = true; } };
+  p.chrome = handle;
+  upgradeChrome(frame).then((h) => { if (handle.stopped || state.present?.chrome !== handle) h.stop(); else handle.stop = () => h.stop(); });
   $('p-count').textContent = `${index + 1} / ${deck.slides.length}`;
   $('p-progress').style.width = `${((index + 1) / deck.slides.length) * 100}%`;
   $('p-prev').disabled = index === 0;
@@ -374,6 +380,7 @@ function stopPresenting() {
   if (!state.present) return;
   const opener = state.present.opener;
   state.present.ctl?.stop();
+  state.present.chrome?.stop();
   state.present = null;
   clearTimeout(idleTimer);
   $('presenter').hidden = true;

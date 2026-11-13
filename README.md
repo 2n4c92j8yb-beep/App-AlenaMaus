@@ -53,6 +53,33 @@ Start screen shows real covers from the three looks. Present mode: full-screen s
 controls that fade while presenting, progress bar, swipe, overview grid (G), rotate hint
 on phones. All motion stops under "reduce motion".
 
+## Writing step (notes in, content out)
+
+`api/generate.js` is a Vercel function that sends the notes to Claude (model `claude-opus-5-5`,
+low effort for speed, structured output via a zod schema, server-side refusal fallback) and
+returns a content pool. The prompt (`src/engine/content.js`) forbids invented facts, numbers,
+quotes and sources; `toPool()` drops empty pieces and shortens anything too long for its slide
+form. Without the server (or after an error) the app offers copy and paste: a ready prompt
+for the user's own Claude and a box for the answer, checked by the same `toPool()`.
+
+Setup: the Vercel project needs the environment variable `ANTHROPIC_API_KEY` for Production
+and Preview. Set a monthly spend limit in the Anthropic Console. Per visitor: six decks an
+hour (best effort), notes up to 15,000 characters.
+
+## PowerPoint export
+
+`src/export/pptx.js` (PptxGenJS 3.12, MIT, loaded on demand). Text stays editable; shapes,
+transparency, rounded corners and glow are native; photos keep their colour grade; chrome
+becomes pictures; light and textures are painted into one background picture per slide.
+PowerPoint can't blur behind glass or fill letters with gradients or photos. Free fonts
+that are not part of Office are not embedded: the app links them after the download.
+
+## 3D chrome
+
+In Present mode, chrome objects become real 3D metal with Three.js (r169, MIT, loaded on
+demand): reflections of a small studio that drift slowly, iridescence on holo pieces.
+Thumbnails, the slide list and exports keep the vector drawings; without WebGL they stay.
+
 ## Present mode
 
 `src/render/present.js` choreographs every slide with GSAP 3.13 (`vendor/gsap.min.js`,
@@ -91,9 +118,10 @@ preview and the PowerPoint export draw from the same data.
 2. Poster look: 3 test directions done; extend after review
 2b. Glass look: 3 directions done (Prism, Pearl, Halo)
 2c. Texture look: 3 of 8 directions done (Survey, Drafting, Grain)
-3. Deploy to Vercel (Unsplash photos, ImageKit cut-outs and colour grades)
-4. AI step: copy-paste with your own Claude, plus a rule-based fallback
-5. PowerPoint export with embedded poster fonts
+3. Deployed on Vercel: done (deck-app-two.vercel.app). Still open: photos for other topics
+   (Unsplash, ImageKit cut-outs and colour grades)
+4. Writing step: done (Claude API on the server, copy and paste as fallback)
+5. PowerPoint export: done (fonts are linked, not embedded)
 
 ## Run locally
 

@@ -2,7 +2,10 @@
 // someone clicks the button. Slides already live in inches on PowerPoint's own
 // 13.333 x 7.5 canvas, so every element maps one to one:
 //
-//   text            real, editable PowerPoint text (font, size, colour, spacing)
+//   text            real, editable PowerPoint text (font, size, colour, spacing) in an Office
+//                   font; text in a free display face PowerPoint does not have (Bebas Neue,
+//                   Anton, Six Caps, Unbounded) becomes a sharp transparent picture drawn
+//                   exactly like the preview, its words kept in the alt text and speaker notes
 //   rect / ellipse  native shapes: fills, transparency, rounded corners, outline,
 //                   glow as a soft outer shadow; frosted glass becomes a translucent panel
 //   line / arrow    native lines
@@ -10,11 +13,20 @@
 //   chrome          a picture rendered from its vector drawing
 //   light, textures painted into one background picture per slide, behind everything
 //
-// What PowerPoint cannot do: blur what lies behind glass, gradient-filled letters
-// (they take the first gradient colour), and photo-filled letters (they take the ink).
+// What PowerPoint cannot do: blur what lies behind glass. Gradient- and photo-filled
+// letters only exist in the display faces, which are pictures anyway.
+//
+// Why pictures: PowerPoint replaces a font it does not have with a much wider one, so
+// headlines ran off the slide and lines overlapped. Body text in Manrope (Glass) stays
+// editable in Arial, whose letters are almost exactly as wide.
 
 import { FONTS } from '../library/fonts.js';
 import { chromeSvg } from '../render/html.js';
+
+/** Free fonts drawn as pictures, and free body fonts swapped for a near-identical Office font. */
+export const AS_PICTURE = new Set(['anton', 'bebas', 'sixcaps', 'unbounded']);
+const OFFICE_STAND_IN = { manrope: 'Arial' };
+export const exportsAsPicture = (e) => e.type === 'text' && AS_PICTURE.has(e.font);
 import { SLIDE_W, SLIDE_H } from '../engine/fit.js';
 
 const PX = 160; // pixels per inch for pictures made by the export (sharp on a projector)
@@ -104,6 +116,92 @@ async function photoPicture(e) {
   return c.toDataURL('image/jpeg', 0.88);
 }
 
+/**
+ * A text element drawn onto a transparent canvas the way the preview lays it out
+ * (html.js drawText): same font, size, line height, letter spacing, alignment,
+ * rotation, gradient or photo fill, glow. Returns { data, x, y, w, h } in inches.
+ */
+async function textPicture(e) {
+  const f = FONTS[e.font];
+  const sizePx = (e.size / 72) * PX;
+  const weight = e.bold ? 700 : f.weight ?? 400;
+  const font = `${e.italic ? 'italic ' : ''}${weight} ${sizePx}px ${f.css}`;
+  const str = e.caps ? e.text.toUpperCase() : e.text;
+  try { await document.fonts.load(font, str); } catch { /* drawn with what is there */ }
+
+  const rotated = e.rotate === 90 || e.rotate === -90;
+  // the text's own frame: rotated text is laid out along the box's height
+  const fw = (rotated ? e.h : e.w) * PX;
+  const fh = (rotated ? e.w : e.h) * PX;
+  // room around the box for glyph overshoot, glow and giant words that bleed past their box
+  const pad = Math.ceil(sizePx * 0.6 + (e.glow ? e.glow.blur * PX * 2 : 0));
+  const W = Math.ceil((rotated ? fh : fw) + 2 * pad);
+  const H = Math.ceil((rotated ? fw : fh) + 2 * pad);
+  const c = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  const g = c.getContext('2d');
+  g.font = font;
+  if ('letterSpacing' in g && e.tracking) g.letterSpacing = `${e.tracking * sizePx}px`;
+  g.textBaseline = 'alphabetic';
+
+  // wrap like the browser: greedy by words, long words broken; rotated and bleeding text stays on one line
+  const nowrap = rotated || e.bleed;
+  const width = (t) => g.measureText(t).width;
+  const lines = [];
+  for (const para of str.split('\n')) {
+    if (nowrap) { lines.push(para); continue; }
+    let cur = '';
+    for (const word of para.split(/[ \t]+/).filter(Boolean)) {
+      const next = cur ? `${cur} ${word}` : word;
+      if (!cur || width(next) <= fw + 0.5) { cur = next; continue; }
+      lines.push(cur);
+      cur = word;
+    }
+    lines.push(cur);
+  }
+  const m = g.measureText('Hg');
+  const asc = m.fontBoundingBoxAscent ?? sizePx * 0.8;
+  const desc = m.fontBoundingBoxDescent ?? sizePx * 0.2;
+  const lh = sizePx * (e.lineHeight ?? 1.2);
+  const total = lines.length * lh;
+  const top = e.valign === 'middle' ? (fh - total) / 2 : e.valign === 'bottom' ? fh - total : 0;
+
+  g.save();
+  // move to the text frame's top-left corner (turned for rotated text)
+  g.translate(W / 2, H / 2);
+  if (rotated) g.rotate((e.rotate * Math.PI) / 180);
+  g.translate(-fw / 2, -fh / 2);
+  if (e.glow) { g.shadowColor = e.glow.color; g.shadowBlur = e.glow.blur * PX; }
+  g.fillStyle = e.color ?? '#000000';
+  if (e.gradient) {
+    const a = (((e.gradient.angle ?? 115) - 90) * Math.PI) / 180;
+    const r = Math.hypot(fw, fh) / 2;
+    const grad = g.createLinearGradient(fw / 2 - Math.cos(a) * r, fh / 2 - Math.sin(a) * r, fw / 2 + Math.cos(a) * r, fh / 2 + Math.sin(a) * r);
+    e.gradient.stops.forEach((col, i) => grad.addColorStop(i / (e.gradient.stops.length - 1), col.length === 9 ? col.slice(0, 7) : col));
+    g.fillStyle = grad;
+  }
+  g.globalAlpha = e.alpha ?? 1;
+  lines.forEach((line, i) => {
+    const lw = width(line);
+    const x = e.align === 'center' ? (fw - lw) / 2 : e.align === 'right' ? fw - lw : 0;
+    g.fillText(line, x, top + i * lh + (lh - (asc + desc)) / 2 + asc);
+  });
+  if (e.fillImage) {
+    // the photo shows through the letters (background-size: cover over the text frame)
+    try {
+      const img = await loadImage(e.fillImage);
+      const k = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+      const iw = img.naturalWidth * k;
+      const ih = img.naturalHeight * k;
+      g.globalCompositeOperation = 'source-in';
+      g.globalAlpha = 1;
+      g.shadowBlur = 0;
+      g.drawImage(img, (fw - iw) / 2, (fh - ih) / 2, iw, ih);
+    } catch { /* keeps the ink colour */ }
+  }
+  g.restore();
+  return { data: c.toDataURL('image/png'), x: e.x - pad / PX, y: e.y - pad / PX, w: W / PX, h: H / PX };
+}
+
 // ---------------------------------------------------------------- elements
 
 function addText(slide, e) {
@@ -112,7 +210,7 @@ function addText(slide, e) {
   const gradientColor = e.gradient ? col(e.gradient.stops[0]) : null;
   const opts = {
     x: e.x, y: e.y, w: e.w, h: e.h,
-    fontFace: f.office, fontSize: e.size,
+    fontFace: OFFICE_STAND_IN[e.font] ?? f.office, fontSize: e.size,
     color: (gradientColor ?? fill).color, transparency: fill.transparency,
     bold: !!e.bold || (f.weight ?? 400) >= 600, italic: !!e.italic,
     align: e.align ?? 'left', valign: e.valign ?? 'top',
@@ -177,18 +275,23 @@ export async function exportPptx(deck, { onProgress } = {}) {
   pptx.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 in, the canvas the slides are laid out on
   pptx.title = deck.deck.title;
   pptx.author = deck.deck.author ?? '';
-  pptx.company = 'Made with Deck App';
+  pptx.company = 'Made with Unprompted';
   const total = deck.slides.length;
   for (let i = 0; i < total; i++) {
     const { els } = deck.slides[i];
     const slide = pptx.addSlide();
     slide.background = { data: await backgroundPicture(els) };
+    const pictured = [];
     const bgIndex = els.findIndex((e) => e.type === 'rect' && e.w >= SLIDE_W - 0.01 && e.h >= SLIDE_H - 0.01);
     for (let k = 0; k < els.length; k++) {
       const e = els[k];
       if (k === bgIndex || e.type === 'svg' || (e.type === 'ellipse' && e.soft)) continue; // already in the background picture
       try {
-        if (e.type === 'text') addText(slide, e);
+        if (exportsAsPicture(e)) {
+          const pic = await textPicture(e);
+          slide.addImage({ ...pic, altText: e.text });
+          pictured.push(e.text.replace(/\s+/g, ' '));
+        } else if (e.type === 'text') addText(slide, e);
         else if (e.type === 'rect') addShape(pptx, slide, e, false);
         else if (e.type === 'ellipse') addShape(pptx, slide, e, true);
         else if (e.type === 'line' || e.type === 'arrow') addLine(pptx, slide, e);
@@ -198,6 +301,8 @@ export async function exportPptx(deck, { onProgress } = {}) {
         console.warn('export: element skipped', e.type, err);
       }
     }
+    // the words of headlines drawn as pictures, so they can still be copied and edited
+    if (pictured.length) slide.addNotes(`Text on this slide drawn as pictures (in the look's own font):\n${pictured.join('\n')}`);
     onProgress?.(i + 1, total);
   }
   const safe = (deck.deck.shortTitle ?? deck.deck.title ?? 'Deck').replace(/[^\p{L}\p{N} _-]+/gu, '').trim().slice(0, 60) || 'Deck';
@@ -216,5 +321,6 @@ export async function exportPptx(deck, { onProgress } = {}) {
 /** The free fonts a deck uses that are not part of Office (recipients may need to install them). */
 export function bundledFontsOf(deck) {
   const used = new Set(deck.slides.flatMap((s) => s.els.filter((e) => e.type === 'text').map((e) => e.font)));
-  return [...used].filter((k) => FONTS[k]?.embed).map((k) => ({ name: FONTS[k].office, file: `fonts/${FONTS[k].file}` }));
+  // display faces are pictures and Manrope becomes Arial, so nothing needs installing any more
+  return [...used].filter((k) => FONTS[k]?.embed && !AS_PICTURE.has(k) && !OFFICE_STAND_IN[k]).map((k) => ({ name: FONTS[k].office, file: `fonts/${FONTS[k].file}` }));
 }

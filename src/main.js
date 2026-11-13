@@ -9,7 +9,7 @@ import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
 import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
 import { attachPictures } from './engine/pictures.js';
 import { occasionById } from './library/occasions.js';
-import { exportPptx, bundledFontsOf } from './export/pptx.js';
+import { exportPptx, bundledFontsOf, exportsAsPicture } from './export/pptx.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -145,7 +145,10 @@ async function downloadPptx() {
   try {
     const name = await exportPptx(deck, { onProgress: (d, t) => { note.textContent = `Preparing the PowerPoint file: slide ${d} of ${t}…`; } });
     const fonts = bundledFontsOf(deck);
-    note.replaceChildren(document.createTextNode(`Downloaded “${name}”. All text stays editable. `));
+    const pictured = deck.slides.some((sl) => sl.els.some(exportsAsPicture));
+    note.replaceChildren(document.createTextNode(pictured
+      ? `Downloaded “${name}”. Headlines in this look's special fonts are pictures, so they look exactly like the preview on any computer (their words are in the speaker notes); all other text is editable. `
+      : `Downloaded “${name}”. All text stays editable. `));
     if (fonts.length) {
       note.append(document.createTextNode('This deck uses free fonts that are not part of Office; install them on the presenting computer: '));
       fonts.forEach((f, i) => {
@@ -200,7 +203,7 @@ function setBusy(on, phase = 'writing') {
   btn.querySelector('.label').textContent = !on ? 'Show three directions' : phase === 'pictures' ? 'Finding pictures…' : 'Writing your slides…';
   $('busy-note').hidden = !on;
   $('busy-note').textContent = phase === 'pictures'
-    ? 'Looking for freely licensed photos on Wikimedia Commons. Each one is credited on its slide and in Works Cited.'
+    ? 'Looking for photos on Unsplash and Wikimedia Commons. Each one is credited on its slide and in Works Cited.'
     : 'Claude is writing the content of your slides. This usually takes under a minute.';
 }
 

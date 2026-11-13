@@ -24,7 +24,7 @@ What to produce:
 - deck: language (the two-letter code of the notes' language, e.g. "en" or "de"), title (a statement, up to 10 words), shortTitle (2 to 4 words, the topic), subtitle, author, course, date (empty strings if the notes don't say), worksCitedTitle (the usual heading for a list of sources in the notes' language, e.g. "Works Cited" or "Literaturverzeichnis"), posterWords (three single strong words from the topic), posterLines (up to five short facts of 2 to 5 words each, for small labels), placeShort (a place connected to the topic, or empty).
 - claims: the thesis (role "thesis", exactly one), background facts (role "context"), counter-arguments (role "counter"), the takeaway (role "takeaway"), other claims (role "claim").
 - definitions, figures (only numbers that appear in the notes), pairs (before/after or two forms of one thing), timelines (dated events in order), processes (steps in order), comparisons (two sides with up to three points each), quotes (exact wording from the notes), questions (role "hook" to open, "discussion" to close, "task" for an activity), pointLists (three or four parallel points), sources, pictureCaptions (up to three title and caption pairs that could go with pictures the student adds).
-- pictures: up to five photos that would make the slides vivid, most important first (the first becomes the cover). For each: search (a short English search term for the photo archive Wikimedia Commons that names one concrete, photographable subject from the notes: a place, building, landscape, object, artwork or historical figure, e.g. "Machu Picchu", "Lake Titicaca", "Ellesmere Chaucer"; never an abstract idea), kind ("landscape", "building" or "detail"), title (a headline statement in the language of the notes, saying what the picture shows about the topic), caption (one sentence in the language of the notes, using only facts from the notes). Leave the list empty if the topic has nothing photographable.
+- pictures: up to five photos that would make the slides vivid, most important first (the first becomes the cover). For each: search (a short English search term for the photo archive Wikimedia Commons that names one concrete, photographable subject from the notes: a place, building, landscape, object, artwork or historical figure, e.g. "Machu Picchu", "Lake Titicaca", "Ellesmere Chaucer"; never an abstract idea), kind ("landscape", "building", "detail", or "historical" for artworks, manuscripts, portraits and historical objects), title (a headline statement in the language of the notes, saying what the picture shows about the topic), caption (one sentence in the language of the notes, using only facts from the notes). Leave the list empty if the topic has nothing photographable.
 - year: the year a piece belongs to, or 0.`;
 
 export const userPrompt = (notes, occasionName) =>
@@ -85,7 +85,7 @@ const keepNumber = (t) => t.replace(/(\d)\s+(%|‰|°|€|\$|£|km|kg|m|cm|mm|h|
 
 // limits that keep every slide form readable at its minimum font size
 const L = { title: 90, deckTitle: 80, short: 40, claim: 190, note: 180, caption: 200, item: 95, head: 60, quote: 200, question: 150, value: 9, label: 60, term: 50, gloss: 60, defText: 260, source: 220 };
-const PICTURE_KINDS = new Set(['landscape', 'building', 'detail']);
+const PICTURE_KINDS = new Set(['landscape', 'building', 'detail', 'historical']);
 const yearOf = (v) => (num(v) > 0 ? num(v) : undefined);
 const weighted = (arr, i) => (i === 0 ? 3 : 2);
 

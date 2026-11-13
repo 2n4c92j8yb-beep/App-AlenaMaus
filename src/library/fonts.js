@@ -5,7 +5,8 @@
 // `factor` is the average character width in em, used for text fitting;
 // `capsFactor` the same for text in capitals (measured in the browser).
 // Poster and Glass fonts (`embed: true`) are not part of Office; they ship with the app
-// (fonts/, SIL Open Font License) and are embedded in exported files.
+// (fonts/, SIL Open Font License). In exported files the display faces become pictures
+// and Manrope becomes Arial (src/export/pptx.js), since PowerPoint does not have them.
 
 export const FONTS = {
   georgia:      { office: 'Georgia',            css: 'Georgia, "Times New Roman", serif',                     factor: 0.53, capsFactor: 0.575 },

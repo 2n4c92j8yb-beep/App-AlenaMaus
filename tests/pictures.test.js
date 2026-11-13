@@ -137,3 +137,98 @@ test('a Peru deck shows the found pictures in every look and cites each one', as
     }
   }
 });
+
+// ---------------------------------------------------------------- Unsplash
+
+import handler, { toPhoto, unsplashKey } from '../api/unsplash.js';
+
+const unsplashResult = (id, o = {}) => ({
+  id, width: o.width ?? 6000, height: o.height ?? 4000, created_at: '2019-05-14T10:00:00Z',
+  description: o.description ?? null, alt_description: o.alt ?? 'green mountains beside a river during daytime',
+  urls: { raw: `https://images.unsplash.com/photo-${id}?ixid=abc` },
+  user: { name: o.author ?? 'Willian Justen de Vasconcellos', links: { html: 'https://unsplash.com/@willianjusten' } },
+  links: { html: `https://unsplash.com/photos/${id}`, download_location: `https://api.unsplash.com/photos/${id}/download?ixid=abc` },
+});
+
+/** The app's server for /api/unsplash plus Commons, as the browser sees them. */
+function appFetch({ unsplash = true } = {}) {
+  const commons = fakeFetch();
+  const calls = [];
+  const f = async (url, o) => {
+    calls.push(url);
+    if (url.startsWith('/api/unsplash?track=')) return { ok: true, status: 204, json: async () => ({}) };
+    if (url.startsWith('/api/unsplash')) {
+      if (!unsplash) return { ok: false, status: 503, json: async () => ({ error: 'not set up' }) };
+      const q = new URLSearchParams(url.split('?')[1]).get('query');
+      const photos = q === 'ceviche' ? [] : [toPhoto(unsplashResult(`${q.length}-a`)), toPhoto(unsplashResult(`${q.length}-b`))];
+      return { ok: true, status: 200, json: async () => ({ photos }) };
+    }
+    return commons(url, o);
+  };
+  f.calls = calls;
+  return f;
+}
+
+test('an Unsplash result keeps what a slide and its MLA citation need', () => {
+  const p = toPhoto(unsplashResult('xyz'));
+  assert.equal(p.src, 'https://images.unsplash.com/photo-xyz?ixid=abc&w=1600&q=80&fm=jpg&fit=max');
+  assert.equal(p.h, 1067);
+  assert.equal(p.download, 'https://api.unsplash.com/photos/xyz/download?ixid=abc');
+});
+
+test('Unsplash first, Commons where Unsplash has nothing or for historical subjects', async () => {
+  const f = appFetch();
+  const searches = [...SEARCHES, { search: 'Machu Picchu', kind: 'historical', title: 'An old view', caption: '' }];
+  const out = await attachPictures({ items: [], pictureSearches: searches }, { fetch: f });
+  assert.match(out.coverImage.src, /images\.unsplash\.com/);
+  assert.match(out.coverImage.credit, /^Photo: Willian Justen de Vasconcellos · Unsplash$/);
+  assert.equal(out.coverImage.citation, 'Willian Justen de Vasconcellos. “Green mountains beside a river during daytime.” Unsplash, 14 May 2019, unsplash.com/photos/13-a.');
+  const srcs = out.mood.map((m) => m.src);
+  assert.ok(srcs.some((s) => /Ceviche/.test(s)), 'ceviche (nothing on Unsplash) comes from Commons');
+  assert.ok(srcs.at(-1).includes('Machu'), 'the historical subject comes from Commons');
+  assert.equal(new Set(srcs).size, srcs.length, 'no photo twice');
+  assert.equal(out.pictureSource, 'Unsplash and Wikimedia Commons');
+  const tracked = f.calls.filter((u) => u.includes('track='));
+  assert.equal(tracked.length, out.mood.filter((m) => /unsplash/.test(m.src)).length, 'each Unsplash photo used is reported');
+});
+
+test('without the Unsplash key the deck still gets Commons photos, asking Unsplash only once', async () => {
+  const f = appFetch({ unsplash: false });
+  const out = await attachPictures({ items: [], pictureSearches: SEARCHES }, { fetch: f });
+  assert.equal(out.mood.length, 5);
+  assert.ok(out.mood.every((m) => !/unsplash/.test(m.src)));
+  assert.ok(f.calls.filter((u) => u.startsWith('/api/unsplash')).length <= 2, 'two parallel searches at most');
+});
+
+test('the server keeps the key, validates input and passes Unsplash results on', async () => {
+  const run = async (query, env = 'k-123', upstream) => {
+    const saved = { key: process.env.UNSPLASH_ACCESS_KEY, fetch: globalThis.fetch };
+    if (env) process.env.UNSPLASH_ACCESS_KEY = env; else delete process.env.UNSPLASH_ACCESS_KEY;
+    const seen = [];
+    globalThis.fetch = async (url, o) => { seen.push({ url, auth: o?.headers?.Authorization }); return upstream ?? { ok: true, status: 200, json: async () => ({ results: [unsplashResult('a1'), unsplashResult('tall', { width: 1000, height: 3000 })] }) }; };
+    const res = { code: 0, body: null, headers: {}, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; }, end() { return this; }, setHeader(k, v) { this.headers[k] = v; } };
+    try { await handler({ method: 'GET', query }, res); } finally {
+      if (saved.key === undefined) delete process.env.UNSPLASH_ACCESS_KEY; else process.env.UNSPLASH_ACCESS_KEY = saved.key;
+      globalThis.fetch = saved.fetch;
+    }
+    return { res, seen };
+  };
+  let { res, seen } = await run({ query: 'Machu Picchu' });
+  assert.equal(res.code, 200);
+  assert.deepEqual(res.body.photos.map((p) => p.id), ['a1'], 'very tall photos are left out');
+  assert.equal(seen[0].auth, 'Client-ID k-123');
+  assert.ok(!JSON.stringify(res.body).includes('k-123'), 'the key never reaches the browser');
+  ({ res } = await run({ query: 'x' }, ''));
+  assert.equal(res.code, 503);
+  ({ res, seen } = await run({ track: 'https://evil.example/steal' }));
+  assert.equal(res.code, 400);
+  assert.equal(seen.length, 0);
+  ({ res, seen } = await run({ track: 'https://api.unsplash.com/photos/a1/download?ixid=abc' }));
+  assert.equal(res.code, 204);
+  ({ res } = await run({ query: 'x' }, 'k', { ok: false, status: 403, json: async () => ({}) }));
+  assert.equal(res.code, 403, 'hourly limit reached: the browser falls back to Commons');
+  process.env.UNSPLASH_KEY = ' "k-pasted" ';
+  delete process.env.UNSPLASH_ACCESS_KEY;
+  assert.equal(unsplashKey(), 'k-pasted');
+  delete process.env.UNSPLASH_KEY;
+});

@@ -1,4 +1,4 @@
-# App-AlenaMaus: Deck App (working title)
+# App-AlenaMaus: Unprompted
 
 A web app that turns notes into a presentation that doesn't look like
 everyone else's. Based on the idea overview "AI decks that don't look AI-made".
@@ -121,19 +121,34 @@ preview and the PowerPoint export draw from the same data.
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)
-5. PowerPoint export: done (fonts are linked, not embedded)
+5. PowerPoint export: done (display fonts as pictures, see below)
 
 ## Pictures for any topic
 
 The writing step also suggests up to five photographable subjects from the notes
-(e.g. "Machu Picchu", "Lake Titicaca"). `src/engine/pictures.js` looks each one up on
-Wikimedia Commons from the browser (no key needed) and keeps only free licences
-(CC0, public domain, CC BY, CC BY-SA), large photos and no maps, flags or logos.
+(e.g. "Machu Picchu", "Lake Titicaca"). `src/engine/pictures.js` looks each one up:
+
+- **Unsplash** first for landscapes, buildings and details, through `api/unsplash.js`
+  so the access key stays on the server (Vercel environment variable
+  `UNSPLASH_ACCESS_KEY`; `UNSPLASH_KEY`, `UNSPLASH_API_KEY` and `UNSPLASH_CLIENT_ID`
+  work too). Photos are hotlinked and each use is reported, as Unsplash's API
+  guidelines ask. A demo key allows 50 searches an hour; after that, Commons takes over.
+- **Wikimedia Commons** first for historical subjects (artworks, manuscripts,
+  portraits) and as the fallback: free licences only (CC0, public domain, CC BY,
+  CC BY-SA), large photos, no maps, flags or logos.
+
 The first photo becomes the cover, up to three more become picture slides, and all of
-them serve as mood photos in the Poster look (graded with a CSS filter that the
-PowerPoint export bakes in). Each photo has a credit line, and every photo the deck
-shows is cited in MLA style on the Works Cited slide. If Commons cannot be reached,
-the deck is made without pictures. Your own uploaded pictures still take priority.
+them serve as mood photos in the Poster look. Each photo has a credit line, and every
+photo the deck shows is cited in MLA style on the Works Cited slide. Without either
+service the deck is made without pictures; your own uploads still take priority.
+
+## PowerPoint export
+
+PowerPoint does not have the free fonts of the Poster and Glass looks and would swap in
+wider ones, so headlines ran off the slides. Text in a display face (Bebas Neue, Anton,
+Six Caps, Unbounded) is therefore exported as a sharp transparent picture drawn exactly
+like the preview, with its words in the alt text and speaker notes; body text in
+Manrope becomes editable Arial (almost identical widths); all other text stays editable.
 
 ## Run locally
 

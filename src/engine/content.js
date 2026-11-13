@@ -19,7 +19,7 @@ How to write:
 - Sources: one entry per source named in the notes, formatted in MLA style as far as the notes allow. No invented details.
 
 What to produce:
-- deck: title (a statement, up to 10 words), shortTitle (2 to 4 words, the topic), subtitle, author, course, date (empty strings if the notes don't say), posterWords (three single strong words from the topic), posterLines (up to five short facts of 2 to 5 words each, for small labels), placeShort (a place connected to the topic, or empty).
+- deck: title (a statement, up to 10 words), shortTitle (2 to 4 words, the topic), subtitle, author, course, date (empty strings if the notes don't say), worksCitedTitle (the usual heading for a list of sources in the notes' language, e.g. "Works Cited" or "Literaturverzeichnis"), posterWords (three single strong words from the topic), posterLines (up to five short facts of 2 to 5 words each, for small labels), placeShort (a place connected to the topic, or empty).
 - claims: the thesis (role "thesis", exactly one), background facts (role "context"), counter-arguments (role "counter"), the takeaway (role "takeaway"), other claims (role "claim").
 - definitions, figures (only numbers that appear in the notes), pairs (before/after or two forms of one thing), timelines (dated events in order), processes (steps in order), comparisons (two sides with up to three points each), quotes (exact wording from the notes), questions (role "hook" to open, "discussion" to close, "task" for an activity), pointLists (three or four parallel points), sources, pictureCaptions (up to three title and caption pairs that could go with pictures the student adds).
 - year: the year a piece belongs to, or 0.`;
@@ -46,7 +46,7 @@ ${userPrompt(notes, occasionName)}`;
 }
 
 const EXAMPLE_SHAPE = {
-  deck: { title: '', shortTitle: '', subtitle: '', author: '', course: '', date: '', posterWords: ['', '', ''], posterLines: [''], placeShort: '' },
+  deck: { title: '', shortTitle: '', subtitle: '', author: '', course: '', date: '', worksCitedTitle: '', posterWords: ['', '', ''], posterLines: [''], placeShort: '' },
   claims: [{ text: '', role: 'thesis', note: '' }],
   definitions: [{ term: '', gloss: '', text: '' }],
   figures: [{ title: '', value: '', label: '', caption: '', source: '', year: 0 }],
@@ -170,7 +170,7 @@ export function toPool(answer) {
   });
   const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, 10);
   // Works Cited is always there; with no sources in the notes it says so instead of inventing any
-  items.push({ kind: 'sources', weight: 3, title: 'Works Cited', entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
+  items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || 'Works Cited', entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
 
   if (items.filter((it) => it.kind !== 'sources').length < 3) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
   if (!thesisSeen) {
@@ -184,7 +184,7 @@ export function toPool(answer) {
     title,
     shortTitle,
     subtitle: clip(d.subtitle, 90) || shortTitle,
-    author: clip(d.author, 60) || 'Your Name',
+    author: clip(d.author, 60), // left empty when the notes don't name one, rather than an English placeholder
     course: clip(d.course, 80),
     date: clip(d.date, 40),
     posterWords: words.length ? words : shortTitle.split(' ').slice(0, 3),

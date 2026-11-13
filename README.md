@@ -26,6 +26,15 @@ Poster fonts (Anton, Bebas Neue, Six Caps) are in `fonts/` under the SIL Open
 Font License. Sample photos are from Wikimedia Commons (see
 `src/sample/photos/credits.json`); every photo shown is cited on the Works Cited slide.
 
+## App interface
+
+Calm "gallery" shell so the decks are the stars: palette snow `#F7F7F7`, mist `#C8CED6`,
+sand `#D4CAC5`, heather `#736A86`, night `#272A3B`; Manrope; round forms (pills, 14–30px
+radii); short, calm transitions (view cross-fades, sliding look switch, cards rising in).
+Start screen shows real covers from the three looks. Present mode: full-screen slide,
+controls that fade while presenting, progress bar, swipe, overview grid (G), rotate hint
+on phones. All motion stops under "reduce motion".
+
 ## How variety is created
 
 The variety does not come from the AI model. Ordinary code samples from a

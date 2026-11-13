@@ -72,10 +72,12 @@ export function text(ctx, role, str, box, o = {}) {
   const bold = o.bold ?? (isDisplay && !!ctx.L.boldDisplay);
   const tracking = o.tracking ?? 0;
   const rotated = o.rotate === 90 || o.rotate === -90;
+  // Unbounded's figures are much wider than its letters: numbers like "40.5%" need more room
+  const digitHeavy = key === 'unbounded' && /^[\d\s.,%+\-–/:]+$/.test(content);
   // letter spacing widens every character; rotated text runs along the box's height
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
     max: o.max, min: o.min ?? Math.round(o.max * 0.6),
-    factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1),
+    factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
     lineHeight, maxLines: o.maxLines ?? Infinity,
   });
   const el = {

@@ -5,6 +5,8 @@ import { buildDirections } from './engine/build.js';
 import { renderSlide } from './render/html.js';
 import { playSlide, transition, hasGsap } from './render/present.js';
 import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
+import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
+import { occasionById } from './library/occasions.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -25,6 +27,9 @@ const state = {
   openIndex: null,
   uploads: [],      // { src, w, h, name } — the user's own pictures, kept in memory only
   present: null,    // { deck, index }
+  pool: null,       // the content written from the user's notes (null: the sample)
+  poolKey: '',      // notes + occasion the pool was written for
+  busy: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -32,7 +37,10 @@ const $ = (id) => document.getElementById(id);
 function init() {
   $('notes').value = SAMPLE_NOTES;
   renderOccasions();
-  $('input-form').addEventListener('submit', (e) => { e.preventDefault(); generate(true); });
+  $('input-form').addEventListener('submit', (e) => { e.preventDefault(); write(); });
+  $('copy-prompt').addEventListener('click', copyPrompt);
+  $('use-answer').addEventListener('click', useAnswer);
+  $('show-fallback').addEventListener('click', () => openFallback(''));
   document.querySelectorAll('[data-density]').forEach((b) => b.addEventListener('click', () => { state.density = b.dataset.density; generate(); }));
   document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; generate(); }));
   document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; generate(); }));
@@ -105,15 +113,85 @@ function renderThumbs() {
 
 // The user's pictures take the place of the sample pictures, in order.
 function currentPool() {
-  if (!state.uploads.length) return SAMPLE_POOL;
+  const base = state.pool ?? SAMPLE_POOL;
+  if (!state.uploads.length) return base;
   const ups = [...state.uploads];
-  const own = (u) => ({
-    src: u.src, w: u.w, h: u.h, alt: u.name, credit: 'Your own picture',
-    title: u.name, caption: 'Once the AI step is connected, the caption comes from your notes.',
-  });
-  const items = SAMPLE_POOL.items.map((it) => (it.kind === 'image' && ups.length ? { ...it, ...own(ups.shift()), citation: undefined } : it));
-  const coverImage = ups.length ? { ...own(ups.shift()), citation: undefined } : SAMPLE_POOL.coverImage;
-  return { ...SAMPLE_POOL, items, coverImage };
+  const captions = [...(base.pictureCaptions ?? [])];
+  const own = (u) => {
+    const c = captions.shift();
+    return { src: u.src, w: u.w, h: u.h, alt: c?.title ?? u.name, credit: 'Your own picture', title: c?.title ?? u.name, caption: c?.caption ?? '' };
+  };
+  // the user's pictures take the place of the sample pictures; with written content they are added as picture slides
+  let items = base.items.map((it) => (it.kind === 'image' && ups.length ? { ...it, ...own(ups.shift()), citation: undefined } : it));
+  if (base.generated) items = [...items, ...ups.splice(0, 2).map((u) => ({ kind: 'image', tags: ['evidence'], weight: 2, ...own(u) }))];
+  const coverImage = ups.length ? { ...own(ups.shift()), citation: undefined } : base.coverImage;
+  return { ...base, items, coverImage };
+}
+
+// ---------- writing step ----------
+
+const notesKey = () => `${state.occasionId}|${$('notes').value.trim()}`;
+const isSample = () => $('notes').value.trim() === SAMPLE_NOTES.trim();
+
+/** Turn the notes into content (server, Claude), then show three directions. */
+async function write() {
+  if (state.busy) return;
+  hideFallback();
+  if (isSample()) { state.pool = null; state.poolKey = ''; generate(true); return; }
+  if (state.pool && state.poolKey === notesKey()) { generate(true); return; }
+  setBusy(true);
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: $('notes').value, occasion: state.occasionId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `The writing step failed (${res.status}).`);
+    if (!data.pool?.items?.length) throw new Error('The server sent no slide content.');
+    state.pool = data.pool; // already cleaned on the server with the same rules (toPool)
+    state.poolKey = notesKey();
+    setBusy(false);
+    generate(true);
+  } catch (err) {
+    setBusy(false);
+    openFallback(err.message === 'Failed to fetch' ? 'The app could not reach the server.' : err.message);
+  }
+}
+
+function setBusy(on) {
+  state.busy = on;
+  const btn = $('submit-btn');
+  btn.disabled = on;
+  btn.classList.toggle('is-busy', on);
+  btn.querySelector('.label').textContent = on ? 'Writing your slides…' : 'Show three directions';
+  $('busy-note').hidden = !on;
+}
+
+function openFallback(message) {
+  $('fallback').hidden = false;
+  $('fallback-error').textContent = message ? `${message} You can still make the deck with your own Claude:` : 'Make the deck with your own Claude:';
+  $('fallback-prompt').value = copyPastePrompt($('notes').value.trim(), occasionById(state.occasionId).name);
+  $('fallback-answer').value = '';
+  $('fallback-status').textContent = '';
+  $('fallback').scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
+}
+const hideFallback = () => { $('fallback').hidden = true; };
+
+async function copyPrompt() {
+  const box = $('fallback-prompt');
+  try { await navigator.clipboard.writeText(box.value); $('fallback-status').textContent = 'Prompt copied. Paste it into Claude, then paste the answer below.'; }
+  catch { box.select(); $('fallback-status').textContent = 'Select the prompt and copy it (Ctrl or Cmd + C).'; }
+}
+
+function useAnswer() {
+  try {
+    state.pool = toPool(parseAnswer($('fallback-answer').value));
+    state.poolKey = notesKey();
+    hideFallback();
+    generate(true);
+  } catch (err) {
+    $('fallback-status').textContent = `That answer could not be used: ${err.message}`;
+  }
 }
 
 // ---------- views ----------

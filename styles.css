@@ -145,6 +145,18 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 
 .actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
+/* writing step */
+.btn.is-busy { cursor: progress; }
+.btn.is-busy .arrow { display: inline-block; animation: busy 1.1s linear infinite; }
+@keyframes busy { 50% { opacity: 0.25; } }
+.btn-primary:disabled { opacity: 0.85; }
+.fallback { display: grid; gap: 12px; padding: 20px; border-radius: var(--r-m); background: rgba(212, 202, 197, 0.35); border: 1px solid var(--line); }
+.fallback h3 { margin: 0; font: 700 1.05rem var(--font-ui); }
+.fallback-steps { margin: 0; padding-left: 22px; display: grid; gap: 16px; }
+.fallback-steps li { display: grid; gap: 8px; }
+.fallback-steps textarea { min-height: 110px; font-size: 0.88rem; }
+.fallback-steps .btn { justify-self: start; }
+
 /* ---------- buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;

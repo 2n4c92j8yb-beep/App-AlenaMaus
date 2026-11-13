@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Deck App</title>
+  <meta name="description" content="Turn notes into a presentation that doesn't look like everyone else's.">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#results">Skip to results</a>
+
+  <header class="app-header">
+    <div class="wrap header-row">
+      <p class="wordmark">Deck App <span class="wordmark-note">working title</span></p>
+      <p class="stage-note">Preview, step 1 of 4: design library</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro" aria-labelledby="intro-title">
+      <h1 id="intro-title">Three decks from the same notes, none of them average.</h1>
+      <p class="lede">Paste your notes, say what the presentation is for, and choose between three directions that differ in story and look. Every slide stays editable when you export it.</p>
+    </section>
+
+    <form class="input-panel" id="input-form" aria-label="Your content">
+      <div class="field">
+        <label for="notes" class="field-label">1 &nbsp;Your notes</label>
+        <textarea id="notes" name="notes" rows="9" spellcheck="true"></textarea>
+        <p class="field-help" id="notes-help">
+          <strong>Preview limitation:</strong> the AI step is not connected yet (that's step 2), so the decks below always use the sample content on the Great Vowel Shift. Your text stays in this box for later.
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="pictures" class="field-label">Pictures <span class="optional">(optional)</span></label>
+        <div class="upload-row">
+          <input type="file" id="pictures" accept="image/*" multiple>
+          <button type="button" class="btn btn-link" id="clear-pictures" hidden>Remove my pictures</button>
+        </div>
+        <p class="field-help" id="pictures-help">Your own photos are used in the decks. Without them, the preview uses public-domain pictures from Wikimedia Commons, credited in Works Cited. Pictures stay on your device.</p>
+        <ul class="thumbs" id="thumbs" aria-label="Your pictures"></ul>
+      </div>
+
+      <fieldset class="field">
+        <legend class="field-label">2 &nbsp;What is it for?</legend>
+        <div class="occasions" id="occasions"></div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Show three directions</button>
+      </div>
+    </form>
+
+    <section id="results" class="results" aria-labelledby="results-title" hidden>
+      <div class="results-head">
+        <h2 id="results-title">3 &nbsp;Pick a direction</h2>
+        <div class="adjust" role="group" aria-label="Adjust all directions">
+          <div class="seg" role="group" aria-label="Look">
+            <span class="seg-label" aria-hidden="true">Look</span>
+            <button type="button" data-family="poster">Poster <em class="new">new</em></button>
+            <button type="button" data-family="editorial">Editorial</button>
+          </div>
+          <div class="seg" role="group" aria-label="Amount of content">
+            <span class="seg-label" aria-hidden="true">Content</span>
+            <button type="button" data-density="light">Lighter</button>
+            <button type="button" data-density="medium">Balanced</button>
+            <button type="button" data-density="dense">Denser</button>
+          </div>
+          <div class="seg" role="group" aria-label="Tone">
+            <span class="seg-label" aria-hidden="true">Tone</span>
+            <button type="button" data-formality="formal">Formal</button>
+            <button type="button" data-formality="neutral">Neutral</button>
+            <button type="button" data-formality="relaxed">Relaxed</button>
+          </div>
+          <button type="button" class="btn btn-secondary" id="reroll">Three new directions</button>
+        </div>
+      </div>
+      <p class="sr-only" aria-live="polite" id="status"></p>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section id="detail" class="detail" aria-labelledby="detail-title" hidden>
+      <div class="detail-head">
+        <button type="button" class="btn btn-link" id="back">&larr; All three directions</button>
+        <div class="detail-title-row">
+          <div>
+            <h2 id="detail-title"></h2>
+            <p class="detail-meta" id="detail-meta"></p>
+          </div>
+          <div class="export">
+            <div class="export-buttons">
+              <button type="button" class="btn btn-primary" id="present">Present</button>
+              <button type="button" class="btn btn-secondary" disabled aria-describedby="export-note">Download PowerPoint</button>
+            </div>
+            <p class="field-help" id="export-note">PowerPoint export, with the same transitions, arrives in step 3.</p>
+          </div>
+        </div>
+        <p class="check" id="detail-check"></p>
+      </div>
+      <ol class="slide-list" id="slide-list"></ol>
+    </section>
+  </main>
+
+  <div class="presenter" id="presenter" role="dialog" aria-modal="true" aria-label="Presentation" hidden>
+    <div class="presenter-stage" id="stage"></div>
+    <div class="presenter-bar">
+      <button type="button" class="pbtn" id="p-prev" aria-label="Previous slide">&larr;</button>
+      <span class="pcount" id="p-count" aria-live="polite"></span>
+      <button type="button" class="pbtn" id="p-next" aria-label="Next slide">&rarr;</button>
+      <button type="button" class="pbtn pclose" id="p-close">Close</button>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="wrap"><p>Sample content: Great Vowel Shift (English studies). Fonts are ones that ship with Microsoft Office, so exported decks look the same on other computers. On iPad, similar fonts stand in for the preview.</p></div>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

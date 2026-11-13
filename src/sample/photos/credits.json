@@ -1,0 +1,57 @@
+{
+ "corona": {
+  "file": "File:Top of The Corona from the south, Canterbury Cathedral, 2019.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Top_of_The_Corona_from_the_south,_Canterbury_Cathedral,_2019.jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "artist": "DimiTalen",
+  "size": [
+   1920,
+   1277
+  ]
+ },
+ "cathedral": {
+  "file": "File:Canterbury cathedral 20160901.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Canterbury_cathedral_20160901.jpg",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "artist": "Suicasmo",
+  "size": [
+   1920,
+   1280
+  ]
+ },
+ "letterpress": {
+  "file": "File:Weldon Spring letterpress (Unsplash).jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Weldon_Spring_letterpress_(Unsplash).jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "artist": "Rodney Truitt Jr rodneytruittjr",
+  "size": [
+   1920,
+   1280
+  ]
+ },
+ "nave": {
+  "file": "File:Canterbury Cathedral Nave 1, Kent, UK - Diliff.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Canterbury_Cathedral_Nave_1,_Kent,_UK_-_Diliff.jpg",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "artist": "Diliff",
+  "size": [
+   1920,
+   1825
+  ]
+ },
+ "london": {
+  "file": "File:London Skyline (232548719).jpeg",
+  "page": "https://commons.wikimedia.org/wiki/File:London_Skyline_(232548719).jpeg",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+  "artist": "William Warby",
+  "size": [
+   1920,
+   1295
+  ]
+ }
+}

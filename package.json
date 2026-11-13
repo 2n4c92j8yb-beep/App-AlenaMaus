@@ -1,0 +1,11 @@
+{
+  "name": "deck-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Turns notes into presentations that don't look AI-made.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}

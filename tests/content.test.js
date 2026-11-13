@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toPool, parseAnswer, copyPastePrompt, clip } from '../src/engine/content.js';
 import { buildDirections } from '../src/engine/build.js';
 import { OCCASIONS } from '../src/library/occasions.js';
-import { writeDeck, AnswerSchema, MODEL } from '../api/generate.js';
+import { writeDeck, MODEL } from '../api/generate.js';
 
 // A realistic answer, in the shape the model returns.
 const ANSWER = {
@@ -32,8 +32,7 @@ const ANSWER = {
 
 const long = (n, word = 'Langwort') => Array.from({ length: n }, (_, i) => `${word}${i % 7}`).join(' ');
 
-test('the answer schema accepts a realistic answer', () => {
-  assert.ok(AnswerSchema.safeParse(ANSWER).success);
+test('the server uses the default model', () => {
   assert.equal(MODEL, 'claude-opus-5-5');
 });
 
@@ -83,15 +82,18 @@ test('copy-paste fallback: the prompt carries the notes, and pasted answers are 
   assert.equal(clip('one two three four five', 12), 'one two…');
 });
 
-test('the server asks Claude with structured output and the fallback, and handles refusals', async () => {
+test('the server asks Claude for JSON with the fallback on, and handles refusals and bad answers', async () => {
   let sent;
-  const fake = (reply) => ({ beta: { messages: { parse: async (params) => { sent = params; return reply; } } } });
-  const pool = await writeDeck('notes '.repeat(20), 'seminar', fake({ stop_reason: 'end_turn', parsed_output: ANSWER }));
+  const fake = (reply) => ({ beta: { messages: { create: async (params) => { sent = params; return reply; } } } });
+  const text = (t, stop = 'end_turn') => ({ stop_reason: stop, content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: t }] });
+  const pool = await writeDeck('notes '.repeat(20), 'seminar', fake(text('```json\n' + JSON.stringify(ANSWER) + '\n```')));
   assert.equal(pool.title, ANSWER.deck.title);
   assert.equal(sent.model, 'claude-opus-5-5');
   assert.equal(sent.fallbacks, 'default');
   assert.ok(sent.betas.includes('server-side-fallback-2026-07-01'));
-  assert.equal(sent.output_config.format.type, 'json_schema');
-  await assert.rejects(writeDeck('notes', 'seminar', fake({ stop_reason: 'refusal', parsed_output: null })), /declined/);
-  await assert.rejects(writeDeck('notes', 'seminar', fake({ stop_reason: 'max_tokens', parsed_output: null })), /too much content/);
+  assert.equal(sent.output_config.effort, 'low');
+  assert.ok(sent.system.includes('"claims"'));
+  await assert.rejects(writeDeck('notes', 'seminar', fake(text('', 'refusal'))), /declined/);
+  await assert.rejects(writeDeck('notes', 'seminar', fake(text('{"deck":', 'max_tokens'))), /too much content/);
+  await assert.rejects(writeDeck('notes', 'seminar', fake(text('Sorry, no JSON here.'))), /could not be read/);
 });

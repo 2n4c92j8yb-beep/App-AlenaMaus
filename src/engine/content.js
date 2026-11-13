@@ -27,6 +27,14 @@ What to produce:
 export const userPrompt = (notes, occasionName) =>
   `Occasion: ${occasionName}\n\nNotes:\n"""\n${notes}\n"""`;
 
+/** The system prompt for the server: the writing rules plus the JSON shape to answer in. */
+export function jsonPrompt() {
+  return `${SYSTEM_PROMPT}
+
+Answer with JSON only, no other text, in exactly this shape (fill in your content; leave lists empty when the notes don't support them):
+${JSON.stringify(EXAMPLE_SHAPE, null, 1)}`;
+}
+
 /** The full prompt for the copy-paste fallback (the user runs it in their own Claude). */
 export function copyPastePrompt(notes, occasionName) {
   return `${SYSTEM_PROMPT}

@@ -9,7 +9,6 @@
     "start": "python3 -m http.server 8080"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
-    "zod": "^4.6.7"
+    "@anthropic-ai/sdk": "^1.8.0"
   }
 }

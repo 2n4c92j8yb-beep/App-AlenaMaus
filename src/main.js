@@ -3,6 +3,7 @@
 import { OCCASIONS } from './library/occasions.js';
 import { buildDirections } from './engine/build.js';
 import { renderSlide } from './render/html.js';
+import { playSlide, transition, hasGsap } from './render/present.js';
 import { SAMPLE_NOTES, SAMPLE_POOL } from './sample/great-vowel-shift.js';
 
 const FORM_LABELS = {
@@ -180,10 +181,12 @@ function setupStage() {
 
 function startPresenting(deck) {
   if (!deck) return;
-  state.present = { deck, index: 0, opener: document.activeElement, dir: 1 };
+  state.present = { deck, index: 0, opener: document.activeElement, dir: 1, ctl: null };
   $('presenter').hidden = false;
+  $('presenter').classList.toggle('has-gsap', hasGsap());
   $('p-overview').hidden = true;
   $('p-grid-btn').setAttribute('aria-pressed', 'false');
+  $('stage').replaceChildren();
   document.body.style.overflow = 'hidden';
   $('presenter').requestFullscreen?.().catch(() => {});
   showSlide();
@@ -191,25 +194,50 @@ function startPresenting(deck) {
   $('p-next').focus();
 }
 
-function showSlide() {
-  const { deck, index, dir } = state.present;
+/** Show the current slide. `complete` skips the builds (going back, or jumping from the overview). */
+function showSlide(complete = false) {
+  const p = state.present;
+  const { deck, index, dir } = p;
   const sl = deck.slides[index];
+  p.ctl?.stop();
   const frame = renderSlide(sl.els, { present: true, label: `Slide ${index + 1} of ${deck.slides.length}: ${FORM_LABELS[sl.form]}` });
   if (dir < 0) frame.classList.add('from-left');
-  $('stage').replaceChildren(frame);
+  const stage = $('stage');
+  [...stage.children].slice(0, -1).forEach((n) => n.remove()); // a transition still running: drop its old frame
+  const old = stage.lastElementChild;
+  stage.append(frame);
+  if (hasGsap()) transition(old, frame, deck.direction.family ?? 'editorial', dir);
+  else old?.remove();
+  p.ctl = playSlide(frame, sl, { complete });
   $('p-count').textContent = `${index + 1} / ${deck.slides.length}`;
   $('p-progress').style.width = `${((index + 1) / deck.slides.length) * 100}%`;
   $('p-prev').disabled = index === 0;
-  $('p-next').disabled = index === deck.slides.length - 1;
+  $('p-next').disabled = index === deck.slides.length - 1 && !(p.ctl.remaining?.() > 0);
 }
 
-function goTo(n) {
+function goTo(n, { complete = false } = {}) {
   if (!state.present || n < 0 || n >= state.present.deck.slides.length || n === state.present.index) return;
   state.present.dir = n > state.present.index ? 1 : -1;
   state.present.index = n;
-  showSlide();
+  showSlide(complete);
 }
-const step = (d) => goTo((state.present?.index ?? 0) + d);
+
+/** Forward reveals the slide's next build first; back always shows the previous slide complete. */
+function step(d) {
+  const p = state.present;
+  if (!p) return;
+  if (d > 0 && p.ctl?.next()) {
+    $('p-next').disabled = p.index === p.deck.slides.length - 1 && !(p.ctl.remaining?.() > 0);
+    return;
+  }
+  goTo(p.index + d, { complete: d < 0 });
+}
+
+/** Show the rest of the current slide at once. */
+function revealAll() {
+  state.present?.ctl?.finish();
+  if (state.present) $('p-next').disabled = state.present.index === state.present.deck.slides.length - 1;
+}
 
 function toggleOverview(force) {
   if (!state.present) return;
@@ -227,7 +255,7 @@ function toggleOverview(force) {
     b.setAttribute('aria-label', `Slide ${n + 1}: ${FORM_LABELS[sl.form] ?? sl.form}`);
     const cap = Object.assign(document.createElement('span'), { textContent: `${String(n + 1).padStart(2, '0')}  ${FORM_LABELS[sl.form] ?? sl.form}` });
     b.append(renderSlide(sl.els), cap);
-    b.addEventListener('click', () => { toggleOverview(false); goTo(n); });
+    b.addEventListener('click', () => { toggleOverview(false); goTo(n, { complete: true }); });
     li.append(b);
     return li;
   }));
@@ -237,6 +265,7 @@ function toggleOverview(force) {
 function stopPresenting() {
   if (!state.present) return;
   const opener = state.present.opener;
+  state.present.ctl?.stop();
   state.present = null;
   clearTimeout(idleTimer);
   $('presenter').hidden = true;
@@ -252,10 +281,11 @@ function onKey(e) {
   if (e.key === 'Escape') { if (!$('p-overview').hidden) toggleOverview(false); else stopPresenting(); return; }
   if (e.key === 'g' || e.key === 'o') { e.preventDefault(); toggleOverview(); return; }
   if (!$('p-overview').hidden) return;
-  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); step(1); }
+  if ((e.key === 'ArrowRight' && e.shiftKey) || e.key === 's') { e.preventDefault(); revealAll(); }
+  else if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); step(1); }
   else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); step(-1); }
-  else if (e.key === 'Home') goTo(0);
-  else if (e.key === 'End') goTo(state.present.deck.slides.length - 1);
+  else if (e.key === 'Home') goTo(0, { complete: true });
+  else if (e.key === 'End') goTo(state.present.deck.slides.length - 1, { complete: true });
 }
 
 // ---------- input ----------

@@ -53,6 +53,20 @@ Start screen shows real covers from the three looks. Present mode: full-screen s
 controls that fade while presenting, progress bar, swipe, overview grid (G), rotate hint
 on phones. All motion stops under "reduce motion".
 
+## Present mode
+
+`src/render/present.js` choreographs every slide with GSAP 3.13 (`vendor/gsap.min.js`,
+GreenSock standard license, free including commercial use): one entrance per slide (the
+headline leads, support follows with shrinking gaps, decoration only fades), then one click
+per step where order carries meaning (process steps, timeline events, list points, the
+second side of a comparison). Timeline bars grow along the time axis, key figures count up,
+quotes and statements sharpen into focus, poster photos settle from a slight zoom. Slide
+transitions follow the look: blur cross-fade (Glass), hard cut (Poster), slide-over
+(Editorial, Texture). One ambient motion per slide at most. Back shows the previous slide
+complete; Shift+→ or S shows the rest of a slide at once; a click mid-animation finishes it.
+Under "reduce motion" everything appears without movement. Without GSAP, a CSS build is
+the fallback.
+
 ## How variety is created
 
 The variety does not come from the AI model. Ordinary code samples from a

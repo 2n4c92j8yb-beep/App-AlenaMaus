@@ -19,6 +19,12 @@ export function renderSlide(els, { label, present = false } = {}) {
     if (node.nodeType === 1) {
       node.dataset.seq = String(el.seq ?? 0);
       node.style.setProperty('--seq', String(el.seq ?? 0));
+      // what Present mode needs to choreograph the slide (present.js)
+      node.dataset.type = el.type;
+      if (el.role) node.dataset.role = el.role;
+      if (el.soft) node.dataset.soft = '1';
+      if (el.mood) node.dataset.mood = '1';
+      if (el.type === 'text') node.dataset.size = String(el.size);
     }
     slide.append(node);
   }

@@ -35,8 +35,11 @@ export const AnswerSchema = z.object({
   pictureCaptions: z.array(z.object({ title: S, caption: S })),
 });
 
+/** The key from the environment, without stray spaces or quotes that come along when pasting. */
+export const apiKey = () => String(process.env.ANTHROPIC_API_KEY ?? '').trim().replace(/^["']|["']$/g, '');
+
 /** Ask Claude for the deck content. `client` is injectable for tests. */
-export async function writeDeck(notes, occasionId, client = new Anthropic()) {
+export async function writeDeck(notes, occasionId, client = new Anthropic({ apiKey: apiKey() })) {
   const occasion = occasionById(occasionId);
   const response = await client.beta.messages.parse({
     model: MODEL,
@@ -72,7 +75,13 @@ function limited(ip) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Use POST.' }); return; }
-  if (!process.env.ANTHROPIC_API_KEY) { res.status(503).json({ error: 'The writing step is not set up on this server yet.' }); return; }
+  if (!apiKey()) { res.status(503).json({ error: 'The writing step is not set up on this server yet.' }); return; }
+  if (!apiKey().startsWith('sk-ant-api')) {
+    // only the public prefix is checked; the key itself is never logged or returned
+    console.error('generate: ANTHROPIC_API_KEY does not start with sk-ant-api');
+    res.status(503).json({ error: 'The key on the server does not look like an Anthropic API key (it should start with sk-ant-api).' });
+    return;
+  }
   const { notes, occasion } = req.body ?? {};
   const text = typeof notes === 'string' ? notes.trim() : '';
   if (text.length < 40) { res.status(400).json({ error: 'Add a few more notes first (at least a couple of lines).' }); return; }

@@ -96,6 +96,8 @@ button:disabled { cursor: not-allowed; }
 @media (min-width: 768px) { .input-panel { padding: 36px; } }
 .field { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
 .field-label { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; padding: 0; }
+/* a legend is not a grid item, so the field's gap does not reach it */
+legend.field-label { margin-bottom: 14px; }
 .step { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--night); color: var(--snow); font: 600 0.78rem var(--font-mono); }
 .step-soft { background: var(--mist); color: var(--night); }
 .optional { font: 500 0.72rem var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--heather); }
@@ -128,7 +130,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .thumbs:empty { display: none; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-s); display: block; box-shadow: var(--shadow-soft); }
 
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 12px 10px; }
 .chip { position: relative; display: inline-flex; }
 .chip input { position: absolute; inset: 0; opacity: 0; margin: 0; }
 .chip span {

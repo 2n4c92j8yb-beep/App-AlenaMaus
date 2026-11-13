@@ -7,7 +7,11 @@
 //   text    { x, y, w, h, text, font, size, color, bold, italic, align, valign, lineHeight, caps, tracking, hanging, fits }
 //   rect    { x, y, w, h, fill, alpha, rotate }
 //   ellipse { x, y, w, h, fill, alpha }
-//   image   { x, y, w, h, src, alt, fit: 'cover' | 'contain', round, natW, natH }
+//   image   { x, y, w, h, src, alt, fit: 'cover' | 'contain', round, radius, natW, natH }
+//   chrome  { x, y, w, h, kind: 'sphere' | 'capsule' | 'ring', tint: 'silver' | 'gold', holo: [colours], rotate }
+// Glass look extras (see glass.js): rect/ellipse `radius`, `gradient` { angle, stops },
+// `glass` { edge, rim } (frosted, blurs what is behind), `glow` { color, blur, edge }, `float` (shadow colour),
+// ellipse `soft` + `blur` (a light blob); text `gradient` (holo letters) and `glow`.
 //   line    { x1, y1, x2, y2, color, width }   only the Ledger direction uses lines
 //   arrow   { x1, y1, x2, y2, color, width }   for before/after pairs
 // Every element has `seq`: the order in which it appears when presenting
@@ -16,6 +20,7 @@
 import { FONTS } from './fonts.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
+import { glassForm, glassify } from './glass.js';
 
 // ---------- colour helpers ----------
 
@@ -81,6 +86,8 @@ export function text(ctx, role, str, box, o = {}) {
     ...(o.rotate ? { rotate: o.rotate } : {}),
     ...(o.alpha != null ? { alpha: o.alpha } : {}),
     ...(o.fillImage ? { fillImage: o.fillImage } : {}),
+    ...(o.gradient ? { gradient: o.gradient } : {}),
+    ...(o.glow ? { glow: o.glow } : {}),
   };
   ctx.els.push(el);
   return { el, height: Math.min(rotated ? box.w : box.h, textHeight(r.lines, r.size, lineHeight)), size: r.size };
@@ -239,7 +246,7 @@ function bleedNumber(ctx, n, { color, side = 'right', size = 300 } = {}) {
   });
 }
 
-function footer(ctx, color) {
+export function footer(ctx, color) {
   if (!ctx.L.footer) return;
   const { m } = ctx;
   const y = H - m * 0.55 - 0.18;
@@ -726,8 +733,11 @@ export function layoutSlide(dir, deck, slide, index, total, density = 'medium') 
   const ctx = makeCtx(dir, deck, slide, index, total, density);
   const poster = posterForm(dir, slide.form);
   if (poster && poster(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return ctx.els;
+  const glass = glassForm(dir, slide.form);
+  if (glass && glass(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return ctx.els;
   const fn = FORMS[slide.form];
   if (!fn) throw new Error(`Unknown slide form: ${slide.form}`);
   fn(ctx, slide.item ?? slide, slide.kicker);
-  return ctx.els;
+  // Glass directions reuse the regular content forms, re-dressed in glass
+  return dir.family === 'glass' ? glassify(ctx) : ctx.els;
 }

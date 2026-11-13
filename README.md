@@ -5,9 +5,17 @@ everyone else's. Based on the idea overview "AI decks that don't look AI-made".
 
 **First users:** students (seminar presentations, paper talks, teaching, group projects).
 
-## Two looks
+## Three looks
 
-- **Poster** (new, default): Summit, Cut-out and Monolith (`src/library/posters.js`).
+- **Glass** (new, default): Prism, Pearl and Halo (`src/library/glass.js`).
+  Frosted glass over soft coloured light, chrome objects (sphere, capsule, ring),
+  holographic or gold headlines and one glowing key figure per slide. Cover,
+  section, statement, question and key-figure slides have their own layouts;
+  content slides use the regular forms, re-dressed by `glassify()` (soft panels
+  become glass, pictures get rounded corners, Halo lights pictures like products).
+  Fonts: Unbounded and Manrope (`fonts/`, SIL Open Font License). In the PowerPoint
+  export, blur and chrome will become pictures; all text stays editable.
+- **Poster**: Summit, Cut-out and Monolith (`src/library/posters.js`).
   Cover, section, statement, key-figure and question slides are built like film
   posters: a colour-graded photo, one giant word (behind the subject, filled with
   the photo, or spanning the width) and small widely spaced labels. Content slides
@@ -40,6 +48,7 @@ preview and the PowerPoint export draw from the same data.
 
 1. **Design library and previews: done** (sample content, no AI). No decorative lines; signature colour areas per direction; picture slides; picture upload; Present mode with builds
 2. Poster look: 3 test directions done; extend after review
+2b. Glass look: 3 directions done (Prism, Pearl, Halo); review in the app
 3. Deploy to Vercel (Unsplash photos, ImageKit cut-outs and colour grades)
 4. AI step: copy-paste with your own Claude, plus a rule-based fallback
 5. PowerPoint export with embedded poster fonts

@@ -3,7 +3,7 @@
 // `css` adds fallbacks for the preview on devices without Office (e.g. iPad).
 // `factor` is the average character width in em, used for text fitting;
 // `capsFactor` the same for text in capitals (measured in the browser).
-// Poster fonts (`embed: true`) are not part of Office; they ship with the app
+// Poster and Glass fonts (`embed: true`) are not part of Office; they ship with the app
 // (fonts/, SIL Open Font License) and are embedded in exported files.
 
 export const FONTS = {
@@ -24,5 +24,7 @@ export const FONTS = {
   courier:      { office: 'Courier New',        css: '"Courier New", Courier, monospace',                     factor: 0.60 },
   anton:        { office: 'Anton',      css: 'Anton, Impact, "Arial Narrow", sans-serif',        factor: 0.39, capsFactor: 0.425, embed: true, file: 'Anton-Regular.ttf' },
   bebas:        { office: 'Bebas Neue', css: '"Bebas Neue", Impact, "Arial Narrow", sans-serif', factor: 0.33, capsFactor: 0.352, embed: true, file: 'BebasNeue-Regular.ttf' },
+  unbounded:    { office: 'Unbounded', css: 'Unbounded, "Arial Black", "Helvetica Neue", Arial, sans-serif', factor: 0.67, capsFactor: 0.79, weight: 500, embed: true, file: 'Unbounded.ttf' },
+  manrope:      { office: 'Manrope',   css: 'Manrope, "Segoe UI", "Helvetica Neue", Arial, sans-serif',  factor: 0.50, capsFactor: 0.58, embed: true, file: 'Manrope.ttf' },
   sixcaps:      { office: 'Six Caps',   css: '"Six Caps", Impact, "Arial Narrow", sans-serif',   factor: 0.19, capsFactor: 0.208, embed: true, file: 'SixCaps.ttf' },
 };

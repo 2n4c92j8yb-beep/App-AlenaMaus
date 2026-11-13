@@ -14,11 +14,12 @@ const DENSITIES = ['light', 'medium', 'dense'];
 const TONES = ['formal', 'neutral', 'relaxed'];
 
 test('library is complete and consistent', () => {
-  assert.equal(DIRECTIONS.filter((d) => d.family !== 'poster').length, 15);
+  assert.equal(DIRECTIONS.filter((d) => !d.family || d.family === 'editorial').length, 15);
   assert.equal(DIRECTIONS.filter((d) => d.family === 'poster').length, 3);
-  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 18);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'glass').length, 3);
+  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 21);
   for (const d of DIRECTIONS) {
-    for (const role of ['display', 'body', 'label', ...(d.family === 'poster' ? ['poster'] : [])]) assert.ok(FONTS[d.fonts[role]], `${d.id} ${role} font`);
+    for (const role of ['display', 'body', 'label', ...(d.family === 'poster' || d.family === 'glass' ? ['poster'] : [])]) assert.ok(FONTS[d.fonts[role]], `${d.id} ${role} font`);
     for (const o of OCCASIONS) assert.ok(o.id in d.suits, `${d.id} has weight for ${o.id}`);
   }
   for (const o of OCCASIONS) for (const id of Object.keys(o.structures)) assert.ok(STRUCTURES.find((s) => s.id === id), id);
@@ -119,6 +120,33 @@ test('poster decks: three poster directions, mood photos on key slides, all cred
       const moods = deck.slides.flatMap((x) => [x.mood, x.fillMood]).filter(Boolean);
       if (refs) for (const m of moods) assert.ok(refs.item.entries.includes(m.citation), `${m.base} not credited`);
     }
+  }
+});
+
+test('glass decks: three glass directions, fitted text, chrome and glass on every deck', () => {
+  for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 4; s++) {
+    const decks = buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family: 'glass' });
+    assert.deepEqual(decks.map((d) => d.direction.family), ['glass', 'glass', 'glass']);
+    assert.equal(new Set(decks.map((d) => d.direction.id)).size, 3);
+    for (const deck of decks) {
+      const name = `${deck.direction.id}/${deck.structure.id}/${density}`;
+      assert.deepEqual(deck.overflow, [], name);
+      const els = deck.slides.flatMap((x) => x.els);
+      assert.ok(deck.slides[0].els.some((e) => e.type === 'chrome'), `${name}: cover has a chrome object`);
+      assert.ok(els.some((e) => e.glass || e.glow), `${name}: uses glass or glow`);
+      for (const sl of deck.slides) {
+        // one hero effect: at most one glowing card per slide
+        assert.ok(sl.els.filter((e) => e.type === 'rect' && e.glow && e.h > 1.5).length <= 1, `${name} ${sl.form}: more than one glowing card`);
+        // body text must never sit on a holo fill
+        assert.ok(!sl.els.some((e) => e.type === 'rect' && e.gradient && e.h > 0.2), `${name} ${sl.form}: large holo fill`);
+      }
+    }
+  }
+});
+
+test('glass directions: holo letters only where every gradient stop reads on the background', () => {
+  for (const d of DIRECTIONS.filter((x) => x.family === 'glass')) {
+    if (d.fx.titleGradient) for (const stop of d.fx.holo) assert.ok(contrast(stop, d.colors.bg) >= 4.5, `${d.id} holo stop ${stop}`);
   }
 });
 

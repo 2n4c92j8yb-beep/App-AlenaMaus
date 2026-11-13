@@ -217,4 +217,64 @@ DIRECTIONS.push(
   },
 );
 
+// Glass look: frosted glass over soft light, chrome objects, holographic or gold gradients
+// and glowing key figures. Layouts for the key slides are in glass.js; content slides use
+// the regular forms, re-dressed in glass. `fx` holds the effect palette.
+DIRECTIONS.push(
+  {
+    id: 'prism',
+    family: 'glass',
+    name: 'Prism',
+    blurb: 'Night-dark glass over aqua and lilac light, chrome spheres and rings, holographic headlines.',
+    fonts: { display: 'unbounded', body: 'manrope', label: 'manrope', poster: 'unbounded' },
+    colors: { bg: '#07080D', ink: '#F2F3F8', muted: '#A6AABB', accent: '#6CF0E0', soft: '#171A26' },
+    fx: {
+      aurora: ['#6CF0E0', '#B9A4FF', '#FF9CCF'], auroraAlpha: 0.34,
+      holo: ['#6CF0E0', '#B9A4FF', '#FF9CCF', '#FFD9A8'],
+      glassFill: '#FFFFFF10', glassEdge: '#FFFFFF2E', glassRim: '#FFFFFF40',
+      glow: '#6CF0E066', glowEdge: '#6CF0E066', float: '#000000B3',
+      chrome: 'silver', chromeHolo: true, titleGradient: true,
+    },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'framed', scale: 0.92, footer: true },
+    tags: { tone: 'neutral', mode: 'dark', type: 'sans' },
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'pearl',
+    family: 'glass',
+    name: 'Pearl',
+    blurb: 'Light frosted glass on pearl grey, iridescent chrome, everything centred and calm.',
+    fonts: { display: 'unbounded', body: 'manrope', label: 'manrope', poster: 'unbounded' },
+    colors: { bg: '#EEEDF4', ink: '#12131A', muted: '#50556A', accent: '#B9A4FF', accentText: '#5B47C8', soft: '#FFFFFF' },
+    fx: {
+      aurora: ['#B9A4FF', '#6CF0E0', '#FF9CCF'], auroraAlpha: 0.42,
+      holo: ['#6CF0E0', '#B9A4FF', '#FF9CCF', '#FFD9A8'],
+      glassFill: '#FFFFFF8C', glassEdge: '#FFFFFFF2', glassRim: '#FFFFFF',
+      glow: '#B9A4FF73', glowEdge: '#B9A4FF8C', float: '#1E1C3C38',
+      chrome: 'silver', chromeHolo: true, titleGradient: false,
+    },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.18, kicker: 'text', signature: 'none', photo: 'framed', scale: 0.88, footer: true },
+    tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'halo',
+    family: 'glass',
+    name: 'Halo',
+    blurb: 'Deep black, one warm gold glow, gold chrome and pictures lit like products on a stage.',
+    fonts: { display: 'manrope', body: 'manrope', label: 'manrope', poster: 'unbounded' },
+    colors: { bg: '#0A0907', ink: '#F3ECE0', muted: '#ABA293', accent: '#E2B66B', soft: '#1A1712' },
+    fx: {
+      aurora: ['#E2B66B', '#8A5A26', '#E2B66B'], auroraAlpha: 0.28,
+      holo: ['#FFF1D6', '#E2B66B', '#B9874A', '#FFE7B8'],
+      glassFill: '#FFF4DE0D', glassEdge: '#FFE7B82E', glassRim: '#FFE7B840',
+      glow: '#E2B66B59', glowEdge: '#E2B66B66', float: '#000000B3',
+      chrome: 'gold', chromeHolo: false, titleGradient: true, stage: true,
+    },
+    layout: { margin: 0.85, align: 'left', titlePos: 'side', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.2, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.0, footer: true, boldDisplay: true },
+    tags: { tone: 'formal', mode: 'dark', type: 'sans' },
+    suits: ALL_OCCASIONS,
+  },
+);
+
 export const byId = (id) => DIRECTIONS.find((d) => d.id === id);

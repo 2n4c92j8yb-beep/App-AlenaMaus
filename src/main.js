@@ -17,7 +17,7 @@ const state = {
   occasionId: 'seminar',
   density: 'medium',
   formality: 'neutral',
-  family: 'poster',
+  family: 'glass',
   round: 0,
   baseSeed: Math.random().toString(36).slice(2, 8), // different people, different picks
   decks: [],

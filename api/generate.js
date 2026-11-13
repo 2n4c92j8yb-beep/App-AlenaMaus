@@ -38,6 +38,12 @@ export const AnswerSchema = z.object({
 /** The key from the environment, without stray spaces or quotes that come along when pasting. */
 export const apiKey = () => String(process.env.ANTHROPIC_API_KEY ?? '').trim().replace(/^["']|["']$/g, '');
 
+/** The key's public format marker, for diagnosis: its first 12 characters, or what kind of text it is. */
+const keyMarker = () => {
+  const k = apiKey();
+  return k.startsWith('sk-ant-') ? k.slice(0, 12) : /^[A-Za-z0-9_-]+$/.test(k) ? `${k.length} chars, no sk-ant- prefix` : 'contains spaces or symbols';
+};
+
 /** Ask Claude for the deck content. `client` is injectable for tests. */
 export async function writeDeck(notes, occasionId, client = new Anthropic({ apiKey: apiKey() })) {
   const occasion = occasionById(occasionId);
@@ -76,10 +82,10 @@ function limited(ip) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Use POST.' }); return; }
   if (!apiKey()) { res.status(503).json({ error: 'The writing step is not set up on this server yet.' }); return; }
-  if (!apiKey().startsWith('sk-ant-api')) {
-    // only the public prefix is checked; the key itself is never logged or returned
-    console.error('generate: ANTHROPIC_API_KEY does not start with sk-ant-api');
-    res.status(503).json({ error: 'The key on the server does not look like an Anthropic API key (it should start with sk-ant-api).' });
+  if (!apiKey().startsWith('sk-ant-')) {
+    // only the public format marker is logged (e.g. "sk-ant-api03"), never the secret part
+    console.error('generate: ANTHROPIC_API_KEY has an unexpected format', { marker: keyMarker(), length: apiKey().length });
+    res.status(503).json({ error: 'The key on the server does not look like an Anthropic API key (it should start with sk-ant-).' });
     return;
   }
   const { notes, occasion } = req.body ?? {};
@@ -99,7 +105,7 @@ export default async function handler(req, res) {
       : err instanceof Anthropic.AuthenticationError ? 'The writing step is not set up correctly on this server.'
       : err instanceof Anthropic.APIError ? 'Claude could not be reached. Please try again.'
       : err.message;
-    console.error('generate failed', status, err?.message);
+    console.error('generate failed', status, err?.message, err instanceof Anthropic.AuthenticationError ? { marker: keyMarker(), length: apiKey().length } : '');
     res.status(status).json({ error: message });
   }
 }

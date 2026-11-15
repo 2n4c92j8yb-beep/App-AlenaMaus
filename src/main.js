@@ -37,12 +37,11 @@ const state = {
 const $ = (id) => document.getElementById(id);
 
 function init() {
-  $('notes').value = SAMPLE_NOTES;
   renderOccasions();
   $('input-form').addEventListener('submit', (e) => { e.preventDefault(); write(); });
   $('copy-prompt').addEventListener('click', copyPrompt);
   $('use-answer').addEventListener('click', useAnswer);
-  $('show-fallback').addEventListener('click', () => openFallback(''));
+  $('show-fallback').addEventListener('click', () => { if ($('input-form').reportValidity()) openFallback(''); });
   $('show-privacy').addEventListener('click', (e) => {
     const note = $('privacy-note');
     note.hidden = !note.hidden;

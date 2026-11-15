@@ -270,7 +270,6 @@ function renderHero() {
       f.frame.classList.toggle('is-front', k === i);
       f.frame.classList.toggle('is-back', k === (i + 1) % frames.length);
     });
-    $('hero-caption').textContent = `${frames[i].deck.direction.name} · ${looks[i][0]} look`;
   };
   show();
   if (reduced()) return;

@@ -88,12 +88,12 @@ async function addPictures(list) {
 }
 
 function setupDropzone() {
-  const zone = $('dropzone');
-  const over = (on) => (e) => { e.preventDefault(); zone.classList.toggle('is-over', on); };
+  const zone = $('dropzone').closest('.composer'); // pictures can be dropped anywhere on the notes box
+  const over = (on) => (e) => { if (![...(e.dataTransfer?.types ?? [])].includes('Files')) return; e.preventDefault(); zone.classList.toggle('is-over', on); };
   zone.addEventListener('dragenter', over(true));
   zone.addEventListener('dragover', over(true));
   zone.addEventListener('dragleave', over(false));
-  zone.addEventListener('drop', (e) => { over(false)(e); addPictures([...e.dataTransfer.files]); });
+  zone.addEventListener('drop', (e) => { if (!e.dataTransfer?.files?.length) return; over(false)(e); addPictures([...e.dataTransfer.files]); });
 }
 
 // Scale photos down on the device (iPad photos are large) and keep them in memory.

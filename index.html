@@ -20,48 +20,39 @@
   </header>
 
   <main id="main">
-  <div class="wrap view" id="view-start">
-    <section class="hero" aria-labelledby="intro-title">
-      <div class="hero-copy">
-        <h1 id="intro-title">Slides that don’t look like everyone else’s</h1>
-      </div>
-      <figure class="hero-stage" aria-label="Example covers in the three looks">
-        <div class="hero-deck" id="hero-deck"></div>
-        <button type="button" class="btn btn-link try-example" id="try-example"><span class="label">Try an example</span> <span class="arrow" aria-hidden="true">→</span></button>
-      </figure>
-    </section>
+  <div class="wrap view start" id="view-start">
+    <h1 id="intro-title">Slides that don’t look like everyone else’s</h1>
 
-    <form class="panel input-panel" id="input-form" aria-label="Your content">
-      <div class="field">
-        <label for="notes" class="field-label"><span class="step">1</span>Your notes</label>
-        <textarea id="notes" name="notes" rows="8" spellcheck="true" placeholder="Add your notes here" required></textarea>
-      </div>
-
-      <div class="field">
-        <span class="field-label" id="pictures-label"><span class="step step-soft step-plus" aria-hidden="true"></span>Pictures <span class="optional">(optional)</span></span>
-        <label class="dropzone" id="dropzone" for="pictures">
-          <input type="file" id="pictures" accept="image/*" multiple aria-labelledby="pictures-label">
-          <span class="dropzone-icon" aria-hidden="true"></span>
-          <span class="dropzone-text"><strong>Add pictures</strong> or drop them here</span>
-        </label>
-        <ul class="thumbs" id="thumbs" aria-label="Your pictures"></ul>
-        <button type="button" class="btn btn-link clear-pictures" id="clear-pictures" hidden>Remove my pictures</button>
-      </div>
-
-      <fieldset class="field">
-        <legend class="field-label"><span class="step">2</span>What is it for?</legend>
-        <div class="chips" id="occasions"></div>
-      </fieldset>
-
-      <div class="submit">
-        <div class="actions">
-          <button type="submit" class="btn btn-primary btn-large" id="submit-btn"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
-          <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
-          <button type="button" class="btn btn-link" id="show-privacy" aria-expanded="false" aria-controls="privacy-note">Privacy</button>
+    <div class="start-main">
+      <form class="start-form" id="input-form" aria-labelledby="intro-title">
+        <div class="field">
+          <label for="notes" class="mini-label">Your notes</label>
+          <div class="composer">
+            <textarea id="notes" name="notes" rows="7" spellcheck="true" autocomplete="off" placeholder="Add your notes here" required></textarea>
+            <div class="composer-bar">
+              <span class="sr-only" id="pictures-label">Pictures (optional)</span>
+              <label class="attach" id="dropzone" for="pictures">
+                <input type="file" id="pictures" accept="image/*" multiple aria-labelledby="pictures-label">
+                <span class="attach-icon" aria-hidden="true"></span>
+                <span>Add pictures</span>
+              </label>
+              <ul class="thumbs" id="thumbs" aria-label="Your pictures"></ul>
+              <button type="button" class="btn btn-link clear-pictures" id="clear-pictures" hidden>Remove</button>
+            </div>
+          </div>
         </div>
-        <p class="field-help" id="privacy-note" hidden>The button sends your notes to Claude (Anthropic), which writes the slide content. Short search terms for matching photos go to Unsplash and Wikimedia Commons. Pictures you add yourself stay on your device.</p>
-        <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
-      </div>
+
+        <fieldset class="field">
+          <legend class="mini-label">What is it for?</legend>
+          <div class="chips" id="occasions"></div>
+        </fieldset>
+
+        <div class="submit">
+          <div class="actions">
+            <button type="submit" class="btn btn-primary btn-large" id="submit-btn"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
+          </div>
+          <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
+        </div>
 
       <section class="fallback" id="fallback" aria-labelledby="fallback-title" hidden>
         <h3 id="fallback-title">Copy and paste</h3>
@@ -78,7 +69,21 @@
         </ol>
         <p class="field-help" id="fallback-status" aria-live="polite"></p>
       </section>
-    </form>
+      </form>
+    </div>
+
+    <figure class="hero-stage" aria-label="Example covers in the three looks">
+      <div class="hero-deck" id="hero-deck"></div>
+      <button type="button" class="btn btn-link try-example" id="try-example"><span class="label">Try an example</span> <span class="arrow" aria-hidden="true">→</span></button>
+    </figure>
+
+    <div class="start-foot">
+      <div class="start-foot-links">
+        <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
+        <button type="button" class="btn btn-link" id="show-privacy" aria-expanded="false" aria-controls="privacy-note">Privacy</button>
+      </div>
+      <p class="field-help" id="privacy-note" hidden>The button sends your notes to Claude (Anthropic), which writes the slide content. Short search terms for matching photos go to Unsplash and Wikimedia Commons. Pictures you add yourself stay on your device.</p>
+    </div>
   </div>
 
   <section id="results" class="wrap view" aria-labelledby="results-title" hidden>

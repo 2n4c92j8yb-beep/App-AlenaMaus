@@ -69,11 +69,6 @@ button:disabled { cursor: not-allowed; }
 @media (min-width: 768px) { .view { padding-top: 40px; } }
 @media (min-width: 1024px) { .view { padding-top: 56px; } }
 
-/* hero */
-.hero { display: grid; gap: 24px; align-items: center; margin-bottom: 28px; }
-@media (min-width: 960px) { .hero { grid-template-columns: 1fr 1.05fr; gap: 56px; margin-bottom: 56px; } }
-.hero-copy { display: grid; gap: 12px; }
-@media (min-width: 960px) { .hero-copy { gap: 16px; } }
 .hero-stage { margin: 0; display: grid; gap: 6px; }
 .try-example { justify-self: end; }
 .btn.try-example { text-decoration: none; }
@@ -91,22 +86,98 @@ button:disabled { cursor: not-allowed; }
 .hero-deck .slide-frame.is-front { opacity: 1; transform: none; }
 .hero-deck .slide-frame.is-back { opacity: 0.55; transform: translate(6%, -7%) scale(0.86); z-index: -1; }
 
-/* panel and fields */
-.panel { background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: var(--r-l); box-shadow: var(--shadow-soft); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
-.input-panel { padding: 22px 18px; display: grid; gap: 28px; }
-@media (min-width: 768px) { .input-panel { padding: 36px; } }
-.field { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
-.field-label { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; padding: 0; }
+/* ---------- start page ----------
+   One screen, two halves: what you bring on the left, what comes out on the right.
+   The headline runs across both, the quiet links sit at the very bottom. */
+.start { display: grid; gap: 28px 40px; grid-template-rows: auto 1fr auto; padding-top: 28px; }
+.start h1 { grid-column: 1 / -1; justify-self: center; text-align: center; max-width: none; font-size: clamp(2rem, 4.1vw, 3.4rem); }
+.start-main { min-width: 0; }
+.start-form { display: grid; gap: 24px; min-width: 0; }
+.start-form .field { gap: 10px; }
+.mini-label { padding: 0; font-weight: 650; font-size: 0.88rem; color: var(--muted); }
 /* a legend is not a grid item, so the field's gap does not reach it */
-legend.field-label { margin-bottom: 20px; }
-.step { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--night); color: var(--snow); font: 600 0.78rem var(--font-mono); }
-.step-soft { background: var(--mist); color: var(--night); }
+legend.mini-label { margin-bottom: 10px; }
+
+/* notes and pictures are one object */
+.composer {
+  background: var(--surface-solid); border: 1px solid var(--line-strong); border-radius: var(--r-m);
+  box-shadow: var(--shadow-soft); overflow: hidden;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.composer:focus-within { border-color: var(--heather); box-shadow: 0 0 0 4px rgba(115, 106, 134, 0.18), var(--shadow-soft); }
+.composer.is-over { border-color: var(--heather); border-style: dashed; }
+.composer textarea { display: block; border: 0; border-radius: 0; background: transparent; min-height: 168px; padding: 18px 20px 12px; }
+.composer textarea:focus { box-shadow: none; }
+.composer-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); background: rgba(247, 247, 247, 0.7); min-height: 56px; }
+.attach {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px 8px 10px;
+  border-radius: var(--pill); font-weight: 600; font-size: 0.9rem; color: var(--night);
+  transition: background-color var(--dur) var(--ease);
+}
+.attach:hover { background: rgba(39, 42, 59, 0.07); }
+.attach:focus-within { outline: 2px solid var(--night); outline-offset: 2px; }
+.attach input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 /* the plus is drawn, not typed: a typed + sits below the middle of its circle */
-.step-plus { position: relative; }
-.step-plus::before, .step-plus::after { content: ""; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 1px; transform: translate(-50%, -50%); }
-.step-plus::before { width: 10px; height: 1.5px; }
-.step-plus::after { width: 1.5px; height: 10px; }
-.optional { font-weight: 500; color: var(--muted); margin-left: -4px; }
+.attach-icon { position: relative; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--mist); }
+.attach-icon::before, .attach-icon::after { content: ""; position: absolute; left: 50%; top: 50%; background: var(--night); border-radius: 1px; transform: translate(-50%, -50%); }
+.attach-icon::before { width: 10px; height: 1.5px; }
+.attach-icon::after { width: 1.5px; height: 10px; }
+.composer-bar .thumbs { flex: 1; min-width: 0; flex-wrap: nowrap; overflow: hidden; gap: 6px; }
+.composer-bar .thumbs:empty { display: block; }
+.composer-bar .thumbs img { width: 40px; height: 40px; border-radius: 10px; box-shadow: none; }
+.composer-bar .clear-pictures { min-height: 40px; padding: 8px 10px; font-size: 0.88rem; }
+
+/* occasions as an even grid: three across, two on the phone */
+.start .chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.start .chip { display: grid; }
+.start .chip span { justify-content: center; text-align: center; min-height: 40px; padding: 8px 10px; font-size: 0.92rem; line-height: 1.2; }
+@media (min-width: 560px) {
+  .start .chips { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .start .chip span { white-space: nowrap; font-size: 0.86rem; padding-left: 6px; padding-right: 6px; }
+}
+@media (pointer: coarse) { .start .chip span, .attach { min-height: 44px; } }
+/* the chosen one is tinted, not black: the only dark thing on the page is the button */
+.start .chip input:checked + span { background: #E9E6F0; border-color: var(--heather); color: var(--night); box-shadow: inset 0 0 0 1px var(--heather); }
+
+/* the one action */
+.start .actions .btn-primary {
+  flex: 1 0 100%; min-height: 62px; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.005em;
+  background: linear-gradient(160deg, #3A3D55 0%, #1B1D2B 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 16px 32px -14px rgba(39, 42, 59, 0.85), 0 0 0 4px rgba(115, 106, 134, 0.16);
+}
+.start .actions .btn-primary:hover:not(:disabled) { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 20px 36px -14px rgba(39, 42, 59, 0.9), 0 0 0 5px rgba(115, 106, 134, 0.24); }
+
+.start .hero-stage { gap: 14px; }
+.start .hero-deck .slide-frame { border-radius: 26px; }
+
+.start-foot { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.start-foot-links { display: flex; flex-wrap: wrap; gap: 0 28px; }
+.start-foot .btn-link { font-size: 0.88rem; font-weight: 600; min-height: 40px; }
+
+@media (min-width: 1000px) {
+  .start {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); grid-template-rows: auto auto 1fr; gap: 32px 72px; align-items: start;
+    min-height: calc(100vh - 51px); padding-top: 40px; padding-bottom: 20px;
+  }
+  /* the slide starts where the notes box starts: below the height of the small label */
+  .start .hero-stage { padding-top: calc(0.88rem * 1.55 + 10px); }
+  .start-foot { align-self: end; }
+}
+/* roomy screens: the notes box is exactly as tall as the slide (slide width times 9/16, minus the bar and borders) */
+@media (min-width: 1000px) and (min-height: 801px) {
+  .composer textarea { height: calc((min(1240px, 100vw) - 136px) * 0.29207 - 59px); }
+}
+/* short laptop screens: the button stays on the first screen, the right half ends where the button ends */
+@media (min-width: 1000px) and (max-height: 800px) {
+  .start { row-gap: 20px; padding-top: 24px; padding-bottom: 12px; }
+  .start h1 { font-size: clamp(2rem, 3.6vw, 2.9rem); }
+  .start-form { gap: 18px; }
+  .composer textarea { min-height: 112px; height: 124px; }
+  .start .hero-stage { align-self: stretch; grid-template-rows: auto 1fr; }
+  .start .try-example { align-self: end; min-height: 62px; }
+}
+
+.field { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
 textarea {
   width: 100%; min-height: 200px; resize: vertical; padding: 16px 18px;
   font: 400 1rem/1.6 var(--font-ui); color: var(--night);
@@ -117,22 +188,6 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 4px rgba(115, 106, 134, 0.18); }
 .field-help { font-size: 0.88rem; color: var(--muted); max-width: 72ch; }
 
-.dropzone {
-  position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 20px;
-  border: 1.5px dashed var(--line-strong); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.5);
-  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-.dropzone:hover, .dropzone.is-over { border-color: var(--heather); background: rgba(255, 255, 255, 0.85); }
-.dropzone.is-over { transform: scale(1.01); }
-.dropzone:focus-within { outline: 2px solid var(--night); outline-offset: 3px; }
-.dropzone-icon { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--grad-dusk); position: relative; }
-.dropzone-icon::before, .dropzone-icon::after { content: ""; position: absolute; left: 50%; top: 50%; background: var(--snow); border-radius: 2px; transform: translate(-50%, -50%); }
-.dropzone-icon::before { width: 14px; height: 2px; }
-.dropzone-icon::after { width: 2px; height: 14px; }
-.dropzone-text { color: var(--muted); }
-.dropzone-text strong { color: var(--night); }
-.clear-pictures { justify-self: end; }
 .thumbs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .thumbs:empty { display: none; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-s); display: block; box-shadow: var(--shadow-soft); }
@@ -152,7 +207,6 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 
 .submit { display: grid; gap: 12px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-@media (max-width: 559px) { .actions { justify-content: center; gap: 4px 24px; } .actions .btn-primary { flex: 1 0 100%; } }
 
 /* writing step */
 .btn.is-busy { cursor: progress; }

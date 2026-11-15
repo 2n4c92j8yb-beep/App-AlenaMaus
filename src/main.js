@@ -43,6 +43,11 @@ function init() {
   $('copy-prompt').addEventListener('click', copyPrompt);
   $('use-answer').addEventListener('click', useAnswer);
   $('show-fallback').addEventListener('click', () => openFallback(''));
+  $('show-privacy').addEventListener('click', (e) => {
+    const note = $('privacy-note');
+    note.hidden = !note.hidden;
+    e.currentTarget.setAttribute('aria-expanded', String(!note.hidden));
+  });
   document.querySelectorAll('[data-density]').forEach((b) => b.addEventListener('click', () => { state.density = b.dataset.density; generate(); }));
   document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; generate(); }));
   document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; generate(); }));

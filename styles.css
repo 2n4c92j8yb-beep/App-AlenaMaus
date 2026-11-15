@@ -143,7 +143,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 
 .submit { display: grid; gap: 12px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-@media (max-width: 559px) { .actions { flex-direction: column; align-items: stretch; gap: 4px; } }
+@media (max-width: 559px) { .actions { justify-content: center; gap: 4px 24px; } .actions .btn-primary { flex: 1 0 100%; } }
 
 /* writing step */
 .btn.is-busy { cursor: progress; }

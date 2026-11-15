@@ -60,7 +60,9 @@
         <div class="actions">
           <button type="submit" class="btn btn-primary btn-large" id="submit-btn"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
           <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
+          <button type="button" class="btn btn-link" id="show-privacy" aria-expanded="false" aria-controls="privacy-note">Privacy</button>
         </div>
+        <p class="field-help" id="privacy-note" hidden>The button sends your notes to Claude (Anthropic), which writes the slide content. Short search terms for matching photos go to Unsplash and Wikimedia Commons. Pictures you add yourself stay on your device.</p>
         <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
       </div>
 

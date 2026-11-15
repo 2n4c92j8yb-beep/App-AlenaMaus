@@ -423,13 +423,12 @@ function renderOccasions() {
     const label = document.createElement('label');
     label.className = 'chip';
     const input = Object.assign(document.createElement('input'), { type: 'radio', name: 'occasion', value: o.id, checked: o.id === state.occasionId });
-    input.addEventListener('change', () => { state.occasionId = o.id; $('occasion-hint').textContent = o.hint; });
+    input.addEventListener('change', () => { state.occasionId = o.id; });
     const span = document.createElement('span');
     span.textContent = o.name;
     label.append(input, span);
     box.append(label);
   }
-  $('occasion-hint').textContent = OCCASIONS.find((o) => o.id === state.occasionId)?.hint ?? '';
 }
 
 function syncToggles() {

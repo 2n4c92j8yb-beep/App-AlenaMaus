@@ -501,6 +501,8 @@ function renderCards() {
     const preview = document.createElement('div');
     preview.className = 'card-preview';
     preview.append(renderSlide(slides[0].els, { label: `Cover slide in the ${d.name} direction` }));
+    // a click on the big slide opens the direction too; keyboard and screen readers use the Open button
+    preview.addEventListener('click', () => openDetail(i, true));
     card.append(preview);
     // flip through a few slides of this direction without leaving the page
     const strip = document.createElement('div');

@@ -528,7 +528,7 @@ function renderCards() {
     body.className = 'card-body';
     body.innerHTML = '<h3></h3><p class="card-meta"></p>';
     body.querySelector('h3').textContent = d.name;
-    body.querySelector('.card-meta').textContent = `${slides.length} slides · ${s.name}`;
+    body.querySelector('.card-meta').textContent = s.name;
     const open = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-primary', innerHTML: 'Open <span class="arrow" aria-hidden="true">→</span>' });
     open.setAttribute('aria-label', `Open ${d.name}`);
     open.addEventListener('click', () => openDetail(i, true));

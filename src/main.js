@@ -42,6 +42,13 @@ function init() {
   $('copy-prompt').addEventListener('click', copyPrompt);
   $('use-answer').addEventListener('click', useAnswer);
   $('show-fallback').addEventListener('click', () => { if ($('input-form').reportValidity()) openFallback(''); });
+  $('try-example').addEventListener('click', () => {
+    if (state.busy) return;
+    if (!$('notes').value.trim()) $('notes').value = SAMPLE_NOTES; // never replaces notes someone typed
+    hideFallback();
+    state.pool = null; state.poolKey = ''; // no pool: the directions are built from the sample content
+    generate(true);
+  });
   $('show-privacy').addEventListener('click', (e) => {
     const note = $('privacy-note');
     note.hidden = !note.hidden;

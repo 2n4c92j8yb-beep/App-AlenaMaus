@@ -74,7 +74,9 @@ button:disabled { cursor: not-allowed; }
 @media (min-width: 960px) { .hero { grid-template-columns: 1fr 1.05fr; gap: 56px; margin-bottom: 56px; } }
 .hero-copy { display: grid; gap: 12px; }
 @media (min-width: 960px) { .hero-copy { gap: 16px; } }
-.hero-stage { margin: 0; display: grid; gap: 14px; }
+.hero-stage { margin: 0; display: grid; gap: 6px; }
+.try-example { justify-self: end; }
+.try-example .arrow { display: inline-block; }
 .hero-deck { position: relative; aspect-ratio: 16 / 9; isolation: isolate; }
 .hero-deck::before { /* dusk glow behind the slides */
   content: ""; position: absolute; inset: 12% -6% -10%; border-radius: 50%;

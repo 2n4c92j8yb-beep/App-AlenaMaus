@@ -559,7 +559,7 @@ function openDetail(i, focus) {
   const { direction: d, structure: s, slides, overflow } = deck;
   const fill = () => {
     $('detail-title').textContent = d.name;
-    $('detail-meta').textContent = `${s.name} · ${slides.length} slides`;
+    $('detail-meta').textContent = s.name;
     $('export-note').hidden = true;
     const check = $('detail-check');
     check.hidden = overflow.length === 0;

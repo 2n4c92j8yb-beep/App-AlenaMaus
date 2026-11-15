@@ -521,20 +521,18 @@ function renderCards() {
       strip.append(b);
     });
     card.append(strip);
-    const body = document.createElement('div');
-    body.className = 'card-body';
-    body.innerHTML = '<p class="structure"></p><h3></h3><p class="blurb"></p>';
-    body.querySelector('h3').textContent = d.name;
-    body.querySelector('.structure').textContent = `Story · ${s.name}`;
-    body.querySelector('.blurb').textContent = d.blurb;
-    card.append(body);
+    // one row under the previews: what it is on the left, the way in on the right
     const foot = document.createElement('div');
     foot.className = 'card-foot';
-    const count = Object.assign(document.createElement('span'), { className: 'count', textContent: `${slides.length} slides` });
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    body.innerHTML = '<h3></h3><p class="card-meta"></p>';
+    body.querySelector('h3').textContent = d.name;
+    body.querySelector('.card-meta').textContent = `${slides.length} slides · ${s.name}`;
     const open = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-primary', innerHTML: 'Open <span class="arrow" aria-hidden="true">→</span>' });
     open.setAttribute('aria-label', `Open ${d.name}`);
     open.addEventListener('click', () => openDetail(i, true));
-    foot.append(count, open);
+    foot.append(body, open);
     card.append(foot);
     box.append(card);
   });

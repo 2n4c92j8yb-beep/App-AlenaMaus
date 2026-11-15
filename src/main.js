@@ -211,10 +211,32 @@ function setBusy(on, phase = 'writing') {
   btn.disabled = on;
   btn.classList.toggle('is-busy', on);
   btn.querySelector('.label').textContent = !on ? 'Show three directions' : phase === 'pictures' ? 'Finding pictures…' : 'Writing your slides…';
-  $('busy-note').hidden = !on;
-  $('busy-note').textContent = phase === 'pictures'
-    ? 'Looking for photos on Unsplash and Wikimedia Commons. Each one is credited on its slide and in Works Cited.'
+  // read out for screen readers; sighted users get the bar
+  $('busy-note').textContent = !on ? '' : phase === 'pictures'
+    ? 'Looking for photos on Unsplash and Wikimedia Commons.'
     : 'Claude is writing the content of your slides. This usually takes under a minute.';
+  progress(on, phase);
+}
+
+// The server reports no progress, so the bar is an estimate: it fills quickly at first and
+// ever more slowly, never reaching the end by itself. Writing takes it towards 85 %,
+// the picture search from there towards 97 %.
+let progressTimer = null;
+function progress(on, phase) {
+  const bar = $('busy-bar');
+  clearInterval(progressTimer);
+  if (!on) { bar.hidden = true; return; }
+  const from = bar.hidden ? 0 : Number(bar.getAttribute('aria-valuenow')) / 100;
+  const [to, tau] = phase === 'pictures' ? [0.97, 4000] : [0.85, 18000];
+  const t0 = performance.now();
+  const paint = () => {
+    const v = from + (to - from) * (1 - Math.exp(-(performance.now() - t0) / tau));
+    bar.firstElementChild.style.transform = `scaleX(${v.toFixed(4)})`;
+    bar.setAttribute('aria-valuenow', String(Math.round(v * 100)));
+  };
+  if (bar.hidden) { bar.firstElementChild.style.transform = 'scaleX(0)'; bar.hidden = false; }
+  paint();
+  progressTimer = setInterval(paint, 250);
 }
 
 function openFallback(message) {

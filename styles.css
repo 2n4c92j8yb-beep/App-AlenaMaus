@@ -210,6 +210,8 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 
 /* writing step */
 .btn.is-busy { cursor: progress; }
+.progress { height: 6px; margin: 4px 4px 0; border-radius: var(--pill); background: rgba(39, 42, 59, 0.1); overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--heather), var(--night)); transform: scaleX(0); transform-origin: left center; transition: transform 300ms linear; }
 .btn.is-busy .arrow { display: inline-block; animation: busy 1.1s linear infinite; }
 @keyframes busy { 50% { opacity: 0.25; } }
 .btn-primary:disabled { opacity: 0.85; }

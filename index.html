@@ -51,7 +51,8 @@
           <div class="actions">
             <button type="submit" class="btn btn-primary btn-large" id="submit-btn"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
           </div>
-          <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
+          <div class="progress" id="busy-bar" role="progressbar" aria-label="Making your slides" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i></i></div>
+          <p class="sr-only" id="busy-note" role="status"></p>
         </div>
 
       <section class="fallback" id="fallback" aria-labelledby="fallback-title" hidden>

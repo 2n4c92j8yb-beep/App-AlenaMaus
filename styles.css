@@ -303,7 +303,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .card-foot { padding: 14px 14px 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .card-body { display: grid; gap: 2px; min-width: 0; }
 .card h3 { font: 700 1.25rem/1.2 var(--font-ui); letter-spacing: -0.02em; margin: 0; }
-.card-meta { font-size: 0.86rem; color: var(--muted); }
+.card-meta { font-size: 0.86rem; color: var(--night); }
 .card-foot .btn { flex: none; }
 
 /* ---------- slides ---------- */

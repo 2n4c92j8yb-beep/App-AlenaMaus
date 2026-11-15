@@ -12,6 +12,8 @@
 //   - a click mid-animation finishes it instead of stacking a second one
 //   - one ambient motion per slide at most (chrome floats, or the light drifts)
 //   - reduce motion: no movement and no delays, opacity only
+//   - each direction's motion law (laws.js) sets the tempo and easing: Riot and
+//     Specimen almost cut, Swiss and Bauhaus are brisk, Couture and Terra settle slowly
 // Without GSAP the slides still appear: the CSS build in styles.css takes over.
 
 const gsapLib = () => (typeof window !== 'undefined' ? window.gsap : undefined);
@@ -78,7 +80,10 @@ export function playSlide(frame, slide, { complete = false } = {}) {
 
   hide(nodes.filter((n) => seqOf(n) > 0));
   hide(deco);
-  tl = g.timeline({ defaults: { ease: 'power3.out' } });
+  // the direction's motion law sets tempo and easing (laws.js: snap, brisk, calm, slow)
+  const ease = slide.motion?.ease ?? 'power3.out';
+  const tempo = slide.motion?.tempo ?? 1;
+  tl = g.timeline({ defaults: { ease } }).timeScale(tempo);
   // decoration fades in place, never moves in
   if (deco.length) tl.to(deco, { autoAlpha: own, duration: still ? 0.2 : 0.9, ease: 'power1.out' }, 0);
   // Poster: the mood photo settles from a slight zoom while the words arrive
@@ -162,7 +167,7 @@ export function playSlide(frame, slide, { complete = false } = {}) {
         const s = pending.shift();
         if (s === undefined) return false;
         const list = nodes.filter((n) => seqOf(n) === s);
-        tl = g.timeline({ defaults: { ease: 'power3.out' } });
+        tl = g.timeline({ defaults: { ease } }).timeScale(tempo);
         enter(tl, list, 'support', 0, s);
         return true;
       },

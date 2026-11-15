@@ -1,4 +1,4 @@
-// Procedural textures for the Texture look. Every texture is generated from a seed,
+// Procedural textures for the Texture look (and some editorial kits). Every texture is generated from a seed,
 // so each deck gets its own contour map, grain or grid offset, and the same seed
 // always gives the same picture (the preview and the later export agree).
 //
@@ -252,5 +252,124 @@ function fluted({ seed, variant = 0, colors }, id) {
   return svgOpen(`<g filter="url(#${id}b)">${blobs.map((b) => `<rect width="${PW}" height="${PH}" fill="url(#${id}g${b.i})"/>`).join('')}</g><rect width="${PW}" height="${PH}" fill="url(#${id}p)"/>`, defs);
 }
 
-const GENERATORS = { contour, grid, grain, film, heat, ripple, landscape, graphite, fluted };
+// ---------------------------------------------------------------- Memphis pattern
+
+/**
+ * Memphis (1980s Milan): squiggles, zigzags, confetti, outlined triangles, dot patches
+ * and terrazzo specks in a triad plus black. Kept to the edges, so the text area stays calm.
+ */
+function squiggle({ seed, variant = 0, colors }, id) {
+  const rng = createRng(`memphis:${seed}:${variant}`);
+  const ink = '#1A1A1A';
+  const pick = () => colors[Math.floor(rng.next() * colors.length)];
+  // places along the right side and the top and bottom bands, clear of the text column and its labels
+  const spot = () => {
+    const r = rng.next();
+    if (r < 0.55) return [PW * (0.8 + rng.next() * 0.18), PH * (0.04 + rng.next() * 0.92)];
+    if (r < 0.8) return [PW * (0.32 + rng.next() * 0.34), PH * (0.02 + rng.next() * 0.1)];
+    return [PW * (0.32 + rng.next() * 0.34), PH * (0.9 + rng.next() * 0.08)];
+  };
+  let body = '';
+  // terrazzo specks
+  for (let i = 0; i < 70; i++) {
+    const [x, y] = spot();
+    const r = 2 + rng.next() * 5;
+    body += `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${r.toFixed(1)}" ry="${(r * (0.5 + rng.next() * 0.5)).toFixed(1)}" fill="${rng.next() < 0.3 ? ink : pick()}" transform="rotate(${(rng.next() * 180).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"/>`;
+  }
+  // squiggles and zigzags
+  for (let i = 0; i < 5; i++) {
+    const [x, y] = spot();
+    const n = 5 + Math.floor(rng.next() * 4);
+    const amp = 12 + rng.next() * 10;
+    const step = 22 + rng.next() * 10;
+    const zig = rng.next() < 0.4;
+    let d = `M${x.toFixed(0)} ${y.toFixed(0)}`;
+    for (let k = 1; k <= n; k++) d += zig ? ` L${(x + k * step).toFixed(0)} ${(y + (k % 2 ? -amp : amp)).toFixed(0)}` : ` Q${(x + (k - 0.5) * step).toFixed(0)} ${(y + (k % 2 ? -amp * 2 : amp * 2)).toFixed(0)} ${(x + k * step).toFixed(0)} ${y.toFixed(0)}`;
+    body += `<path d="${d}" fill="none" stroke="${i % 2 ? ink : pick()}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" transform="rotate(${(rng.next() * 60 - 30).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"/>`;
+  }
+  // solid circles and outlined triangles
+  for (let i = 0; i < 3; i++) {
+    const [x, y] = spot();
+    body += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(26 + rng.next() * 30).toFixed(0)}" fill="${pick()}"/>`;
+  }
+  for (let i = 0; i < 3; i++) {
+    const [x, y] = spot();
+    const s = 40 + rng.next() * 30;
+    body += `<polygon points="${x.toFixed(0)},${(y - s).toFixed(0)} ${(x + s).toFixed(0)},${(y + s * 0.7).toFixed(0)} ${(x - s).toFixed(0)},${(y + s * 0.7).toFixed(0)}" fill="${rng.next() < 0.5 ? pick() : 'none'}" stroke="${ink}" stroke-width="5" stroke-linejoin="round" transform="rotate(${(rng.next() * 90).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})"/>`;
+  }
+  // one patch of dots
+  const [px, py] = [PW * (0.84 + rng.next() * 0.04), PH * (0.1 + rng.next() * 0.55)];
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) body += `<circle cx="${(px + i * 20).toFixed(0)}" cy="${(py + j * 20).toFixed(0)}" r="3.5" fill="${ink}"/>`;
+  return svgOpen(body);
+}
+
+// ---------------------------------------------------------------- organic blobs
+
+/** Soft biomorphic blobs (noise-shaped closed curves) running off the corners, in earthy tints. */
+function blobs({ seed, variant = 0, colors }, id) {
+  const rng = createRng(`blobs:${seed}:${variant}`);
+  const noise = makeNoise(`blobs:${seed}:${variant}`);
+  const corners = [[PW * 1.0, PH * 0.0], [PW * 0.92, PH * 1.0], [PW * 0.05, PH * 1.05], [PW * 0.55, PH * -0.05]];
+  let body = '';
+  colors.forEach((c, i) => {
+    const [cx, cy] = corners[(i + variant) % corners.length];
+    const r = PH * (0.28 + rng.next() * 0.18);
+    const pts = [];
+    const n = 10;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const rr = r * (0.75 + noise(Math.cos(a) * 1.3 + i * 5, Math.sin(a) * 1.3 + i * 3) * 0.55);
+      pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.85]);
+    }
+    // closed Catmull-Rom curve through the points, as cubic Béziers
+    let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let k = 0; k < n; k++) {
+      const p0 = pts[(k - 1 + n) % n]; const p1 = pts[k]; const p2 = pts[(k + 1) % n]; const p3 = pts[(k + 2) % n];
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    body += `<path d="${d}Z" fill="${c}"/>`;
+  });
+  return svgOpen(body);
+}
+
+// ---------------------------------------------------------------- risograph halftone
+
+/**
+ * Risograph: two spot inks as halftone dots on different screen angles, the second
+ * printed a few pixels out of register, fading from one corner of the sheet.
+ */
+function halftone({ seed, variant = 0, colors }, id) {
+  const rng = createRng(`riso:${seed}:${variant}`);
+  const noise = makeNoise(`riso:${seed}:${variant}`);
+  const [a, b] = colors;
+  const layer = (color, angle, cell, ox, oy, corner) => {
+    const rad = (angle * Math.PI) / 180;
+    const cos = Math.cos(rad); const sin = Math.sin(rad);
+    let dots = '';
+    const reach = Math.hypot(PW, PH);
+    for (let u = -reach; u < reach; u += cell) {
+      for (let v = -reach; v < reach; v += cell) {
+        const x = u * cos - v * sin + ox;
+        const y = u * sin + v * cos + oy;
+        if (x < -cell || y < -cell || x > PW + cell || y > PH + cell) continue;
+        // intensity: strongest at the chosen corner, broken up a little by noise
+        const t = 1 - Math.hypot((x - corner[0]) / PW, (y - corner[1]) / PH) / 0.72; // stays in its corner, clear of the text
+        const k = Math.max(0, Math.min(1, t * 1.2 + (noise(x / 180, y / 180) - 0.5) * 0.5));
+        if (k < 0.06) continue;
+        dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(cell * 0.52 * Math.sqrt(k)).toFixed(2)}"/>`;
+      }
+    }
+    return `<g fill="${color}" style="mix-blend-mode:multiply">${dots}</g>`;
+  };
+  // the inks gather in the right-hand corners: headlines and labels start on the left
+  const corners = [[PW, 0], [PW, PH], [PW * 1.05, PH * 0.5]];
+  const c1 = corners[variant % 3];
+  const c2 = corners[(variant + 1) % 3];
+  const mis = 3 + rng.next() * 4;
+  return svgOpen(layer(a, 15, 16, 0, 0, c1) + layer(b ?? a, 75, 16, mis, mis * 0.6, c2));
+}
+
+const GENERATORS = { contour, grid, grain, film, heat, ripple, landscape, graphite, fluted, squiggle, blobs, halftone };
 export const TEXTURE_KINDS = Object.keys(GENERATORS);

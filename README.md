@@ -7,8 +7,9 @@ everyone else's. Based on the idea overview "AI decks that don't look AI-made".
 
 ## Four looks
 
-- **Texture** (new): Survey, Drafting and Grain, built around generated surfaces
-  (contour lines, blueprint grid, grainy gradient).
+- **Texture**: Survey, Drafting, Grain, Memphis, Terra and Riso, built around generated
+  surfaces (contour lines, blueprint grid, grainy gradient, Memphis squiggles and
+  terrazzo, organic blobs, two-ink risograph halftone).
 
 ## Design kits: one identity, several effects
 
@@ -38,7 +39,36 @@ panel for key figures. A planner places them per deck:
   posters: a colour-graded photo, one giant word (behind the subject, filled with
   the photo, or spanning the width) and small widely spaced labels. Content slides
   use the regular forms in the same type and colours.
-- **Editorial:** the 15 directions below.
+- **Editorial:** the 15 directions below, plus six built on the design laws:
+  Bauhaus, Couture, Riot, Bento, Specimen and Duotone.
+
+## Design laws
+
+Every direction follows named laws of design, written into its brief (`laws` in
+`src/library/directions.js`, helpers in `src/library/laws.js`), read by the layout
+engine and checked by `tests/laws.test.js`:
+
+| Law | What it means here | Checked |
+|---|---|---|
+| Modular type scale | Headline sizes are steps on one ratio from a 21 pt body (minor third 1.2 up to the golden section 1.618); body text never grows past step 1, so a headline always outranks it | headline/body ≥ the direction's ratio on every content slide |
+| Type pairing | Display and body faces contrast in one stated dimension (classification, width, weight, case, style, or one family); at most two typefaces plus one monospace. Every font carries its classification in `fonts.js` | the stated contrast really exists |
+| Colour harmony | A named scheme (neutral + accent, monochromatic, analogous, complementary, split-complementary, triadic); Bauhaus is measured on the painters' red-yellow-blue wheel | the stated hues are the right distance apart |
+| 60-30-10 | On content slides the accent covers at most a tenth of the slide | measured on every content slide |
+| Contrast | Ink 7:1, secondary text 4.5:1 on the background and on tinted panels, accent text 3:1 | every direction |
+| Grid | Margins and content start lines snap to a 1/8-inch baseline unit; side columns are built from a 12-column grid | margins and columns |
+| Motion | Tempo and easing follow the style in Present mode: snap (Riot, Specimen), brisk, calm, slow (Couture, Terra, Gallery) | every slide carries its tempo |
+| Movement | Each direction names the school it comes from (International Typographic Style, Bauhaus, Memphis …), so a critique can say what it is doing | stated for every direction |
+
+The six new editorial directions:
+
+- **Bauhaus**: red, yellow and blue circle, square and triangle, one geometric sans (Century Gothic).
+- **Couture**: fashion editorial; Bodoni on a golden-section scale, huge margins, tracked capitals.
+  Bodoni MT ships only with Office for Windows, so its headlines export as pictures.
+- **Riot**: neo-brutalism; Arial Black, cobalt and yellow panels with thick outlines and hard
+  offset shadows (native shapes in PowerPoint).
+- **Bento**: rounded tiles on a 12-column grid, one indigo tile; text keeps clear of the mosaic.
+- **Specimen**: experimental typography; one giant Anton word cropped by the slide edge.
+- **Duotone**: two inks (navy and orange), photos printed in blue.
 
 Poster fonts (Anton, Bebas Neue, Six Caps) are in `fonts/` under the SIL Open
 Font License. Sample photos are from Wikimedia Commons (see
@@ -117,7 +147,8 @@ preview and the PowerPoint export draw from the same data.
 1. **Design library and previews: done** (sample content, no AI). No decorative lines; signature colour areas per direction; picture slides; picture upload; Present mode with builds
 2. Poster look: 3 test directions done; extend after review
 2b. Glass look: 3 directions done (Prism, Pearl, Halo)
-2c. Texture look: 3 of 8 directions done (Survey, Drafting, Grain)
+2c. Texture look: 6 of 8 directions done (Survey, Drafting, Grain, Memphis, Terra, Riso)
+2d. Design laws: every direction states and passes them (see above)
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)

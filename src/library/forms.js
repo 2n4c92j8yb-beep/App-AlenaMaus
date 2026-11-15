@@ -24,6 +24,7 @@ import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.j
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
 import { applyAccent, invertPalette } from './accents.js';
+import { stepSize, snap, snapUp, columns, BASELINE } from './laws.js';
 
 // ---------- colour helpers ----------
 
@@ -49,10 +50,15 @@ function makeCtx(dir, deck, slide, index, total, density) {
   // a slide planned with the `invert` accent uses the direction's second tone
   const c = slide?.accent?.kind === 'invert' ? invertPalette({ ...dir.colors }, contrast) : { ...dir.colors };
   c.accentText = c.accentText ?? (contrast(c.accent, c.bg) >= 3 ? c.accent : c.ink);
+  // the direction's laws (laws.js): one modular type scale, margins on the baseline grid
+  const ratio = dir.laws?.type.ratio ?? 1.25;
+  const grid = dir.laws?.grid ?? { baseline: BASELINE, columns: 12, gutter: 0.25 };
+  const m = snap(dir.layout.margin, grid.baseline);
   return {
     dir, L: dir.layout, c, deck, slide, slideIndex: index, total, density,
-    m: dir.layout.margin,
-    scale: dir.layout.scale ?? 1,
+    m, ratio, grid,
+    step: (n) => stepSize(ratio, n),
+    cols: columns(m, grid.columns, grid.gutter, W),
     dz: density === 'dense' ? 0.88 : density === 'light' ? 1.1 : 1,
     onAccent: c.onAccent ?? onColor(c.accent, c.bg, c.ink),
     els: [],
@@ -60,6 +66,8 @@ function makeCtx(dir, deck, slide, index, total, density) {
 }
 
 export const sig = (ctx) => ctx.L.signature;
+/** Right edge text may use: Bento keeps the columns of its tile mosaic free. */
+const textRight = (ctx) => (sig(ctx) === 'bento' ? ctx.cols.x(8) - ctx.cols.gutter : W - ctx.m);
 const isLedger = (ctx) => sig(ctx) === 'ledger';
 
 /** Add a fitted text element. Returns { el, height, size }. */
@@ -76,8 +84,10 @@ export function text(ctx, role, str, box, o = {}) {
   // Unbounded's figures are much wider than its letters: numbers like "40.5%" need more room
   const digitHeavy = key === 'unbounded' && /^[\d\s.,%+\-–/:]+$/.test(content);
   // letter spacing widens every character; rotated text runs along the box's height
+  // hierarchy law: body text never grows past step 1 of the scale, so a headline (step 2) always outranks it
+  const max = role === 'body' && ctx.step ? Math.min(o.max, ctx.step(1)) : o.max;
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
-    max: o.max, min: o.min ?? Math.round(o.max * 0.6),
+    max, min: Math.min(max, o.min ?? Math.round(o.max * 0.6)),
     factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
     lineHeight, maxLines: o.maxLines ?? Infinity,
   });
@@ -129,6 +139,11 @@ function kicker(ctx, str, x, y, maxW, o = {}) {
 
 export const rect = (ctx, x, y, w, h, fill, extra = {}) => ctx.els.push({ type: 'rect', x, y, w, h, fill, seq: 0, ...extra });
 const ellipse = (ctx, x, y, w, h, fill, extra = {}) => ctx.els.push({ type: 'ellipse', x, y, w, h, fill, seq: 0, ...extra });
+/** A triangle (Bauhaus). Drawn as a small picture: PowerPoint gets it in the background image. */
+function triangle(ctx, x, y, w, h, fill) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w * 96)}" height="${Math.round(h * 96)}" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="50,0 100,100 0,100" fill="${fill}"/></svg>`;
+  ctx.els.push({ type: 'svg', x, y, w, h, svg, seq: 0 });
+}
 const line = (ctx, x1, y1, x2, y2, color, width = 0.75) => ctx.els.push({ type: 'line', x1, y1, x2, y2, color, width, seq: 0 });
 
 /** Place a picture according to the direction's photo treatment. */
@@ -231,6 +246,59 @@ function signature(ctx, kind) {
       if (kind === 'statement') rect(ctx, 0, 0, W, 0.5, c.ink);
       return;
     }
+    case 'bauhaus': {
+      // Bauhaus: circle, square and triangle in the three primaries, set on a diagonal
+      if (kind === 'quiet') return;
+      const [red, yellow, blue] = c.tri;
+      if (kind === 'content') {
+        ellipse(ctx, W - 1.05, 0.35, 0.7, 0.7, red);
+        rect(ctx, W - 0.7, 0.75, 0.45, 0.45, blue);
+        return;
+      }
+      if (kind === 'statement') {
+        ellipse(ctx, W - 3.4, H - 3.4, 5.2, 5.2, yellow);
+        rect(ctx, W - 1.6, H - 4.6, 1.6, 1.6, blue);
+        return;
+      }
+      ellipse(ctx, W - 5.6 + v * 0.3, -1.2, 5.2, 5.2, red);
+      rect(ctx, W - 3.1, 2.7, 3.1, 3.1, blue);
+      triangle(ctx, W - 5.9, H - 2.6, 2.9, 2.6, yellow);
+      return;
+    }
+    case 'specimen': {
+      // experimental typography: one giant word, cropped by the slide edge
+      if (kind === 'quiet' || kind === 'content') {
+        if (kind === 'content') text(ctx, 'label', (ctx.deck.shortTitle ?? ctx.deck.title).toUpperCase(), { x: W - 0.55, y: 0.6, w: 0.4, h: H - 1.2 }, { max: 10, min: 8, color: c.accentText, tracking: 0.3, rotate: 90, maxLines: 1, seq: 0 });
+        return;
+      }
+      const word = String((ctx.deck.posterWords?.[0] ?? ctx.deck.shortTitle ?? ctx.deck.title).split(/\s+/)[0]).toUpperCase();
+      const box = kind === 'cover' ? { x: -0.3, y: H - 4.3, w: W * 1.6, h: 5.2 } : { x: W * 0.42, y: -0.9, w: W * 1.2, h: H + 1.6 };
+      text(ctx, 'display', word, box, { max: kind === 'cover' ? 380 : 520, min: kind === 'cover' ? 380 : 520, color: c.soft, caps: true, maxLines: 1, lineHeight: 0.9, seq: 0, bleed: true, italic: false });
+      return;
+    }
+    case 'duo': {
+      // duotone: everything in two inks; a disc of the second ink anchors section slides
+      if (kind === 'section') ellipse(ctx, W - 3.2, H * 0.5 - 3.2, 6.4, 6.4, c.accent);
+      if (kind === 'statement') rect(ctx, 0, 0, 0.42, H, c.accent);
+      if (kind === 'content') rect(ctx, W - 0.42, 0, 0.42, 1.1, c.accent);
+      return;
+    }
+    case 'bento': {
+      // bento: a mosaic of rounded tiles on the grid's columns, one in the accent
+      if (kind !== 'cover' && kind !== 'section' && kind !== 'statement') return;
+      const { cols } = ctx;
+      const x0 = cols.x(8);
+      const w = W - x0 - ctx.m;
+      const g = cols.gutter;
+      const top = ctx.m;
+      const h = H - 2 * ctx.m;
+      const r = 0.22;
+      const tile = (x, y, tw, th, fill, alpha = 1) => rect(ctx, x, y, tw, th, fill, { radius: r, alpha });
+      tile(x0, top, w, h * 0.55 - g / 2, kind === 'section' ? c.accent : c.soft);
+      tile(x0, top + h * 0.55 + g / 2, w / 2 - g / 2, h * 0.45 - g / 2, c.soft);
+      tile(x0 + w / 2 + g / 2, top + h * 0.55 + g / 2, w / 2 - g / 2, h * 0.45 - g / 2, kind === 'section' ? c.soft : c.accent);
+      return;
+    }
     case 'bleed':
     case 'band':
     case 'panel':
@@ -266,25 +334,27 @@ const footerSpace = (ctx) => (ctx.L.footer ? 0.45 : 0);
  * 'top' puts the headline above the content, 'side' in a left column.
  */
 function frame(ctx, title, kick) {
-  const { L, c, m, scale } = ctx;
+  const { L, c, m, step, cols } = ctx;
   const center = L.align === 'center';
   if (L.titlePos === 'side') {
-    const colW = 3.55;
+    // the headline column spans four of the grid's columns, the body starts on the fifth
+    const colW = cols.span(4) - cols.gutter;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
     if (sig(ctx) === 'bleed') bleedNumber(ctx, ctx.slideIndex + 1, { side: 'left', size: 230 });
     let y = m;
     y += kicker(ctx, kick, m, y, colW);
-    text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
-    const bx = m + colW + 0.85;
+    text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: step(2), min: 18, maxLines: 7 });
+    const bx = cols.x(4) + cols.gutter;
     return { x: bx, y: m + 0.05, w: W - bx - m - (sig(ctx) === 'tabs' ? 0.3 : 0), h: H - 2 * m - footerSpace(ctx) - 0.05 };
   }
   let y = m;
   y += kicker(ctx, kick, m, y, W - 2 * m, { align: center ? 'center' : 'left' });
   const right = sig(ctx) === 'tabs' ? 0.35 : 0;
-  const t = text(ctx, 'display', title, { x: m, y, w: W - 2 * m - right, h: 1.35 * scale }, {
-    max: Math.round(32 * scale), min: 20, maxLines: 2, align: center ? 'center' : 'left',
+  const t = text(ctx, 'display', title, { x: m, y, w: W - 2 * m - right, h: Math.min(1.45, Math.max(1.2, (step(2) / 72) * 1.1 * 2 + 0.1)) }, {
+    max: step(2), min: 20, maxLines: 2, align: center ? 'center' : 'left',
   });
-  let by = y + t.height + 0.55;
+  // the content starts on the baseline grid
+  let by = snapUp(y + t.height + 0.55, ctx.grid.baseline);
   if (isLedger(ctx)) { line(ctx, m, by - 0.2, W - m, by - 0.2, c.muted, 0.5); by += 0.2; }
   return { x: m, y: by, w: W - 2 * m - right, h: H - by - m - footerSpace(ctx) };
 }
@@ -292,9 +362,9 @@ function frame(ctx, title, kick) {
 // ---------- forms ----------
 
 function cover(ctx) {
-  const { L, c, m, scale, deck } = ctx;
+  const { L, c, m, step, deck } = ctx;
   const meta = [deck.author, deck.course, deck.date].filter(Boolean).join('  ·  ');
-  const titleMax = Math.round(54 * scale);
+  const titleMax = step(4);
   const img = deck.coverImage;
   switch (L.cover) {
     case 'block': {
@@ -367,7 +437,7 @@ function cover(ctx) {
     default: { // 'bottom'
       background(ctx);
       signature(ctx, 'cover');
-      const tw = img ? W * 0.5 : W * 0.74;
+      const tw = img ? W * 0.5 : Math.min(W * 0.74, textRight(ctx) - m);
       if (img) image(ctx, img, { x: W * 0.6, y: L.photo === 'framed' ? m : 0, w: W * 0.4 - (L.photo === 'framed' ? m : 0), h: L.photo === 'framed' ? H - 2 * m : H }, { seq: 0 });
       label(ctx, deck.occasionLabel, { x: m, y: m, w: tw, h: 0.3 }, { seq: 1 });
       text(ctx, 'display', deck.title, { x: m, y: H * 0.26, w: tw, h: H * 0.42 }, { max: titleMax, min: 26, valign: 'bottom', maxLines: 5 });
@@ -378,7 +448,7 @@ function cover(ctx) {
 }
 
 function section(ctx, s) {
-  const { L, c, m, scale } = ctx;
+  const { L, c, m, step } = ctx;
   const center = L.align === 'center';
   const full = L.cover === 'block' || L.accentStatements || sig(ctx) === 'masthead';
   const fill = sig(ctx) === 'masthead' ? c.ink : c.accent;
@@ -397,12 +467,12 @@ function section(ctx, s) {
     });
   }
   // centred directions centre the section name under the number, across the full width
-  text(ctx, 'display', s.label, { x: m, y: H * 0.42, w: center ? W - 2 * m : W * 0.6, h: 1.6 }, { max: Math.round(48 * scale), min: 28, color: bandInk, align: center ? 'center' : 'left', maxLines: 2, seq: 2 });
+  text(ctx, 'display', s.label, { x: m, y: H * 0.42, w: center ? W - 2 * m : Math.min(W * 0.6, textRight(ctx) - m), h: 1.6 }, { max: step(3), min: 28, color: bandInk, align: center ? 'center' : 'left', maxLines: 2, seq: 2 });
   footer(ctx, full ? ink : undefined);
 }
 
 function statement(ctx, item, kick) {
-  const { L, c, m, scale, dz } = ctx;
+  const { L, c, m, step, dz } = ctx;
   const center = L.align === 'center';
   const full = !!L.accentStatements;
   background(ctx, full ? c.accent : undefined);
@@ -410,11 +480,11 @@ function statement(ctx, item, kick) {
   const band = sig(ctx) === 'band';
   if (band) rect(ctx, 0, H * 0.2, W, H * 0.62, c.accent);
   const ink = full || band ? ctx.onAccent : c.ink;
-  const w = center ? W - 2 * m - 1 : W * 0.74;
+  const w = center ? W - 2 * m - 1 : Math.min(W * 0.74, textRight(ctx) - m);
   const x = center ? (W - w) / 2 : m + (L.titlePos === 'side' ? 0.1 : 0);
   if (kick) kicker(ctx, kick, x, H * 0.24, w, { align: center ? 'center' : 'left', color: full || band ? ink : undefined, fill: band ? c.ink : undefined });
   text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.46 }, {
-    max: Math.round(46 * scale * dz), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5,
+    max: Math.round(step(3) * dz), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5,
   });
   if (item.note) text(ctx, 'body', item.note, { x, y: H * 0.79, w, h: 0.6 }, { max: 18, min: 13, color: full || band ? ink : c.muted, align: center ? 'center' : 'left', seq: 3 });
   footer(ctx, full ? ink : undefined);
@@ -428,7 +498,7 @@ function bigNumber(ctx, item, kick) {
   if (L.align === 'center') {
     text(ctx, 'display', item.value, { x: b.x, y: b.y, w: b.w, h: b.h * 0.46 }, { max: 140, min: 60, color: c.accentText, align: 'center', valign: 'middle', italic: false, caps: false });
     let y = b.y + b.h * 0.46 + 0.1;
-    const lb = text(ctx, 'display', item.label, { x: b.x + 1, y, w: b.w - 2, h: 0.7 }, { max: 30, min: 18, align: 'center', italic: false, seq: 2 });
+    const lb = text(ctx, 'display', item.label, { x: b.x + 1, y, w: b.w - 2, h: 0.7 }, { max: ctx.step(1), min: 18, align: 'center', italic: false, seq: 2 });
     y += lb.height + 0.15;
     text(ctx, 'body', item.caption ?? '', { x: b.x + 0.4, y, w: b.w - 0.8, h: b.y + b.h - y - 0.3 }, { max: Math.round(20 * dz), min: 14, align: 'center', color: c.muted, seq: 3 });
     if (item.source) label(ctx, item.source, { x: b.x, y: b.y + b.h - 0.28, w: b.w, h: 0.28 }, { align: 'center', maxLines: 1, seq: 3 });
@@ -441,7 +511,7 @@ function bigNumber(ctx, item, kick) {
   const rx = b.x + numW + 0.5;
   const rw = b.x + b.w - rx;
   let y = b.y + b.h * 0.18;
-  const lb = text(ctx, 'display', item.label, { x: rx, y, w: rw, h: 1.3 }, { max: 32, min: 18, italic: false, maxLines: 3, seq: 2 });
+  const lb = text(ctx, 'display', item.label, { x: rx, y, w: rw, h: 1.3 }, { max: ctx.step(1), min: 18, italic: false, maxLines: 3, seq: 2 });
   y += lb.height + 0.25;
   const cap = text(ctx, 'body', item.caption ?? '', { x: rx, y, w: rw, h: b.y + b.h - y - 0.5 }, { max: Math.round(21 * dz), min: 14, color: c.muted, seq: 3 });
   if (item.source) label(ctx, item.source, { x: rx, y: y + cap.height + 0.25, w: rw, h: 0.3 }, { maxLines: 2, seq: 3 });
@@ -464,7 +534,7 @@ function comparison(ctx, item, kick) {
     const x = b.x + i * (colW + gap) + pad;
     const w = colW - pad;
     const seq = 2 + i * 2;
-    const hd = text(ctx, 'display', side.heading, { x, y: b.y, w, h: 0.9 }, { max: 30, min: 18, color: c.accentText, maxLines: 2, italic: false, seq });
+    const hd = text(ctx, 'display', side.heading, { x, y: b.y, w, h: 0.9 }, { max: ctx.step(1), min: 18, color: c.accentText, maxLines: 2, italic: false, seq });
     const y = b.y + hd.height + 0.25;
     text(ctx, 'body', side.points.join('\n'), { x, y, w, h: b.y + colH - y - 0.1 }, { max: Math.round(22 * dz), min: 14, lineHeight: 1.45, seq });
   });
@@ -499,7 +569,7 @@ function processForm(ctx, item, kick) {
       numberEl(ctx, i + 1, { x: b.x + indent + 0.25, y: y + 0.16, w: nw - 0.2, h: Math.min(rowH - 0.25, 0.8) }, { large: 30, seq });
       const tx = b.x + indent + nw + 0.1;
       const tw = b.w - indent - nw - 0.35;
-      const hd = text(ctx, 'display', s.title, { x: tx, y: y + 0.16, w: tw, h: rowH * 0.42 }, { max: 24, min: 15, italic: false, maxLines: 2, seq });
+      const hd = text(ctx, 'display', s.title, { x: tx, y: y + 0.16, w: tw, h: rowH * 0.42 }, { max: Math.min(26, ctx.step(1)), min: 15, italic: false, maxLines: 2, seq });
       text(ctx, 'body', s.text, { x: tx, y: y + 0.2 + hd.height, w: tw, h: rowH - hd.height - 0.42 }, { max: Math.round(18 * dz), min: 13, color: c.muted, seq });
     });
   } else {
@@ -514,7 +584,7 @@ function processForm(ctx, item, kick) {
       rect(ctx, x, top, colW, b.y + b.h - top, i === n - 1 ? c.accent : c.soft, { seq, alpha: i === n - 1 ? 0.22 : 1 });
       const nb = numberEl(ctx, i + 1, { x: x + 0.25, y: top + 0.2, w: colW - 0.5, h: L.numbers === 'large' ? 0.8 : 0.35 }, { large: 40, seq });
       const ty = top + 0.3 + (nb.height || 0);
-      const hd = text(ctx, 'display', s.title, { x: x + 0.25, y: ty, w: colW - 0.5, h: 1.1 }, { max: 26, min: 16, italic: false, maxLines: 3, seq });
+      const hd = text(ctx, 'display', s.title, { x: x + 0.25, y: ty, w: colW - 0.5, h: 1.1 }, { max: Math.min(26, ctx.step(1)), min: 16, italic: false, maxLines: 3, seq }); // narrow columns cap the subhead step
       text(ctx, 'body', s.text, { x: x + 0.25, y: ty + hd.height + 0.15, w: colW - 0.5, h: b.y + b.h - (ty + hd.height + 0.15) - 0.2 }, { max: Math.round(19 * dz), min: 13, color: c.muted, seq });
     });
   }
@@ -561,7 +631,7 @@ function note(ctx, x, y, w, h) {
 }
 
 function quote(ctx, item, kick) {
-  const { L, c, m, scale } = ctx;
+  const { L, c, m, step } = ctx;
   background(ctx);
   signature(ctx, 'statement');
   const center = L.align === 'center';
@@ -571,7 +641,7 @@ function quote(ctx, item, kick) {
   if (kick) kicker(ctx, kick, x, m, w, { align: center ? 'center' : 'left' });
   if (!center && !pinned) text(ctx, 'display', '“', { x: m - 0.1, y: H * 0.12, w: 1.2, h: 1.6 }, { max: 120, min: 90, color: c.accentText, italic: false, bold: false, caps: false, maxLines: 1, seq: 0 });
   text(ctx, 'display', item.text, { x, y: H * 0.22, w, h: H * 0.42 }, {
-    max: Math.round(36 * scale), min: 20, italic: true, caps: false, align: center ? 'center' : 'left', valign: 'middle', lineHeight: 1.25, maxLines: 6,
+    max: step(2), min: 20, italic: true, caps: false, align: center ? 'center' : 'left', valign: 'middle', lineHeight: 1.25, maxLines: 6,
   });
   const y = H * 0.22 + H * 0.42 + 0.3;
   label(ctx, `— ${item.author}${item.work ? `, ${item.work}` : ''}`, { x, y, w, h: 0.5 }, { align: center ? 'center' : 'left', max: 14, maxLines: 2, seq: 2 });
@@ -580,7 +650,7 @@ function quote(ctx, item, kick) {
 }
 
 function definition(ctx, item, kick) {
-  const { L, c, m, scale, dz } = ctx;
+  const { L, c, m, step, dz } = ctx;
   background(ctx);
   signature(ctx, 'statement');
   const center = L.align === 'center';
@@ -588,7 +658,7 @@ function definition(ctx, item, kick) {
   const w = center ? W - 2 * m - 1 : W * 0.66;
   let y = H * 0.16;
   if (kick) kicker(ctx, kick, x, y - 0.5, w, { align: center ? 'center' : 'left' });
-  text(ctx, 'display', item.term, { x, y, w, h: 1.9 }, { max: Math.round(64 * scale), min: 32, align: center ? 'center' : 'left', valign: 'bottom', maxLines: 2 });
+  text(ctx, 'display', item.term, { x, y, w, h: 1.9 }, { max: step(5), min: 32, align: center ? 'center' : 'left', valign: 'bottom', maxLines: 2 });
   y += 1.9 + 0.2;
   if (item.gloss) y += kicker(ctx, item.gloss, x, y, w, { align: center ? 'center' : 'left', plain: ctx.L.kicker !== 'tag' }) + 0.1;
   text(ctx, 'body', item.text, { x, y: y + 0.1, w, h: H - y - m - footerSpace(ctx) }, { max: Math.round(28 * dz), min: 16, align: center ? 'center' : 'left', lineHeight: 1.35, seq: 3 });
@@ -644,17 +714,17 @@ function pair(ctx, item, kick) {
 }
 
 function question(ctx, item, kick) {
-  const { L, c, m, scale } = ctx;
+  const { L, c, m, step } = ctx;
   const full = L.accentStatements || L.cover === 'block';
   background(ctx, full ? c.accent : undefined);
   if (!full) signature(ctx, 'statement');
   const ink = full ? ctx.onAccent : c.ink;
   const center = L.align === 'center' || L.cover === 'center';
-  const w = center ? W - 2 * m - 1.5 : W * 0.72;
+  const w = center ? W - 2 * m - 1.5 : Math.min(W * 0.72, textRight(ctx) - m);
   const x = center ? (W - w) / 2 : m;
   note(ctx, x, H * 0.2, w, H * 0.62);
   kicker(ctx, kick ?? label_(ctx.deck.language, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
-  text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.42 }, { max: Math.round(44 * scale), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5 });
+  text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.42 }, { max: step(3), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5 });
   if (item.hint) text(ctx, 'body', item.hint, { x, y: H * 0.74, w, h: 0.8 }, { max: 20, min: 13, color: full ? ink : c.muted, align: center ? 'center' : 'left', seq: 3 });
   footer(ctx, full ? ink : undefined);
 }
@@ -671,7 +741,7 @@ function photo(ctx, item, kick) {
     const w = W - iw - m - 0.7;
     let y = H * 0.22;
     if (kick) y += kicker(ctx, kick, x, y, w);
-    const t = text(ctx, 'display', item.title, { x, y, w, h: 2.4 }, { max: Math.round(36 * ctx.scale), min: 20, maxLines: 4, seq: 1 });
+    const t = text(ctx, 'display', item.title, { x, y, w, h: 2.4 }, { max: ctx.step(2), min: 20, maxLines: 4, seq: 1 });
     const cap = text(ctx, 'body', item.caption ?? '', { x, y: y + t.height + 0.35, w, h: H * 0.84 - (y + t.height + 0.35) }, { max: Math.round(20 * dz), min: 13, color: c.muted, seq: 2 });
     label(ctx, item.credit ?? '', { x, y: Math.min(H - m - 0.45, y + t.height + 0.5 + cap.height), w, h: 0.45 }, { max: 10, min: 8, maxLines: 2, seq: 2 });
     return;
@@ -717,7 +787,7 @@ function photoSplit(ctx, item, kick) {
   const w = half - 0.7 - m;
   let y = H * 0.2;
   if (kick) y += kicker(ctx, kick, x, y, w);
-  const t = text(ctx, 'display', item.title, { x, y, w, h: 2.4 }, { max: Math.round(34 * (ctx.scale)), min: 20, maxLines: 5, seq: 1 });
+  const t = text(ctx, 'display', item.title, { x, y, w, h: 2.4 }, { max: ctx.step(2), min: 20, maxLines: 5, seq: 1 });
   const cap = text(ctx, 'body', item.caption ?? '', { x, y: y + t.height + 0.35, w, h: H * 0.84 - (y + t.height + 0.35) }, { max: Math.round(19 * dz), min: 13, color: c.muted, seq: 2 });
   label(ctx, item.credit ?? '', { x, y: Math.min(H - m - 0.4, y + t.height + 0.5 + cap.height), w, h: 0.45 }, { max: 10, min: 8, maxLines: 2, seq: 2 });
 }
@@ -731,6 +801,42 @@ function references(ctx, item) {
     max: Math.round(18 * dz), min: 11, lineHeight: 1.4, hanging: true, color: c.ink,
   });
   footer(ctx);
+}
+
+// ---------- surface treatments ----------
+
+const isBackground = (e) => e.type === 'rect' && e.w >= W - 0.01 && e.h >= H - 0.01;
+
+/**
+ * Riot (neo-brutalism): panels and pictures get a thick ink outline and a hard,
+ * unblurred offset shadow; translucent panels become solid. All native shapes,
+ * so the PowerPoint export keeps them editable.
+ */
+function brutalize(ctx) {
+  const { c } = ctx;
+  const out = [];
+  const shadow = 0.09;
+  for (const e of ctx.els) {
+    const panel = (e.type === 'rect' && !isBackground(e) && !e.rotate && e.w > 0.5 && e.h > 0.3) || e.type === 'image';
+    if (!panel || e.type === 'svg') { out.push(e); continue; }
+    out.push({ type: 'rect', x: e.x + shadow, y: e.y + shadow, w: e.w, h: e.h, fill: c.ink, seq: e.seq });
+    if (e.type === 'image') {
+      out.push({ type: 'rect', x: e.x - 0.03, y: e.y - 0.03, w: e.w + 0.06, h: e.h + 0.06, fill: c.ink, seq: e.seq });
+      out.push(e);
+    } else {
+      out.push({ ...e, alpha: 1, fill: e.alpha != null && e.alpha < 0.5 ? c.soft : e.fill, stroke: c.ink, strokeWidth: 2.25 });
+    }
+  }
+  // keep the shadows on the canvas
+  ctx.els = out.map((e) => (e.type === 'rect' && !isBackground(e) ? { ...e, w: Math.min(e.w, W - e.x), h: Math.min(e.h, H - e.y) } : e));
+}
+
+/** Bento: every panel and picture becomes a rounded tile. */
+function tile(ctx) {
+  for (const e of ctx.els) {
+    if (e.type === 'rect' && !isBackground(e) && !e.rotate && e.w > 0.4 && e.h > 0.4) e.radius = e.radius ?? 0.22;
+    if (e.type === 'image' && !e.round) e.radius = e.radius ?? 0.22;
+  }
 }
 
 const FORMS = {
@@ -751,6 +857,8 @@ export function layoutSlide(dir, deck, slide, index, total, density = 'medium') 
   fn(ctx, slide.item ?? slide, slide.kicker);
   // Glass directions reuse the regular content forms, re-dressed in glass
   if (dir.family === 'glass') glassify(ctx);
+  if (dir.layout.surface === 'brutal') brutalize(ctx);
+  if (dir.layout.surface === 'tiles') tile(ctx);
   // then the slide's planned effect from the direction's kit (accents.js), if it has one
   return applyAccent(ctx);
 }

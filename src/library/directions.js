@@ -15,10 +15,14 @@
 //   kicker      'text' | 'tag'               kicker as plain label or as a filled colour tag
 //   signature   the direction's own graphic device (see forms.js → signature())
 //   photo       'bleed' | 'framed' | 'offset' | 'round'   how pictures sit on the slide
-//   scale       multiplier for headline sizes
+//   surface     'brutal' (outlines and hard shadows) | 'tiles' (rounded bento tiles), optional
+// laws: the direction's design laws (laws.js): type scale ratio and pairing, colour harmony,
+//       grid, motion and the movement it comes from
 //   footer      show page number and short title
 // tags: tone (formal | neutral | relaxed), mode (light | dark | tint), type (serif | sans | mixed)
 // suits: weight per occasion id (0 = never)
+
+import { laws } from './laws.js';
 
 export const DIRECTIONS = [
   {
@@ -26,9 +30,10 @@ export const DIRECTIONS = [
     name: 'Archive',
     blurb: 'Warm paper, Garamond, oxblood. Pictures sit on a paper mat like plates in an old book.',
     fonts: { display: 'garamond', body: 'garamond', label: 'garamond' },
-    colors: { bg: '#F4EFE6', ink: '#2B2622', muted: '#6B6158', accent: '#7A2E2A', soft: '#E4DACB' },
-    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', kicker: 'text', signature: 'plate', photo: 'framed', scale: 1.05, footer: true },
+    colors: { bg: '#F4EFE6', ink: '#2B2622', muted: '#675D55', accent: '#7A2E2A', soft: '#E4DACB' },
+    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', kicker: 'text', signature: 'plate', photo: 'framed', footer: true },
     tags: { tone: 'formal', mode: 'tint', type: 'serif' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One old-style face throughout; hierarchy comes from size and spaced capitals, as on a printed book page.', harmony: 'neutral + accent', movement: 'Book typography (old-style serif, Renaissance page)' }),
     suits: { seminar: 3, thesis: 3, lesson: 1, group: 1, pitch: 0, update: 1 },
   },
   {
@@ -37,8 +42,9 @@ export const DIRECTIONS = [
     blurb: 'Newspaper energy: bold Georgia headlines, black masthead bars, red tags.',
     fonts: { display: 'georgia', body: 'arial', label: 'arial' },
     colors: { bg: '#FFFFFF', ink: '#141414', muted: '#5A5A5A', accent: '#B5121B', soft: '#EDEDED' },
-    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'top', labels: 'upper', kicker: 'tag', signature: 'masthead', photo: 'bleed', scale: 1.1, footer: true, boldDisplay: true },
+    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'top', labels: 'upper', kicker: 'tag', signature: 'masthead', photo: 'bleed', footer: true, boldDisplay: true },
     tags: { tone: 'neutral', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'classification', why: 'Transitional serif headlines over a neo-grotesque text face: the newspaper contrast of voice and information.', harmony: 'neutral + accent', motion: 'brisk', movement: 'Newspaper design' }),
     suits: { seminar: 2, thesis: 2, lesson: 2, group: 2, pitch: 2, update: 3 },
   },
   {
@@ -46,9 +52,10 @@ export const DIRECTIONS = [
     name: 'Swiss Grid',
     blurb: 'Strict grid, oversized numbers running off the edge, one hot accent.',
     fonts: { display: 'arial', body: 'arial', label: 'arial' },
-    colors: { bg: '#FFFFFF', ink: '#111111', muted: '#6E6E6E', accent: '#D9432B', soft: '#F0F0F0' },
-    layout: { margin: 0.75, align: 'left', titlePos: 'side', numbers: 'large', cover: 'split', labels: 'small', kicker: 'text', signature: 'bleed', photo: 'bleed', scale: 1.0, footer: true, boldDisplay: true },
+    colors: { bg: '#FFFFFF', ink: '#111111', muted: '#6C6C6C', accent: '#D9432B', soft: '#F0F0F0' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'side', numbers: 'large', cover: 'split', labels: 'small', kicker: 'text', signature: 'bleed', photo: 'bleed', footer: true, boldDisplay: true },
     tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One neo-grotesque family; order comes from the grid, scale contrast and flush-left text, never from ornament.', harmony: 'neutral + accent', motion: 'brisk', movement: 'International Typographic Style' }),
     suits: { seminar: 2, thesis: 2, lesson: 1, group: 3, pitch: 3, update: 3 },
   },
   {
@@ -57,8 +64,9 @@ export const DIRECTIONS = [
     blurb: 'Slate green-black, italic serif headlines, chalk-yellow highlights and soft spots of colour.',
     fonts: { display: 'georgia', body: 'verdana', label: 'verdana' },
     colors: { bg: '#1F2A2B', ink: '#ECEAE2', muted: '#A9B1AC', accent: '#E8D36A', soft: '#2C3A3B' },
-    layout: { margin: 0.85, align: 'left', titlePos: 'top', numbers: 'large', cover: 'center', labels: 'italic', kicker: 'text', signature: 'spots', photo: 'round', scale: 1.0, footer: false, italicDisplay: true },
+    layout: { margin: 0.85, align: 'left', titlePos: 'top', numbers: 'large', cover: 'center', labels: 'italic', kicker: 'text', signature: 'spots', photo: 'round', footer: false, italicDisplay: true },
     tags: { tone: 'relaxed', mode: 'dark', type: 'mixed' },
+    laws: laws({ ratio: 'majorThird', pairing: 'classification', why: 'An italic transitional serif speaks; a wide humanist sans stays readable from the back row.', harmony: 'neutral + accent', movement: 'Classroom vernacular (chalkboard)' }),
     suits: { seminar: 2, thesis: 1, lesson: 3, group: 2, pitch: 0, update: 0 },
   },
   {
@@ -67,8 +75,9 @@ export const DIRECTIONS = [
     blurb: 'Kraft paper, typewriter labels, index tabs and notes pinned slightly askew.',
     fonts: { display: 'georgia', body: 'georgia', label: 'courier' },
     colors: { bg: '#ECE5D5', ink: '#33312C', muted: '#625C50', accent: '#2F5D50', soft: '#DED5C1', note: '#F6E9A8' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'small', kicker: 'text', signature: 'tabs', photo: 'framed', scale: 0.95, footer: true },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'small', kicker: 'text', signature: 'tabs', photo: 'framed', footer: true },
     tags: { tone: 'relaxed', mode: 'tint', type: 'serif' },
+    laws: laws({ ratio: 'minorThird', pairing: 'single', why: 'One serif for reading, a typewriter monospace as a second, documentary voice for labels.', harmony: 'neutral + accent', movement: 'Vernacular field journal' }),
     suits: { seminar: 3, thesis: 1, lesson: 2, group: 2, pitch: 0, update: 1 },
   },
   {
@@ -77,8 +86,9 @@ export const DIRECTIONS = [
     blurb: 'Museum wall: centred Palatino, wide margins, pictures given the whole stage.',
     fonts: { display: 'palatino', body: 'palatino', label: 'gillSans' },
     colors: { bg: '#FBFAF7', ink: '#26231F', muted: '#6C655B', accent: '#8C6E4E', soft: '#EFEBE3' },
-    layout: { margin: 1.3, align: 'center', titlePos: 'top', numbers: 'none', cover: 'center', labels: 'upper', kicker: 'text', signature: 'wall', photo: 'framed', scale: 0.95, footer: false },
+    layout: { margin: 1.3, align: 'center', titlePos: 'top', numbers: 'none', cover: 'center', labels: 'upper', kicker: 'text', signature: 'wall', photo: 'framed', footer: false },
     tags: { tone: 'formal', mode: 'light', type: 'serif' },
+    laws: laws({ ratio: 'minorThird', pairing: 'single', why: 'One old-style serif centred like wall text, a humanist sans only for captions: the calm of a museum label.', harmony: 'neutral + accent', motion: 'slow', movement: 'Museum and gallery typography' }),
     suits: { seminar: 2, thesis: 2, lesson: 1, group: 0, pitch: 1, update: 0 },
   },
   {
@@ -87,8 +97,9 @@ export const DIRECTIONS = [
     blurb: 'Deep blue, Century Gothic, translucent blocks that overlap like layered plans.',
     fonts: { display: 'centuryGothic', body: 'centuryGothic', label: 'courier' },
     colors: { bg: '#13355A', ink: '#F2F6FA', muted: '#A9BFD6', accent: '#8FD3F5', soft: '#1C4470' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'small', kicker: 'text', signature: 'blocks', photo: 'offset', scale: 0.95, footer: true },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'small', kicker: 'text', signature: 'blocks', photo: 'offset', footer: true },
     tags: { tone: 'neutral', mode: 'dark', type: 'sans' },
+    laws: laws({ ratio: 'minorThird', pairing: 'single', why: 'One geometric sans, like lettering on a technical plan.', harmony: 'monochromatic', movement: 'Technical drawing' }),
     suits: { seminar: 1, thesis: 1, lesson: 1, group: 3, pitch: 2, update: 2 },
   },
   {
@@ -97,8 +108,9 @@ export const DIRECTIONS = [
     blurb: 'Condensed capitals, wide teal bands, poster-like hierarchy.',
     fonts: { display: 'franklin', body: 'arial', label: 'franklin' },
     colors: { bg: '#F6F5F1', ink: '#1C1F1E', muted: '#5F6462', accent: '#0F7466', soft: '#E4E6E1' },
-    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'upper', kicker: 'tag', signature: 'band', photo: 'bleed', scale: 1.15, footer: true, upperDisplay: true },
+    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'upper', kicker: 'tag', signature: 'band', photo: 'bleed', footer: true, upperDisplay: true },
     tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'case', why: 'Grotesque capitals for headlines, the neo-grotesque in sentence case for text: one group, contrast through case.', harmony: 'neutral + accent', motion: 'brisk', movement: 'Signage and wayfinding' }),
     suits: { seminar: 1, thesis: 1, lesson: 2, group: 3, pitch: 3, update: 2 },
   },
   {
@@ -106,9 +118,10 @@ export const DIRECTIONS = [
     name: 'Monograph',
     blurb: 'Cream and navy, Book Antiqua, a tinted column for every headline.',
     fonts: { display: 'bookAntiqua', body: 'gillSans', label: 'gillSans' },
-    colors: { bg: '#F7F2E7', ink: '#1D2B4F', muted: '#5B6680', accent: '#A87C24', soft: '#EAE1CC' },
-    layout: { margin: 0.95, align: 'left', titlePos: 'side', numbers: 'small', cover: 'split', labels: 'upper', kicker: 'text', signature: 'panel', photo: 'bleed', scale: 1.0, footer: true },
+    colors: { bg: '#F7F2E7', ink: '#1D2B4F', muted: '#57627D', accent: '#A87C24', soft: '#EAE1CC' },
+    layout: { margin: 0.95, align: 'left', titlePos: 'side', numbers: 'small', cover: 'split', labels: 'upper', kicker: 'text', signature: 'panel', photo: 'bleed', footer: true },
     tags: { tone: 'formal', mode: 'tint', type: 'mixed' },
+    laws: laws({ ratio: 'majorThird', pairing: 'classification', why: 'An old-style serif for headings, a humanist sans for text: both humanist, so they share rhythm.', harmony: 'complementary', hues: ['#1D2B4F', '#A87C24'], movement: 'Academic monograph' }),
     suits: { seminar: 3, thesis: 3, lesson: 1, group: 1, pitch: 1, update: 1 },
   },
   {
@@ -116,9 +129,10 @@ export const DIRECTIONS = [
     name: 'Studio',
     blurb: 'Warm grey, chunky Trebuchet, terracotta blocks set behind pictures and numbers.',
     fonts: { display: 'trebuchet', body: 'trebuchet', label: 'trebuchet' },
-    colors: { bg: '#E9E5DF', ink: '#232220', muted: '#66625C', accent: '#B85A2B', soft: '#DAD4CB' },
-    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'small', kicker: 'text', signature: 'offset', photo: 'offset', scale: 1.05, footer: false, boldDisplay: true },
+    colors: { bg: '#E9E5DF', ink: '#232220', muted: '#5E5A55', accent: '#B85A2B', soft: '#DAD4CB' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'small', kicker: 'text', signature: 'offset', photo: 'offset', footer: false, boldDisplay: true },
     tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One humanist sans in heavy and regular weights; terracotta blocks carry the emphasis.', harmony: 'neutral + accent', movement: 'Contemporary studio and craft' }),
     suits: { seminar: 1, thesis: 0, lesson: 3, group: 3, pitch: 2, update: 1 },
   },
   {
@@ -127,8 +141,9 @@ export const DIRECTIONS = [
     blurb: 'Near-black stage, large Georgia, an amber glow behind the one thing that matters.',
     fonts: { display: 'georgia', body: 'arial', label: 'arial' },
     colors: { bg: '#141414', ink: '#EDEBE6', muted: '#9C9890', accent: '#F0A43A', soft: '#232323' },
-    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', kicker: 'text', signature: 'glow', photo: 'bleed', scale: 1.1, footer: false },
+    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', kicker: 'text', signature: 'glow', photo: 'bleed', footer: false },
     tags: { tone: 'neutral', mode: 'dark', type: 'mixed' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'classification', why: 'A large transitional serif against a plain neo-grotesque: the lecturer\'s voice and the notes.', harmony: 'neutral + accent', motion: 'slow', movement: 'Theatrical chiaroscuro (spotlight)' }),
     suits: { seminar: 2, thesis: 2, lesson: 1, group: 1, pitch: 2, update: 1 },
   },
   {
@@ -137,8 +152,9 @@ export const DIRECTIONS = [
     blurb: 'Cambria and Calibri on white, table-like rules, ink blue. The one direction that uses lines, on purpose.',
     fonts: { display: 'cambria', body: 'calibri', label: 'calibri' },
     colors: { bg: '#FFFFFF', ink: '#1E1F24', muted: '#5D6170', accent: '#2F4F9E', soft: '#EEF0F5' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'small', cover: 'top', labels: 'small', kicker: 'text', signature: 'ledger', photo: 'framed', scale: 0.95, footer: true },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'small', cover: 'top', labels: 'small', kicker: 'text', signature: 'ledger', photo: 'framed', footer: true },
     tags: { tone: 'formal', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'minorThird', pairing: 'classification', why: 'A transitional serif with a humanist sans of the same era of Office faces, set like a table.', harmony: 'neutral + accent', movement: 'Information design (tables and ledgers)' }),
     suits: { seminar: 2, thesis: 3, lesson: 1, group: 2, pitch: 1, update: 3 },
   },
   {
@@ -147,8 +163,9 @@ export const DIRECTIONS = [
     blurb: 'Mustard and black, Arial Black, full-bleed colour and type that runs off the page.',
     fonts: { display: 'arialBlack', body: 'arial', label: 'arial' },
     colors: { bg: '#F7F3EA', ink: '#1A1A1A', muted: '#5C5850', accent: '#E3B23C', soft: '#EFE6D2', onAccent: '#1A1A1A', accentText: '#7A5A0A' },
-    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'upper', kicker: 'text', signature: 'bleed', photo: 'bleed', scale: 0.92, footer: false, accentStatements: true },
+    layout: { margin: 0.7, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'upper', kicker: 'text', signature: 'bleed', photo: 'bleed', footer: false, accentStatements: true },
     tags: { tone: 'relaxed', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'weight', why: 'Arial Black over Arial: one family, contrast through weight only.', harmony: 'neutral + accent', motion: 'brisk', movement: 'Mid-century poster and Pop' }),
     suits: { seminar: 1, thesis: 0, lesson: 2, group: 3, pitch: 3, update: 1 },
   },
   {
@@ -157,8 +174,9 @@ export const DIRECTIONS = [
     blurb: 'A tinted margin holds headlines and numbers, like an annotated page.',
     fonts: { display: 'georgia', body: 'verdana', label: 'verdana' },
     colors: { bg: '#FFFFFF', ink: '#262626', muted: '#6B6B6B', accent: '#992436', soft: '#F4EEEC' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'side', numbers: 'small', cover: 'split', labels: 'italic', kicker: 'text', signature: 'margin', photo: 'framed', scale: 0.95, footer: true },
+    layout: { margin: 0.8, align: 'left', titlePos: 'side', numbers: 'small', cover: 'split', labels: 'italic', kicker: 'text', signature: 'margin', photo: 'framed', footer: true },
     tags: { tone: 'formal', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'minorThird', pairing: 'classification', why: 'A transitional serif in the margin, a wide humanist sans in the text block, like an annotated page.', harmony: 'neutral + accent', movement: 'Annotated manuscript' }),
     suits: { seminar: 3, thesis: 2, lesson: 2, group: 1, pitch: 0, update: 1 },
   },
   {
@@ -166,9 +184,10 @@ export const DIRECTIONS = [
     name: 'Botanical',
     blurb: 'Pale sage, italic Garamond, large soft circles and round-cropped pictures.',
     fonts: { display: 'garamond', body: 'gillSans', label: 'gillSans' },
-    colors: { bg: '#E5ECE3', ink: '#23332A', muted: '#56665C', accent: '#8A4F36', soft: '#D2DDCF' },
-    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', kicker: 'text', signature: 'circles', photo: 'round', scale: 1.05, footer: false, italicDisplay: true },
+    colors: { bg: '#E5ECE3', ink: '#23332A', muted: '#526258', accent: '#8A4F36', soft: '#D2DDCF' },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', kicker: 'text', signature: 'circles', photo: 'round', footer: false, italicDisplay: true },
     tags: { tone: 'relaxed', mode: 'tint', type: 'mixed' },
+    laws: laws({ ratio: 'majorThird', pairing: 'classification', why: 'Italic old-style serif for names, a humanist sans for descriptions, as on a botanical plate.', harmony: 'neutral + accent', motion: 'slow', movement: 'Botanical illustration plates' }),
     suits: { seminar: 2, thesis: 1, lesson: 3, group: 2, pitch: 1, update: 0 },
   },
 ];
@@ -187,8 +206,9 @@ DIRECTIONS.push(
     grade: 'warm',
     fonts: { display: 'bebas', body: 'georgia', label: 'georgia', poster: 'bebas' },
     colors: { bg: '#0F0C09', ink: '#F2E6D2', muted: '#A99A87', accent: '#D9A75A', soft: '#1D1712' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.3, kicker: 'text', signature: 'none', photo: 'bleed', scale: 1.15, footer: true, upperDisplay: true, photoFilter: 'sepia(0.45) contrast(1.1) brightness(0.88)' },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.3, kicker: 'text', signature: 'none', photo: 'bleed', footer: true, upperDisplay: true, photoFilter: 'sepia(0.45) contrast(1.1) brightness(0.88)' },
     tags: { tone: 'neutral', mode: 'dark', type: 'mixed' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'classification', why: 'A condensed grotesque for the giant word, a transitional serif for the small print: poster against text.', harmony: 'neutral + accent', movement: 'Film and travel posters' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -199,8 +219,9 @@ DIRECTIONS.push(
     grade: 'mono',
     fonts: { display: 'anton', body: 'arial', label: 'arial', poster: 'anton' },
     colors: { bg: '#EEECE7', ink: '#111111', muted: '#55524D', accent: '#111111', soft: '#DCD9D2' },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.3, kicker: 'text', signature: 'none', photo: 'bleed', scale: 1.1, footer: true, upperDisplay: true, photoFilter: 'grayscale(1) contrast(1.15)' },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.3, kicker: 'text', signature: 'none', photo: 'bleed', footer: true, upperDisplay: true, photoFilter: 'grayscale(1) contrast(1.15)' },
     tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'width', why: 'A condensed grotesque over a normal-width neo-grotesque: same group, contrast through width.', harmony: 'monochromatic', motion: 'brisk', movement: 'Photomontage poster' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -211,8 +232,9 @@ DIRECTIONS.push(
     grade: 'night',
     fonts: { display: 'georgia', body: 'georgia', label: 'georgia', poster: 'sixcaps' },
     colors: { bg: '#0E0C0A', ink: '#EDE3D1', muted: '#9C9182', accent: '#C9A15F', soft: '#1B1713' },
-    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.35, kicker: 'text', signature: 'none', photo: 'bleed', scale: 1.0, footer: false, photoFilter: 'sepia(0.55) brightness(0.72) contrast(1.15)' },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.35, kicker: 'text', signature: 'none', photo: 'bleed', footer: false, photoFilter: 'sepia(0.55) brightness(0.72) contrast(1.15)' },
     tags: { tone: 'formal', mode: 'dark', type: 'serif' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One transitional serif for all text; the ultra-condensed poster word is the only second voice.', harmony: 'neutral + accent', motion: 'slow', movement: 'Art Deco cinema poster' }),
     suits: ALL_OCCASIONS,
   },
 );
@@ -235,8 +257,9 @@ DIRECTIONS.push(
       glow: '#6CF0E066', glowEdge: '#6CF0E066', float: '#000000B3',
       chrome: 'silver', chromeHolo: true, titleGradient: true,
     },
-    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'framed', scale: 0.92, footer: true },
+    layout: { margin: 0.8, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'framed', footer: true },
     tags: { tone: 'neutral', mode: 'dark', type: 'sans' },
+    laws: laws({ ratio: 'minorThird', pairing: 'width', why: 'An extended geometric display face over a normal-width geometric text face.', harmony: 'neutral + accent', movement: 'Y2K and glassmorphism' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -253,8 +276,9 @@ DIRECTIONS.push(
       glow: '#B9A4FF73', glowEdge: '#B9A4FF8C', float: '#1E1C3C38',
       chrome: 'silver', chromeHolo: true, titleGradient: false,
     },
-    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.18, kicker: 'text', signature: 'none', photo: 'framed', scale: 0.88, footer: true },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.18, kicker: 'text', signature: 'none', photo: 'framed', footer: true },
     tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'minorThird', pairing: 'width', why: 'An extended geometric display face over a normal-width geometric text face, set centred and quiet.', harmony: 'neutral + accent', motion: 'slow', movement: 'Glassmorphism (soft UI)' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -271,8 +295,9 @@ DIRECTIONS.push(
       glow: '#E2B66B59', glowEdge: '#E2B66B66', float: '#000000B3',
       chrome: 'gold', chromeHolo: false, titleGradient: true, stage: true,
     },
-    layout: { margin: 0.85, align: 'left', titlePos: 'side', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.2, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.0, footer: true, boldDisplay: true },
+    layout: { margin: 0.85, align: 'left', titlePos: 'side', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.2, kicker: 'text', signature: 'none', photo: 'framed', footer: true, boldDisplay: true },
     tags: { tone: 'formal', mode: 'dark', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One geometric sans in heavy and regular weights, gold carrying the emphasis.', harmony: 'monochromatic', motion: 'slow', movement: 'Luxury product staging' }),
     suits: ALL_OCCASIONS,
   },
 );
@@ -287,8 +312,9 @@ DIRECTIONS.push(
     blurb: 'Paper and ink-green contour lines, like a topographic map. Palatino headlines, Gill Sans text.',
     fonts: { display: 'palatino', body: 'gillSans', label: 'gillSans' },
     colors: { bg: '#EFEBE1', ink: '#1F2A24', muted: '#525C56', accent: '#2F6B57', soft: '#E3DED1' },
-    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', labelTracking: 0.14, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.05, footer: true },
+    layout: { margin: 0.9, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'upper', labelTracking: 0.14, kicker: 'text', signature: 'none', photo: 'framed', footer: true },
     tags: { tone: 'formal', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'majorThird', pairing: 'classification', why: 'An old-style serif for place names, a humanist sans for legends, as on a map.', harmony: 'monochromatic', movement: 'Cartography' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -298,8 +324,9 @@ DIRECTIONS.push(
     blurb: 'Cobalt drafting sheet with a fine white grid, registration marks, narrow title-block capitals and typewriter labels.',
     fonts: { display: 'bebas', body: 'arial', label: 'courier' },
     colors: { bg: '#1D3B8B', ink: '#F3F6FF', muted: '#C3D0F4', accent: '#9FC4FF', soft: '#26479C' },
-    layout: { margin: 0.95, align: 'left', titlePos: 'side', numbers: 'large', cover: 'top', labels: 'upper', labelTracking: 0.12, kicker: 'text', signature: 'none', photo: 'framed', scale: 1.2, footer: true, upperDisplay: true },
+    layout: { margin: 0.95, align: 'left', titlePos: 'side', numbers: 'large', cover: 'top', labels: 'upper', labelTracking: 0.12, kicker: 'text', signature: 'none', photo: 'framed', footer: true, upperDisplay: true },
     tags: { tone: 'neutral', mode: 'dark', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'width', why: 'Condensed title-block capitals over a normal-width neo-grotesque, typewriter labels as a third voice.', harmony: 'monochromatic', motion: 'brisk', movement: 'Engineering drawing' }),
     suits: ALL_OCCASIONS,
   },
   {
@@ -309,8 +336,121 @@ DIRECTIONS.push(
     blurb: 'Soft peach, lilac and butter colour fields with film grain, bold rounded headlines, everything centred.',
     fonts: { display: 'manrope', body: 'manrope', label: 'manrope' },
     colors: { bg: '#F3ECE6', ink: '#221E26', muted: '#4A4350', accent: '#A63D63', soft: '#EADFD7' },
-    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'round', scale: 1.0, footer: false, boldDisplay: true },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'round', footer: false, boldDisplay: true },
     tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One geometric sans, bold and centred; the colour fields do the talking.', harmony: 'neutral + accent', movement: 'Contemporary gradient and grain' }),
+    suits: ALL_OCCASIONS,
+  },
+);
+
+// ---------------------------------------------------------------- new directions, built on the laws
+// Six editorial directions (Office-safe fonts except Couture's Bodoni and Specimen's Anton,
+// whose headlines export as pictures) and three for the Texture look.
+
+DIRECTIONS.push(
+  {
+    id: 'bauhaus',
+    name: 'Bauhaus',
+    blurb: 'Red, yellow and blue circle, square and triangle on a diagonal, geometric sans in tags and large numbers.',
+    fonts: { display: 'centuryGothic', body: 'centuryGothic', label: 'centuryGothic' },
+    colors: { bg: '#F2EEE3', ink: '#151515', muted: '#4F4C45', accent: '#C81F35', soft: '#E6E0D1', tri: ['#C81F35', '#F2B705', '#1E4FA3'] },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', kicker: 'tag', signature: 'bauhaus', photo: 'bleed', footer: true, boldDisplay: true },
+    tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'single', why: 'One geometric sans, as the Bauhaus taught: form reduced to circle, square and triangle, type to its construction.', harmony: 'triadic', hues: ['#C81F35', '#F2B705', '#1E4FA3'], wheel: 'ryb', motion: 'brisk', movement: 'Bauhaus (Itten, Bayer, Moholy-Nagy)' }),
+    suits: { seminar: 2, thesis: 1, lesson: 3, group: 3, pitch: 2, update: 1 },
+  },
+  {
+    id: 'couture',
+    name: 'Couture',
+    blurb: 'Ivory, a high-contrast Bodoni at dramatic scale, widely tracked capitals and an enormous margin.',
+    fonts: { display: 'bodoni', body: 'gillSans', label: 'gillSans' },
+    colors: { bg: '#F6F3EE', ink: '#121212', muted: '#57534D', accent: '#7D6A4C', soft: '#ECE6DC' },
+    layout: { margin: 1.25, align: 'left', titlePos: 'top', numbers: 'none', cover: 'center', labels: 'upper', labelTracking: 0.3, kicker: 'text', signature: 'none', photo: 'bleed', footer: false },
+    tags: { tone: 'formal', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'golden', pairing: 'classification', why: 'A didone headline over a humanist sans: hairline contrast against an even stroke, the fashion-magazine pairing. The golden-section scale gives the extreme scale contrast that reads as luxury.', harmony: 'neutral + accent', motion: 'slow', movement: 'Fashion editorial (didone mastheads)' }),
+    suits: { seminar: 2, thesis: 1, lesson: 0, group: 1, pitch: 3, update: 1 },
+  },
+  {
+    id: 'riot',
+    name: 'Riot',
+    blurb: 'Neo-brutalism: Arial Black, cobalt and yellow panels with thick black outlines and hard offset shadows.',
+    fonts: { display: 'arialBlack', body: 'arial', label: 'courier' },
+    colors: { bg: '#FFFDF5', ink: '#111111', muted: '#474747', accent: '#3B57E8', soft: '#FFE066' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'block', labels: 'upper', kicker: 'tag', signature: 'none', photo: 'offset', footer: true, surface: 'brutal' },
+    tags: { tone: 'relaxed', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'weight', why: 'Arial Black over Arial: one family, contrast through weight, with a typewriter monospace for labels.', harmony: 'complementary', hues: ['#3B57E8', '#FFE066'], motion: 'snap', movement: 'Neo-brutalism' }),
+    suits: { seminar: 1, thesis: 0, lesson: 2, group: 3, pitch: 3, update: 2 },
+  },
+  {
+    id: 'bento',
+    name: 'Bento',
+    blurb: 'White rounded tiles in mixed sizes on light grey, one indigo tile, everything on a twelve-column grid.',
+    fonts: { display: 'calibri', body: 'calibri', label: 'calibri' },
+    colors: { bg: '#EFEFEC', ink: '#16181D', muted: '#545962', accent: '#3A47D5', soft: '#FFFFFF' },
+    layout: { margin: 0.625, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'small', kicker: 'text', signature: 'bento', photo: 'framed', footer: true, boldDisplay: true, surface: 'tiles' },
+    tags: { tone: 'neutral', mode: 'light', type: 'sans' },
+    laws: laws({ ratio: 'majorThird', pairing: 'single', why: 'One humanist sans in bold and regular; hierarchy comes from tile size (common region) rather than from type.', harmony: 'neutral + accent', motion: 'brisk', movement: 'Bento grid (product interfaces)' }),
+    suits: { seminar: 2, thesis: 1, lesson: 2, group: 3, pitch: 3, update: 3 },
+  },
+  {
+    id: 'specimen',
+    name: 'Specimen',
+    blurb: 'Near-black, one giant condensed word cropped by the slide edge, signal orange, labels running up the side.',
+    fonts: { display: 'anton', body: 'arial', label: 'arial' },
+    colors: { bg: '#0D0D0D', ink: '#F4F4F0', muted: '#A3A39C', accent: '#FF5A26', soft: '#202020' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.24, kicker: 'text', signature: 'specimen', photo: 'bleed', footer: true, upperDisplay: true, photoFilter: 'grayscale(1) contrast(1.3)' },
+    tags: { tone: 'relaxed', mode: 'dark', type: 'sans' },
+    laws: laws({ ratio: 'augmentedFourth', pairing: 'width', why: 'A condensed grotesque at poster scale over a normal-width neo-grotesque: type as image, text as information.', harmony: 'neutral + accent', motion: 'snap', movement: 'Experimental typography (Weingart, Carson)' }),
+    suits: { seminar: 1, thesis: 0, lesson: 1, group: 3, pitch: 3, update: 1 },
+  },
+  {
+    id: 'duotone',
+    name: 'Duotone',
+    blurb: 'Two inks only: deep navy and orange. Photos printed in blue, condensed capitals, Georgia for reading.',
+    fonts: { display: 'bebas', body: 'georgia', label: 'georgia' },
+    colors: { bg: '#14213D', ink: '#F5F1E8', muted: '#AEB6C8', accent: '#FCA311', soft: '#1D2D50' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'split', labels: 'upper', labelTracking: 0.16, kicker: 'tag', signature: 'duo', photo: 'bleed', footer: true, upperDisplay: true, photoFilter: 'grayscale(1) contrast(1.2) sepia(1) hue-rotate(178deg) saturate(2.4) brightness(0.8)' },
+    tags: { tone: 'neutral', mode: 'dark', type: 'mixed' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'classification', why: 'Condensed grotesque capitals over a transitional serif: poster voice and reading voice.', harmony: 'complementary', hues: ['#14213D', '#FCA311'], movement: 'Duotone print' }),
+    suits: { seminar: 2, thesis: 1, lesson: 2, group: 2, pitch: 3, update: 2 },
+  },
+);
+
+DIRECTIONS.push(
+  {
+    id: 'memphis',
+    family: 'texture',
+    name: 'Memphis',
+    blurb: 'Cream with pink, lime and periwinkle squiggles, confetti and terrazzo, chunky Verdana and offset pictures.',
+    fonts: { display: 'verdana', body: 'verdana', label: 'verdana' },
+    colors: { bg: '#FFF6EC', ink: '#1A1A1A', muted: '#524D47', accent: '#FF7AA2', accentText: '#B4235A', soft: '#FBE6D4' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'top', numbers: 'large', cover: 'bottom', labels: 'upper', labelTracking: 0.12, kicker: 'tag', signature: 'none', photo: 'offset', footer: false, boldDisplay: true },
+    tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'single', why: 'One wide humanist sans in bold and regular; the pattern carries the play, so the type stays plain.', harmony: 'triadic', hues: ['#FF7AA2', '#9BE36C', '#7B8CFF'], motion: 'brisk', movement: 'Memphis Group (Sottsass, 1980s Milan)' }),
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'terra',
+    family: 'texture',
+    name: 'Terra',
+    blurb: 'Soft clay, sand and moss blobs on oat paper, italic Palatino, round-cropped pictures.',
+    fonts: { display: 'palatino', body: 'trebuchet', label: 'trebuchet' },
+    colors: { bg: '#ECE6D6', ink: '#2B2A22', muted: '#535046', accent: '#5C6B2C', soft: '#E0D8C3' },
+    layout: { margin: 0.875, align: 'left', titlePos: 'top', numbers: 'small', cover: 'bottom', labels: 'italic', kicker: 'text', signature: 'none', photo: 'round', footer: false, italicDisplay: true },
+    tags: { tone: 'relaxed', mode: 'tint', type: 'mixed' },
+    laws: laws({ ratio: 'majorThird', pairing: 'classification', why: 'An italic old-style serif over a humanist sans: both drawn by hand, so they share warmth.', harmony: 'analogous', hues: ['#B5774E', '#C9A86A', '#7E8F4E'], motion: 'slow', movement: 'Organic modernism (Arp, Noguchi)' }),
+    suits: ALL_OCCASIONS,
+  },
+  {
+    id: 'riso',
+    family: 'texture',
+    name: 'Riso',
+    blurb: 'Risograph print: blue and orange halftones slightly out of register, Rockwell slab headlines, typewriter tags.',
+    fonts: { display: 'rockwell', body: 'arial', label: 'courier' },
+    colors: { bg: '#F3EFE4', ink: '#1E1E28', muted: '#4E4E5C', accent: '#0072B5', soft: '#E7E1D2', second: '#FF6C2F' },
+    layout: { margin: 0.75, align: 'left', titlePos: 'side', numbers: 'large', cover: 'top', labels: 'upper', labelTracking: 0.1, kicker: 'tag', signature: 'none', photo: 'offset', footer: true, boldDisplay: true, photoFilter: 'grayscale(1) contrast(1.35)' },
+    tags: { tone: 'relaxed', mode: 'light', type: 'mixed' },
+    laws: laws({ ratio: 'perfectFourth', pairing: 'classification', why: 'A slab serif over a neo-grotesque, with typewriter labels: the zine pairing of poster and text.', harmony: 'complementary', hues: ['#0072B5', '#FF6C2F'], motion: 'brisk', movement: 'Risograph and zine print' }),
     suits: ALL_OCCASIONS,
   },
 );

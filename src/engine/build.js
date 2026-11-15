@@ -22,7 +22,9 @@ export function buildDeck({ deck, direction, structure, density = 'medium' }) {
   // pictures are cited once they are known to be on a slide, so Works Cited lists exactly what the deck shows
   const laid = plan.map(lay);
   const cited = withImageCitations(plan, deck, laid);
-  const slides = cited.map((s, i) => (s === plan[i] ? laid[i] : lay(s, i)));
+  // each slide carries its direction's motion law (tempo and easing) for Present mode
+  const motion = direction.laws?.motion;
+  const slides = cited.map((s, i) => (s === plan[i] ? laid[i] : lay(s, i))).map((s) => (motion ? { ...s, motion: { tempo: motion.tempo, ease: motion.ease } } : s));
   const overflow = slides.flatMap((s, i) => s.els.filter((e) => e.type === 'text' && !e.fits && !e.bleed).map((e) => ({ slide: i + 1, form: s.form, text: e.text.slice(0, 60) })));
   return { direction, structure, density, deck, slides, overflow };
 }

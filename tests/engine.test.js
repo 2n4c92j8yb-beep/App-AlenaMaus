@@ -15,11 +15,11 @@ const DENSITIES = ['light', 'medium', 'dense'];
 const TONES = ['formal', 'neutral', 'relaxed'];
 
 test('library is complete and consistent', () => {
-  assert.equal(DIRECTIONS.filter((d) => !d.family || d.family === 'editorial').length, 15);
+  assert.equal(DIRECTIONS.filter((d) => !d.family || d.family === 'editorial').length, 21);
   assert.equal(DIRECTIONS.filter((d) => d.family === 'poster').length, 3);
   assert.equal(DIRECTIONS.filter((d) => d.family === 'glass').length, 3);
-  assert.equal(DIRECTIONS.filter((d) => d.family === 'texture').length, 3);
-  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 24);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'texture').length, 6);
+  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 33);
   for (const d of DIRECTIONS) {
     for (const role of ['display', 'body', 'label', ...(d.family === 'poster' || d.family === 'glass' ? ['poster'] : [])]) assert.ok(FONTS[d.fonts[role]], `${d.id} ${role} font`);
     for (const o of OCCASIONS) assert.ok(o.id in d.suits, `${d.id} has weight for ${o.id}`);
@@ -180,7 +180,7 @@ test('design kits: effects on about a third of the slides, never on dense slides
           assert.notEqual(sl.accent.id, acc[i - 1].id, `${name}: ${sl.accent.id} twice in a row`);
           assert.ok(!(sl.accent.strong && acc[i - 1].strong), `${name}: two strong effects side by side`);
         }
-        const tex = sl.els.filter((e) => e.type === 'svg');
+        const tex = sl.els.filter((e) => e.type === 'svg' && e.accent); // shape pictures (Bauhaus triangles) are not textures
         assert.ok(tex.length <= 1, `${name} ${sl.form}: ${tex.length} textures`);
         if (tex.length) assert.ok(sl.els.indexOf(tex[0]) <= 1, `${name} ${sl.form}: texture sits behind the content`);
       });

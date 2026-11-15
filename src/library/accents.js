@@ -43,6 +43,9 @@ const KITS = {
   survey: [T('contour', ['cover', 'section'], { color: 'accent', alpha: 0.42, priority: 3, strong: true }), LAND({ color: 'accent', alpha: 0.75 }), T('film', ['statement', 'quote', 'definition'], { alpha: 0.6 })],
   drafting: [T('grid', ['cover', 'process', 'timeline'], { color: '#FFFFFF', alpha: 1, priority: 3, strong: true }), INVERT(['quote', 'definition', 'statement'], { texture: 'grid', color: 'ink', alpha: 0.5 }), T('contour', ['section'], { color: '#FFFFFF', alpha: 0.3, priority: 2 })],
   grain: [T('grain', ['cover', 'statement', 'section'], { colors: ['#F6A27E', '#B9A4FF', '#FFD58A', '#F29BB8'], alpha: 0.7, priority: 3, strong: true }), T('ripple', ['question', 'quote'], { color: 'accent', alpha: 0.5, priority: 2 }), GLOW],
+  memphis: [T('squiggle', ['cover', 'section', 'statement'], { colors: ['#FF7AA2', '#9BE36C', '#7B8CFF'], alpha: 1, priority: 3, strong: true }), T('squiggle', ['question', 'quote'], { id: 'confetti', colors: ['#FF7AA2', '#9BE36C', '#7B8CFF'], alpha: 0.55, priority: 2 })],
+  terra: [T('blobs', ['cover', 'section', 'statement'], { colors: ['#C98F6B', '#D9C39A', '#8FA16A'], alpha: 0.75, priority: 3, strong: true }), T('blobs', ['quote', 'definition', 'question'], { id: 'blobs-soft', colors: ['#E3D3B8', '#D3D8BE'], alpha: 0.8, priority: 2 }), T('ripple', ['timeline', 'process'], { color: 'accent', alpha: 0.25 })],
+  riso: [T('halftone', ['cover', 'section', 'statement'], { colors: ['#0072B5', '#FF6C2F'], alpha: 0.7, priority: 3, strong: true }), T('halftone', ['process', 'timeline', 'quote'], { id: 'halftone-blue', colors: ['#0072B5', '#0072B5'], alpha: 0.28, priority: 2 }), INVERT(['definition'], { max: 1 })],
   // ---- Glass look (key slides keep their chrome compositions; the kit dresses the content slides)
   prism: [T('contour', ['process', 'timeline'], { color: '#B9A4FF', alpha: 0.28 }), T('film', ['quote', 'definition', 'pair'], { alpha: 0.8 })],
   pearl: [T('fluted', ['quote', 'definition'], { colors: ['#B9A4FF', '#6CF0E0', '#FF9CCF'], alpha: 0.75, strong: true }), T('ripple', ['timeline', 'pair', 'process'], { color: '#5B47C8', alpha: 0.35 })],
@@ -66,6 +69,12 @@ const KITS = {
   ledger: [T('grid', ['process', 'timeline'], { color: 'accent', alpha: 0.22 }), INVERT(['statement'], { max: 1 })],
   poster: [T('film', ['quote', 'definition'], { alpha: 0.7 }), T('heat', ['bigNumber'], { alpha: 0.3, max: 1 })],
   margin: [T('contour', ['section'], { color: 'accent', alpha: 0.25 }), INVERT(['statement', 'quote'], { max: 1 })],
+  bauhaus: [T('grid', ['process', 'timeline'], { color: 'ink', alpha: 0.14 }), INVERT(['quote', 'definition'], { max: 1 })],
+  couture: [T('film', ['quote', 'definition', 'statement'], { alpha: 0.45 }), INVERT(['statement', 'question'], { max: 1 })],
+  riot: [T('halftone', ['statement', 'question', 'section'], { colors: ['#3B57E8', '#111111'], alpha: 0.32, strong: true, max: 2 }), INVERT(['quote'], { max: 1 })],
+  bento: [T('grid', ['process', 'timeline'], { color: 'accent', alpha: 0.12 }), GLOW],
+  specimen: [T('film', ['statement', 'question', 'quote'], { alpha: 0.7 }), T('graphite', ['definition'], { color: '#F4F4F0', alpha: 0.45 })],
+  duotone: [T('halftone', ['statement', 'question'], { colors: ['#FCA311', '#FCA311'], alpha: 0.22, strong: true, max: 1 }), T('film', ['quote', 'definition'], { alpha: 0.6 })],
   botanical: [LAND({ color: 'accent', alpha: 0.5 }), T('ripple', ['question', 'quote'], { color: 'accent', alpha: 0.35 })],
 };
 

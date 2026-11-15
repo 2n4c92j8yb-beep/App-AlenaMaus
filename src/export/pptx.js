@@ -24,7 +24,8 @@ import { FONTS } from '../library/fonts.js';
 import { chromeSvg } from '../render/html.js';
 
 /** Free fonts drawn as pictures, and free body fonts swapped for a near-identical Office font. */
-export const AS_PICTURE = new Set(['anton', 'bebas', 'sixcaps', 'unbounded']);
+// Bodoni MT ships only with Office for Windows, so Couture's headlines travel as pictures too.
+export const AS_PICTURE = new Set(['anton', 'bebas', 'sixcaps', 'unbounded', 'bodoni']);
 const OFFICE_STAND_IN = { manrope: 'Arial' };
 export const exportsAsPicture = (e) => e.type === 'text' && AS_PICTURE.has(e.font);
 import { SLIDE_W, SLIDE_H } from '../engine/fit.js';

@@ -17,7 +17,6 @@ const FORM_LABELS = {
   pair: 'Before / after', question: 'Question', references: 'Works cited',
   photo: 'Picture', photoSplit: 'Picture and text',
 };
-const STUDENT_OCCASIONS = new Set(['seminar', 'thesis', 'lesson', 'group']);
 
 const state = {
   occasionId: 'seminar',
@@ -428,7 +427,6 @@ function renderOccasions() {
     input.addEventListener('change', () => { state.occasionId = o.id; $('occasion-hint').textContent = o.hint; });
     const span = document.createElement('span');
     span.textContent = o.name;
-    if (STUDENT_OCCASIONS.has(o.id)) span.append(Object.assign(document.createElement('em'), { textContent: 'Students' }));
     label.append(input, span);
     box.append(label);
   }

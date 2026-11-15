@@ -37,8 +37,8 @@
     <form class="panel input-panel" id="input-form" aria-label="Your content">
       <div class="field">
         <label for="notes" class="field-label"><span class="step">1</span>Your notes</label>
-        <textarea id="notes" name="notes" rows="8" spellcheck="true"></textarea>
-        <p class="field-help" id="notes-help">Replace the sample with your own notes: bullet points are fine. When you click the button, your notes are sent to Claude (Anthropic) to write the slide content; the design comes from this app. Pictures stay on your device.</p>
+        <textarea id="notes" name="notes" rows="8" spellcheck="true" aria-describedby="notes-help"></textarea>
+        <p class="field-help" id="notes-help">Replace the sample with your own notes. Bullet points are fine.</p>
       </div>
 
       <div class="field">
@@ -61,11 +61,14 @@
         <p class="field-help" id="occasion-hint" aria-live="polite"></p>
       </fieldset>
 
-      <div class="actions">
-        <button type="submit" class="btn btn-primary btn-large" id="submit-btn"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
-        <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
+      <div class="submit">
+        <div class="actions">
+          <button type="submit" class="btn btn-primary btn-large" id="submit-btn" aria-describedby="send-note"><span class="label">Show three directions</span> <span class="arrow" aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
+        </div>
+        <p class="field-help" id="send-note">The button sends your notes to Claude (Anthropic), which writes the slide content. The design comes from this app.</p>
+        <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
       </div>
-      <p class="field-help" id="busy-note" role="status" hidden>Claude is writing the content of your slides. This usually takes under a minute.</p>
 
       <section class="fallback" id="fallback" aria-labelledby="fallback-title" hidden>
         <h3 id="fallback-title">Copy and paste</h3>

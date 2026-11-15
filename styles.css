@@ -66,13 +66,15 @@ button:disabled { cursor: not-allowed; }
 .badge { padding: 6px 12px; border-radius: var(--pill); border: 1px solid var(--line-strong); background: var(--surface); }
 
 /* ---------- views ---------- */
-.view { padding-top: 40px; padding-bottom: 40px; }
+.view { padding-top: 24px; padding-bottom: 40px; }
+@media (min-width: 768px) { .view { padding-top: 40px; } }
 @media (min-width: 1024px) { .view { padding-top: 56px; } }
 
 /* hero */
-.hero { display: grid; gap: 32px; align-items: center; margin-bottom: 40px; }
+.hero { display: grid; gap: 24px; align-items: center; margin-bottom: 28px; }
 @media (min-width: 960px) { .hero { grid-template-columns: 1fr 1.05fr; gap: 56px; margin-bottom: 56px; } }
-.hero-copy { display: grid; gap: 16px; }
+.hero-copy { display: grid; gap: 12px; }
+@media (min-width: 960px) { .hero-copy { gap: 16px; } }
 .lede { color: var(--muted); max-width: 46ch; font-size: 1.1rem; }
 .hero-stage { margin: 0; display: grid; gap: 14px; }
 .hero-deck { position: relative; aspect-ratio: 16 / 9; isolation: isolate; }
@@ -142,10 +144,10 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .chip:active span { transform: scale(0.97); }
 .chip input:checked + span { background: var(--night); border-color: var(--night); color: var(--snow); }
 .chip input:focus-visible + span { outline: 2px solid var(--night); outline-offset: 3px; }
-.chip em { font: 500 0.66rem var(--font-mono); font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; color: var(--heather); }
-.chip input:checked + span em { color: var(--mist); }
 
-.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.submit { display: grid; gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+@media (max-width: 559px) { .actions { flex-direction: column; align-items: stretch; gap: 4px; } }
 
 /* writing step */
 .btn.is-busy { cursor: progress; }

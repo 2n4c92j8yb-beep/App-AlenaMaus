@@ -123,7 +123,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .dropzone-icon::after { width: 2px; height: 14px; }
 .dropzone-text { color: var(--muted); }
 .dropzone-text strong { color: var(--night); }
-.dropzone-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 16px; }
+.clear-pictures { justify-self: end; }
 .thumbs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .thumbs:empty { display: none; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--r-s); display: block; box-shadow: var(--shadow-soft); }

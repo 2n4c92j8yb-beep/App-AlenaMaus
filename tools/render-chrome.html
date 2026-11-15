@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- Bakes the Glass look's chrome objects (src/render/chrome/*.webp) with the same studio
+     Present mode uses. Run: python3 tools/render-chrome.py (needs Playwright and Chrome). -->
+<html><head><meta charset="utf-8"><title>Render chrome</title></head><body>
+<script type="module">
+import * as THREE from '../vendor/three.module.min.js';
+import { STUDIOS, CAPSULE_ASPECT, buildEnvironment, makeChromeMesh, fitCamera } from '../src/render/studio.js';
+
+const LONG = 960; // px on the long side
+const SHAPES = { sphere: 1, ring: 1, 'capsule-v': 1 / CAPSULE_ASPECT, 'capsule-h': CAPSULE_ASPECT };
+const out = {};
+const canvas = document.createElement('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setClearColor(0x000000, 0);
+for (const id of Object.keys(STUDIOS)) {
+  const envs = { false: buildEnvironment(THREE, renderer, id), true: buildEnvironment(THREE, renderer, id, { holo: true }) };
+  for (const [shape, aspect] of Object.entries(SHAPES)) {
+    for (const holo of id === 'halo' ? [false] : [false, true]) {
+      const envMap = envs[holo];
+      const w = Math.round(aspect >= 1 ? LONG : LONG * aspect);
+      const h = Math.round(aspect >= 1 ? LONG / aspect : LONG);
+      renderer.setSize(w, h, false);
+      const scene = new THREE.Scene();
+      scene.environment = envMap;
+      // the key light sits top left for every object, as in one photograph
+      if (scene.environmentRotation) scene.environmentRotation.y = shape === 'sphere' ? 0.5 : 0.2;
+      const mesh = makeChromeMesh(THREE, shape.startsWith('capsule') ? 'capsule' : shape, aspect, id, holo);
+      const camera = fitCamera(THREE, mesh, aspect);
+      scene.add(mesh);
+      renderer.render(scene, camera);
+      out[`${id}-${shape}${holo ? '-holo' : ''}`] = canvas.toDataURL('image/webp', 0.9);
+      mesh.geometry.dispose(); mesh.material.dispose();
+    }
+  }
+  envs.false.dispose(); envs.true.dispose();
+}
+window.RESULT = out;
+</script></body></html>

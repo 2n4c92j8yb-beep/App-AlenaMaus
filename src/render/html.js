@@ -2,6 +2,7 @@
 // The wrapper scales it to whatever width it gets.
 
 import { FONTS } from '../library/fonts.js';
+import { chromeSrc, groundFor } from './studio.js';
 
 const PX = 96;              // px per inch
 const PT = 96 / 72;         // px per point
@@ -25,7 +26,7 @@ export function renderSlide(els, { label, present = false } = {}) {
       if (el.soft) node.dataset.soft = '1';
       if (el.mood) node.dataset.mood = '1';
       if (el.type === 'text') node.dataset.size = String(el.size);
-      if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.holo) node.dataset.holo = '1'; }
+      if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.studio) node.dataset.studio = el.studio; if (el.holo) node.dataset.holo = '1'; }
     }
     slide.append(node);
   }
@@ -97,7 +98,7 @@ function drawSvg(el) {
   return d;
 }
 
-// Chrome objects (sphere, capsule, ring) as vector drawings. PowerPoint export turns them into pictures.
+// Chrome objects (sphere, capsule, ring) as vector drawings: the fallback when no baked render exists.
 const CHROME = {
   silver: ['#FFFFFF', '#E9EBF0', '#B9BDCA', '#3C404E', '#0C0D12', '#3C404E', '#D6D9E2', '#FFFFFF'],
   gold: ['#FFF6E2', '#F3DDB0', '#C9A15F', '#5A4220', '#160F06', '#5A4220', '#E7C98F', '#FFF6E2'],
@@ -134,17 +135,52 @@ export function chromeSvg(el, scale = 1) {
   return `<svg xmlns="${SVG_NS}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${shape}${film}</svg>`;
 }
 
+/**
+ * A chrome object: a baked 3D render from the direction's studio (studio.js), grounded by a
+ * soft shadow and a coloured light bounce on the slide. Objects without a studio keep the
+ * vector drawing. The outer box stays upright, so the shadow falls downwards whatever the
+ * object's rotation; the inner box turns (Present mode puts its live 3D canvas there).
+ */
 function drawChrome(el) {
   const [w, h] = [el.w * PX, el.h * PX];
   const wrap = document.createElement('div');
   Object.assign(wrap.style, {
     position: 'absolute', left: `${el.x * PX}px`, top: `${el.y * PX}px`, width: `${w}px`, height: `${h}px`,
-    transform: el.rotate ? `rotate(${el.rotate}deg)` : 'none', opacity: el.alpha ?? 1,
-    filter: `drop-shadow(0 ${0.25 * PX}px ${0.3 * PX}px rgba(0,0,0,0.45))`,
+    opacity: el.alpha ?? 1, overflow: 'visible',
   });
-  wrap.innerHTML = chromeSvg(el);
+  const src = chromeSrc(el);
+  if (!el.back) for (const g of groundFor(el)) {
+    const s = document.createElement('div');
+    Object.assign(s.style, {
+      position: 'absolute', left: `${(g.x - el.x) * PX}px`, top: `${(g.y - el.y) * PX}px`, width: `${g.w * PX}px`, height: `${g.h * PX}px`,
+      background: `radial-gradient(closest-side, ${hexA(g.color, g.alpha)}, ${hexA(g.color, 0)})`, pointerEvents: 'none',
+    });
+    s.className = 'chrome-ground';
+    wrap.append(s);
+  }
+  const obj = document.createElement('div');
+  obj.className = 'chrome-obj';
+  Object.assign(obj.style, {
+    position: 'absolute', inset: '0',
+    transform: el.rotate ? `rotate(${el.rotate}deg)` : 'none',
+    filter: el.back ? `blur(${0.035 * PX}px)` : 'none',
+  });
+  if (src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.decoding = 'async';
+    Object.assign(img.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', display: 'block' });
+    obj.append(img);
+  } else {
+    obj.style.filter = `drop-shadow(0 ${0.25 * PX}px ${0.3 * PX}px rgba(0,0,0,0.45))`;
+    obj.innerHTML = chromeSvg(el);
+  }
+  wrap.append(obj);
   return wrap;
 }
+
+const hexA = (hex, a) => { const n = parseInt(hex.slice(1, 7), 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`; };
 
 function drawImage(el) {
   const img = document.createElement('img');

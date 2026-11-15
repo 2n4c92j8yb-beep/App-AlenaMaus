@@ -106,9 +106,22 @@ that are not part of Office are not embedded: the app links them after the downl
 
 ## 3D chrome
 
-In Present mode, chrome objects become real 3D metal with Three.js (r169, MIT, loaded on
-demand): reflections of a small studio that drift slowly, iridescence on holo pieces.
-Thumbnails, the slide list and exports keep the vector drawings; without WebGL they stay.
+The Glass look's spheres, rings and capsules are real 3D renders everywhere, not drawings.
+`src/render/studio.js` defines one photo studio per Glass direction: a sky, a crisp dark
+horizon and a lighter floor, soft-edged light panels (key box, strip lights, rim light, a
+specular hot spot) and coloured cards in the direction's own palette, so the metal picks up
+the colours of the slide. Iridescent pieces reflect a sweep of those colours and add a
+thin-film shimmer; plain chrome gets a clear coat.
+
+- **Previews, thumbnails and the PowerPoint export** use pictures baked from that studio
+  (`src/render/chrome/*.webp`, 20 files, about 0.3 MB). Re-bake after changing the studio:
+  `python3 tools/render-chrome.py` (Playwright and Chrome; software WebGL is enough).
+- **Present mode** renders the same metal live with Three.js (r169, MIT, loaded on demand)
+  and lets the reflections drift slowly; it fades in over the baked picture without a jump.
+- **Grounding:** each object throws a soft shadow and a coloured light bounce onto the slide
+  (`groundFor()`, shared by preview and export); objects marked `back` sit slightly out of focus.
+- In the export, each object becomes one picture with its shadow; without WebGL, the baked
+  pictures simply stay.
 
 ## Present mode
 

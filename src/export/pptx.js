@@ -10,7 +10,7 @@
 //                   glow as a soft outer shadow; frosted glass becomes a translucent panel
 //   line / arrow    native lines
 //   image           pictures (photo colour grades are baked in), cropped like the preview
-//   chrome          a picture rendered from its vector drawing
+//   chrome          a picture: the baked 3D render with its shadow (studio.js)
 //   light, textures painted into one background picture per slide, behind everything
 //
 // What PowerPoint cannot do: blur what lies behind glass. Gradient- and photo-filled
@@ -22,6 +22,7 @@
 
 import { FONTS } from '../library/fonts.js';
 import { chromeSvg } from '../render/html.js';
+import { chromeSrc, groundFor } from '../render/studio.js';
 
 /** Free fonts drawn as pictures, and free body fonts swapped for a near-identical Office font. */
 // Bodoni MT ships only with Office for Windows, so Couture's headlines travel as pictures too.
@@ -98,11 +99,47 @@ async function backgroundPicture(els) {
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
+/**
+ * A chrome object as one picture: its baked 3D render (turned and, further back, softened)
+ * over the soft shadow and light bounce it throws on the slide, exactly as in the preview.
+ * Returns { data, x, y, w, h } in inches; the box grows to hold the shadow.
+ */
 async function chromePicture(e) {
-  const img = await loadImage(svgUrl(chromeSvg(e, PX / 96)));
-  const c = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height });
-  c.getContext('2d').drawImage(img, 0, 0);
-  return c.toDataURL('image/png');
+  const src = chromeSrc(e);
+  const img = await loadImage(src ?? svgUrl(chromeSvg(e, PX / 96)));
+  const ground = e.back ? [] : groundFor(e);
+  // the turned object's corners and the shadows decide the picture's box
+  const a = ((e.rotate ?? 0) * Math.PI) / 180;
+  const bw = Math.abs(e.w * Math.cos(a)) + Math.abs(e.h * Math.sin(a));
+  const bh = Math.abs(e.w * Math.sin(a)) + Math.abs(e.h * Math.cos(a));
+  const cx = e.x + e.w / 2; const cy = e.y + e.h / 2;
+  const boxes = [{ x: cx - bw / 2, y: cy - bh / 2, w: bw, h: bh }, ...ground];
+  const x0 = Math.min(...boxes.map((b) => b.x)); const y0 = Math.min(...boxes.map((b) => b.y));
+  const x1 = Math.max(...boxes.map((b) => b.x + b.w)); const y1 = Math.max(...boxes.map((b) => b.y + b.h));
+  const k = PX; // pixels per inch in the picture
+  const c = Object.assign(document.createElement('canvas'), { width: Math.ceil((x1 - x0) * k), height: Math.ceil((y1 - y0) * k) });
+  const g = c.getContext('2d');
+  for (const s of ground) {
+    const gx = (s.x - x0 + s.w / 2) * k; const gy = (s.y - y0 + s.h / 2) * k;
+    const grad = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+    const n = parseInt(s.color.slice(1, 7), 16);
+    const rgb = `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+    grad.addColorStop(0, `rgba(${rgb}, ${s.alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
+    g.save();
+    g.translate(gx, gy);
+    g.scale((s.w / 2) * k, (s.h / 2) * k);
+    g.fillStyle = grad;
+    g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+  g.save();
+  g.translate((cx - x0) * k, (cy - y0) * k);
+  g.rotate(a);
+  if (e.back) g.filter = `blur(${0.035 * k}px)`;
+  g.drawImage(img, (-e.w / 2) * k, (-e.h / 2) * k, e.w * k, e.h * k);
+  g.restore();
+  return { data: c.toDataURL('image/png'), x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
 /** A photo with its colour grade baked in (PowerPoint has no CSS filters). */
@@ -297,7 +334,7 @@ export async function exportPptx(deck, { onProgress } = {}) {
         else if (e.type === 'ellipse') addShape(pptx, slide, e, true);
         else if (e.type === 'line' || e.type === 'arrow') addLine(pptx, slide, e);
         else if (e.type === 'image') await addImage(slide, e);
-        else if (e.type === 'chrome') slide.addImage({ data: await chromePicture(e), x: e.x, y: e.y, w: e.w, h: e.h, ...(e.rotate ? { rotate: e.rotate } : {}) });
+        else if (e.type === 'chrome') { const pic = await chromePicture(e); slide.addImage({ data: pic.data, x: pic.x, y: pic.y, w: pic.w, h: pic.h }); }
       } catch (err) {
         console.warn('export: element skipped', e.type, err);
       }

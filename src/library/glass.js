@@ -60,9 +60,11 @@ function glowCard(ctx, x, y, w, h, o = {}) {
 function chrome(ctx, kind, x, y, w, h, o = {}) {
   const f = fx(ctx);
   ctx.els.push({
-    type: 'chrome', kind, x, y, w, h, tint: f.chrome, seq: o.seq ?? 0,
+    type: 'chrome', kind, x, y, w, h, tint: f.chrome, seq: o.seq ?? 0, studio: ctx.dir.id,
     ...(o.holo && f.chromeHolo ? { holo: f.holo } : {}),
     ...(o.rotate ? { rotate: o.rotate } : {}),
+    // objects further back sit slightly out of focus (depth of field), and throw no shadow on the slide
+    ...(o.back ? { back: true } : {}),
   });
 }
 
@@ -99,7 +101,7 @@ const prism = {
     ground(ctx);
     chrome(ctx, 'sphere', W - 4.6, 0.55, 2.7, 2.7, { holo: true });
     chrome(ctx, 'ring', W - 2.9, H - 3.1, 3.6, 3.6, { holo: true });
-    chrome(ctx, 'capsule', W - 6.4, -0.7, 0.85, 2.7, { rotate: 26 });
+    chrome(ctx, 'capsule', W - 6.4, -0.7, 0.85, 2.7, { rotate: 26, back: true });
     // two small glass cards float over the chrome, carrying the deck's key facts
     const lines = deck.posterLines ?? [];
     [[W - 6.1, 3.45, 3.6], [W - 4.9, 4.75, 3.9]].forEach(([x, y, w], i) => {
@@ -117,7 +119,7 @@ const prism = {
   section(ctx, s) {
     const { c, m } = ctx;
     ground(ctx);
-    chrome(ctx, 'ring', W - 3.3, -1.1, 4.2, 4.2, { holo: true });
+    chrome(ctx, 'ring', W - 3.3, -1.1, 4.2, 4.2, { holo: true, back: true });
     glassPanel(ctx, m, 1.35, 3.9, 3.9, { radius: 0.4, seq: 1 });
     text(ctx, 'display', String(s.number).padStart(2, '0'), { x: m + 0.2, y: 1.35, w: 3.5, h: 3.9 }, titleOpts(ctx, { max: 116, min: 80, align: 'center', valign: 'middle', maxLines: 1, caps: false, seq: 1 }));
     micro(ctx, `${label_(ctx.deck.language, 'Part')} ${String(s.number).padStart(2, '0')}`, { x: m + 4.5, y: 2.4, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });

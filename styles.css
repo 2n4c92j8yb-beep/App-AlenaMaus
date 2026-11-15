@@ -312,10 +312,15 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .slide-frame [data-overflow="true"] { outline: 2px dashed #C2410C; outline-offset: 2px; }
 
 /* ---------- detail ---------- */
-.detail-head { display: grid; gap: 14px; margin-bottom: 32px; justify-items: start; }
-.detail-title-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; align-items: flex-end; width: 100%; }
-.detail-meta { color: var(--muted); margin-top: 8px; max-width: 64ch; }
+/* same order again: name across the width, one row of controls, then the slides */
+#detail h2 { text-align: center; font-size: clamp(1.9rem, 3.2vw, 2.8rem); margin-bottom: 24px; }
+.detail-head { display: grid; gap: 12px; margin-bottom: 24px; justify-items: start; align-items: center; }
+@media (min-width: 1024px) { .detail-head { grid-template-columns: 1fr auto 1fr; } .export-buttons { justify-self: end; } }
+.detail-head .btn-ghost { margin-left: -12px; }
+.detail-meta { font-size: 0.95rem; }
 .export-buttons { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+@media (max-width: 559px) { .export-buttons { width: 100%; } .export-buttons .btn { flex: 1 1 0; white-space: nowrap; } }
+.export-note, .check { margin-bottom: 20px; }
 .btn:has(> .play:first-child) { padding-left: 18px; } /* a leading icon needs less room than a leading letter */
 .play { width: 0; height: 0; border-left: 9px solid currentColor; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
 .soon { padding: 4px 10px; border-radius: var(--pill); background: rgba(212, 202, 197, 0.55); color: var(--muted); }
@@ -326,9 +331,9 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .slide-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
 @media (min-width: 1024px) { .slide-list { grid-template-columns: repeat(2, 1fr); gap: 32px 28px; } }
 .slide-list li { display: grid; gap: 10px; animation: rise 480ms var(--ease) both; animation-delay: calc(min(var(--n, 0), 8) * 50ms); }
-.slide-list .slide-frame { border-radius: var(--r-m); box-shadow: var(--shadow-soft); }
-.slide-caption { display: flex; gap: 10px; font: 500 0.74rem var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.slide-caption b { color: var(--night); font-weight: 600; }
+.slide-list .slide-frame { border-radius: var(--r-m); box-shadow: var(--shadow-soft); outline: 1px solid var(--line); }
+.slide-caption { display: flex; gap: 2px; padding-left: 4px; font-size: 0.86rem; color: var(--muted); }
+.slide-caption b { color: var(--night); font-weight: 650; font-variant-numeric: tabular-nums; min-width: 1.4em; }
 
 
 /* ---------- presenter ---------- */

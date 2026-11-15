@@ -559,7 +559,7 @@ function openDetail(i, focus) {
   const { direction: d, structure: s, slides, overflow } = deck;
   const fill = () => {
     $('detail-title').textContent = d.name;
-    $('detail-meta').textContent = `Story: ${s.name}. ${s.blurb} ${slides.length} slides.`;
+    $('detail-meta').textContent = `${s.name} · ${slides.length} slides`;
     $('export-note').hidden = true;
     const check = $('detail-check');
     check.hidden = overflow.length === 0;
@@ -571,7 +571,7 @@ function openDetail(i, focus) {
       const cap = document.createElement('p');
       cap.className = 'slide-caption';
       cap.innerHTML = '<b></b><span></span>';
-      cap.querySelector('b').textContent = String(n + 1).padStart(2, '0');
+      cap.querySelector('b').textContent = String(n + 1);
       cap.querySelector('span').textContent = FORM_LABELS[sl.form] ?? sl.form;
       li.append(renderSlide(sl.els, { label: `Slide ${n + 1}: ${FORM_LABELS[sl.form]}` }), cap);
       return li;

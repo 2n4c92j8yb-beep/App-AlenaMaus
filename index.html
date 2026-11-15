@@ -123,21 +123,17 @@
   </section>
 
   <section id="detail" class="wrap view" aria-labelledby="detail-title" hidden>
+    <h2 id="detail-title"></h2>
     <div class="detail-head">
-      <button type="button" class="btn btn-ghost" id="back"><span aria-hidden="true">←</span> All three directions</button>
-      <div class="detail-title-row">
-        <div>
-          <h2 id="detail-title"></h2>
-          <p class="detail-meta" id="detail-meta"></p>
-        </div>
-        <div class="export-buttons">
-          <button type="button" class="btn btn-primary" id="present"><span class="play" aria-hidden="true"></span>Present</button>
-          <button type="button" class="btn btn-secondary" id="export-pptx">Download PowerPoint</button>
-        </div>
+      <button type="button" class="btn btn-ghost" id="back"><span class="arrow" aria-hidden="true">←</span> All three directions</button>
+      <p class="detail-meta" id="detail-meta"></p>
+      <div class="export-buttons">
+        <button type="button" class="btn btn-secondary" id="export-pptx">Download PowerPoint</button>
+        <button type="button" class="btn btn-primary" id="present"><span class="play" aria-hidden="true"></span>Present</button>
       </div>
-      <p class="field-help export-note" id="export-note" aria-live="polite" hidden></p>
-      <p class="check warn" id="detail-check" hidden></p>
     </div>
+    <p class="field-help export-note" id="export-note" aria-live="polite" hidden></p>
+    <p class="check warn" id="detail-check" hidden></p>
     <ol class="slide-list" id="slide-list"></ol>
   </section>
 

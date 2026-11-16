@@ -16,10 +16,10 @@ const TONES = ['formal', 'neutral', 'relaxed'];
 
 test('library is complete and consistent', () => {
   assert.equal(DIRECTIONS.filter((d) => !d.family || d.family === 'editorial').length, 21);
-  assert.equal(DIRECTIONS.filter((d) => d.family === 'poster').length, 3);
-  assert.equal(DIRECTIONS.filter((d) => d.family === 'glass').length, 3);
-  assert.equal(DIRECTIONS.filter((d) => d.family === 'texture').length, 6);
-  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 33);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'poster').length, 4);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'glass').length, 4);
+  assert.equal(DIRECTIONS.filter((d) => d.family === 'texture').length, 9);
+  assert.equal(new Set(DIRECTIONS.map((d) => d.id)).size, 38);
   for (const d of DIRECTIONS) {
     for (const role of ['display', 'body', 'label', ...(d.family === 'poster' || d.family === 'glass' ? ['poster'] : [])]) assert.ok(FONTS[d.fonts[role]], `${d.id} ${role} font`);
     for (const o of OCCASIONS) assert.ok(o.id in d.suits, `${d.id} has weight for ${o.id}`);

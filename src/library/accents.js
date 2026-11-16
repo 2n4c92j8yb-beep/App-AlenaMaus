@@ -46,14 +46,19 @@ const KITS = {
   memphis: [T('squiggle', ['cover', 'section', 'statement'], { colors: ['#FF7AA2', '#9BE36C', '#7B8CFF'], alpha: 1, priority: 3, strong: true }), T('squiggle', ['question', 'quote'], { id: 'confetti', colors: ['#FF7AA2', '#9BE36C', '#7B8CFF'], alpha: 0.55, priority: 2 })],
   terra: [T('blobs', ['cover', 'section', 'statement'], { colors: ['#C98F6B', '#D9C39A', '#8FA16A'], alpha: 0.75, priority: 3, strong: true }), T('blobs', ['quote', 'definition', 'question'], { id: 'blobs-soft', colors: ['#E3D3B8', '#D3D8BE'], alpha: 0.8, priority: 2 }), T('ripple', ['timeline', 'process'], { color: 'accent', alpha: 0.25 })],
   riso: [T('halftone', ['cover', 'section', 'statement'], { colors: ['#0072B5', '#FF6C2F'], alpha: 0.7, priority: 3, strong: true }), T('halftone', ['process', 'timeline', 'quote'], { id: 'halftone-blue', colors: ['#0072B5', '#0072B5'], alpha: 0.28, priority: 2 }), INVERT(['definition'], { max: 1 })],
+  press: [T('film', ['cover', 'quote', 'definition', 'process', 'timeline'], { alpha: 0.7, priority: 3 }), T('halftone', ['section'], { colors: ['#55664A', '#E2552B'], alpha: 0.55, priority: 2, strong: true }), INVERT(['quote', 'question'], { max: 1 })],
+  waveform: [T('waves', ['cover', 'section', 'statement', 'question'], { colors: ['#FFB020', '#FF8A1F', '#E0287A'], alpha: 1, priority: 3, strong: true, max: 4 }), T('film', ['quote', 'definition', 'process', 'timeline', 'pair'], { alpha: 0.8 })],
+  redline: [T('scallop', ['cover', 'section', 'quote', 'statement'], { color: 'accent', alpha: 0.9, priority: 3, strong: true }), T('sketch', ['question', 'definition', 'bigNumber', 'timeline'], { color: 'accent', alpha: 0.85, priority: 2 })],
   // ---- Glass look (key slides keep their chrome compositions; the kit dresses the content slides)
   prism: [T('contour', ['process', 'timeline'], { color: '#B9A4FF', alpha: 0.28 }), T('film', ['quote', 'definition', 'pair'], { alpha: 0.8 })],
   pearl: [T('fluted', ['quote', 'definition'], { colors: ['#B9A4FF', '#6CF0E0', '#FF9CCF'], alpha: 0.75, strong: true }), T('ripple', ['timeline', 'pair', 'process'], { color: '#5B47C8', alpha: 0.35 })],
+  frost: [T('ripple', ['timeline', 'process', 'pair'], { color: '#E9D9B4', alpha: 0.28 }), T('film', ['quote', 'definition'], { alpha: 0.7 })],
   halo: [T('graphite', ['quote', 'definition', 'pair'], { color: '#E2B66B', alpha: 0.8 }), T('contour', ['process', 'timeline'], { color: '#E2B66B', alpha: 0.25 })],
   // ---- Poster look (key slides carry mood photos; the kit adds film and texture between them)
   summit: [T('film', ['quote', 'definition', 'pair', 'timeline', 'process'], { alpha: 0.9 }), LAND({ color: 'accent' })],
   cutout: [T('graphite', ['quote', 'definition'], { color: '#111111', alpha: 0.6 }), T('grid', ['process', 'timeline'], { color: '#111111', alpha: 0.35 })],
   monolith: [T('film', ['quote', 'pair', 'timeline'], { alpha: 0.9 }), INVERT(['definition', 'quote'], { max: 1 }), LAND({ color: 'accent' })],
+  knockout: [T('film', ['quote', 'definition', 'pair', 'process', 'timeline'], { alpha: 0.85 }), INVERT(['quote'], { max: 1 })],
   // ---- Editorial look
   archive: [T('film', ['quote', 'definition', 'cover'], { alpha: 0.7 }), LAND({ color: 'accent', alpha: 0.6 }), INVERT(['statement'], { max: 1 })],
   broadsheet: [T('film', ['quote', 'definition'], { alpha: 0.6 }), INVERT(['statement', 'question'], { max: 1 })],

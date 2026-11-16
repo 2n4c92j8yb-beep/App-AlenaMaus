@@ -6,7 +6,7 @@
 // simply remains what people see. Thumbnails, the slide list and exports use the
 // baked pictures, so phones stay fast and files stay small.
 
-import { buildEnvironment, makeChromeMesh, fitCamera } from './studio.js';
+import { buildEnvironment, makeChromeMesh, fitCamera, addStudioLights } from './studio.js';
 
 let threeP;
 const loadThree = () => (threeP ??= import('../../vendor/three.module.min.js'));
@@ -44,10 +44,11 @@ export async function upgradeChrome(frame) {
     const holo = !!node.dataset.holo;
     scene.environment = buildEnvironment(THREE, renderer, studio, { holo });
     const aspect = w / h;
-    const mesh = makeChromeMesh(THREE, node.dataset.kind, aspect, studio, holo);
+    const mesh = makeChromeMesh(THREE, node.dataset.kind, aspect, studio, holo, node.dataset.finish);
     const camera = fitCamera(THREE, mesh, aspect);
     const base = { x: mesh.rotation.x, y: mesh.rotation.y };
     scene.add(mesh);
+    addStudioLights(THREE, scene, studio);
     const obj = node.querySelector('.chrome-obj') ?? node;
     obj.append(canvas);
     const flat = obj.querySelector('img, svg');

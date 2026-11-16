@@ -23,7 +23,7 @@ export const FONTS = {
   arialBlack:   { group: 'sans', cls: 'neo-grotesque', family: 'arial', width: 'normal', office: 'Arial Black',        css: '"Arial Black", "Helvetica Neue", Arial, sans-serif',    factor: 0.67, weight: 900 },
   verdana:      { group: 'sans', cls: 'humanist', family: 'verdana', width: 'wide', office: 'Verdana',            css: 'Verdana, Geneva, sans-serif',                           factor: 0.58 },
   trebuchet:    { group: 'sans', cls: 'humanist', family: 'trebuchet', width: 'normal', office: 'Trebuchet MS',       css: '"Trebuchet MS", "Lucida Grande", sans-serif',           factor: 0.50 },
-  franklin:     { group: 'sans', cls: 'grotesque', family: 'franklin', width: 'normal', office: 'Franklin Gothic Medium', css: '"Franklin Gothic Medium", "Avenir Next Condensed", "Arial Narrow", Arial, sans-serif', factor: 0.47 },
+  franklin:     { group: 'sans', cls: 'grotesque', family: 'franklin', width: 'normal', office: 'Franklin Gothic Medium', css: '"Franklin Gothic Medium", "Avenir Next Condensed", "Arial Narrow", Arial, sans-serif', factor: 0.47, capsFactor: 0.62 },
   centuryGothic:{ group: 'sans', cls: 'geometric', family: 'centuryGothic', width: 'wide', office: 'Century Gothic',     css: '"Century Gothic", Futura, "Avenir Next", sans-serif',   factor: 0.56 },
   gillSans:     { group: 'sans', cls: 'humanist', family: 'gillSans', width: 'normal', office: 'Gill Sans MT',       css: '"Gill Sans MT", "Gill Sans", Calibri, sans-serif',      factor: 0.47 },
   calibri:      { group: 'sans', cls: 'humanist', family: 'calibri', width: 'normal', office: 'Calibri',            css: 'Calibri, Carlito, "Helvetica Neue", Arial, sans-serif', factor: 0.47 },

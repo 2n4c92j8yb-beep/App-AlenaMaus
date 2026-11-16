@@ -125,7 +125,8 @@ function kicker(ctx, str, x, y, maxW, o = {}) {
   if (ctx.L.kicker === 'tag' && !o.plain) {
     const f = FONTS[ctx.dir.fonts.label];
     const size = 11;
-    const w = Math.min(maxW, str.length * (size / 72) * f.factor * 1.25 + 0.36);
+    // the tag's text is set in tracked capitals, so its width comes from the capital widths
+    const w = Math.min(maxW, str.length * (size / 72) * Math.max(f.factor * 1.25, (f.capsFactor ?? f.factor * 1.08) + 0.12) + 0.36);
     const tx = o.align === 'center' ? x + (maxW - w) / 2 : x;
     rect(ctx, tx, y, w, 0.32, o.fill ?? ctx.c.accent, { seq: 1 });
     text(ctx, 'label', str, { x: tx + 0.04, y: y + 0.05, w: w - 0.08, h: 0.24 }, {
@@ -299,6 +300,12 @@ function signature(ctx, kind) {
       tile(x0 + w / 2 + g / 2, top + h * 0.55 + g / 2, w / 2 - g / 2, h * 0.45 - g / 2, kind === 'section' ? c.soft : c.accent);
       return;
     }
+    case 'press': {
+      // Press: a solid ink rule across the top of key slides, a small orange registration square on content
+      if (kind === 'statement' || kind === 'section') rect(ctx, 0, 0, W, 0.2, c.accent);
+      if (kind === 'content') rect(ctx, W - 0.42, 0.3, 0.16, 0.16, c.second ?? c.accent);
+      return;
+    }
     case 'bleed':
     case 'band':
     case 'panel':
@@ -414,6 +421,24 @@ function cover(ctx) {
       // the author line sits below the subtitle even when wide margins push it down
       const my = Math.min(H - 0.5, Math.max(H - m - 0.35, y + 0.6 + th + sub.height + 0.2));
       label(ctx, meta, { x: m, y: my, w: W - 2 * m, h: 0.3 }, { align: 'center', maxLines: 1, seq: 3 });
+      return;
+    }
+    case 'press': {
+      // Press: a photo panel, one full-width word in the accent ink, a row of typewriter labels,
+      // then the title, like a print-shop poster
+      background(ctx);
+      const ph = H * 0.33;
+      if (img) image(ctx, img, { x: m, y: m, w: W - 2 * m, h: ph }, { style: 'bleed', seq: 0 });
+      else rect(ctx, m, m, W - 2 * m, ph, c.soft);
+      const word = String((deck.posterWords?.[0] ?? deck.shortTitle ?? deck.title)).toUpperCase();
+      const wy = m + ph + 0.12;
+      text(ctx, 'display', word, { x: m - 0.04, y: wy, w: W - 2 * m + 0.08, h: 2.2 }, { max: 320, min: 60, color: c.accent, bold: true, caps: true, maxLines: 1, lineHeight: 0.86, align: 'center', seq: 1 });
+      const ly = wy + 2.24;
+      const cells = [deck.occasionLabel, deck.date, deck.author].filter(Boolean);
+      const cw = (W - 2 * m) / Math.max(1, cells.length);
+      cells.forEach((str, k) => label(ctx, str, { x: m + k * cw, y: ly, w: cw, h: 0.25 }, { align: ['left', 'center', 'right'][cells.length === 1 ? 0 : k === 0 ? 0 : k === cells.length - 1 ? 2 : 1], maxLines: 1, seq: 2, color: c.ink }));
+      text(ctx, 'display', deck.title, { x: m, y: ly + 0.42, w: W * 0.62, h: H - ly - 0.42 - m * 0.6 }, { max: 26, min: 16, maxLines: 2, color: c.ink, seq: 2 });
+      text(ctx, 'body', deck.subtitle ?? '', { x: W * 0.62 + m + 0.3, y: ly + 0.45, w: W * 0.38 - 2 * m - 0.3, h: H - ly - 0.45 - m * 0.6 }, { max: 13, min: 10, color: c.muted, maxLines: 3, align: 'right', seq: 3 });
       return;
     }
     case 'top': {
@@ -536,7 +561,7 @@ function comparison(ctx, item, kick) {
     const seq = 2 + i * 2;
     const hd = text(ctx, 'display', side.heading, { x, y: b.y, w, h: 0.9 }, { max: ctx.step(1), min: 18, color: c.accentText, maxLines: 2, italic: false, seq });
     const y = b.y + hd.height + 0.25;
-    text(ctx, 'body', side.points.join('\n'), { x, y, w, h: b.y + colH - y - 0.1 }, { max: Math.round(22 * dz), min: 14, lineHeight: 1.45, seq });
+    text(ctx, 'body', side.points.join('\n'), { x, y, w, h: b.y + colH - y - 0.1 }, { max: Math.round(22 * dz), min: 12, lineHeight: 1.45, seq });
   });
   if (item.verdict) text(ctx, 'body', item.verdict, { x: b.x, y: b.y + b.h - verdictH + 0.2, w: b.w, h: verdictH - 0.2 }, { max: 18, min: 13, italic: true, color: c.muted, seq: 6 });
   footer(ctx);

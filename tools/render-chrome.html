@@ -4,7 +4,7 @@
 <html><head><meta charset="utf-8"><title>Render chrome</title></head><body>
 <script type="module">
 import * as THREE from '../vendor/three.module.min.js';
-import { STUDIOS, CAPSULE_ASPECT, buildEnvironment, makeChromeMesh, fitCamera } from '../src/render/studio.js';
+import { STUDIOS, CAPSULE_ASPECT, buildEnvironment, makeChromeMesh, fitCamera, addStudioLights } from '../src/render/studio.js';
 
 const LONG = 960; // px on the long side
 const SHAPES = { sphere: 1, ring: 1, 'capsule-v': 1 / CAPSULE_ASPECT, 'capsule-h': CAPSULE_ASPECT };
@@ -17,8 +17,12 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setClearColor(0x000000, 0);
 for (const id of Object.keys(STUDIOS)) {
   const envs = { false: buildEnvironment(THREE, renderer, id), true: buildEnvironment(THREE, renderer, id, { holo: true }) };
-  for (const [shape, aspect] of Object.entries(SHAPES)) {
-    for (const holo of id === 'halo' ? [false] : [false, true]) {
+  const matte = STUDIOS[id].tint === 'matte';
+  // matte clay comes as spheres in two finishes; metal studios render every shape, plain and iridescent
+  const shapes = matte ? { sphere: 1 } : SHAPES;
+  const variants = matte ? Object.keys(STUDIOS[id].finishes).map((f) => [false, f]) : (id === 'halo' ? [[false]] : [[false], [true]]);
+  for (const [shape, aspect] of Object.entries(shapes)) {
+    for (const [holo, finish] of variants) {
       const envMap = envs[holo];
       const w = Math.round(aspect >= 1 ? LONG : LONG * aspect);
       const h = Math.round(aspect >= 1 ? LONG / aspect : LONG);
@@ -27,11 +31,12 @@ for (const id of Object.keys(STUDIOS)) {
       scene.environment = envMap;
       // the key light sits top left for every object, as in one photograph
       if (scene.environmentRotation) scene.environmentRotation.y = shape === 'sphere' ? 0.5 : 0.2;
-      const mesh = makeChromeMesh(THREE, shape.startsWith('capsule') ? 'capsule' : shape, aspect, id, holo);
+      const mesh = makeChromeMesh(THREE, shape.startsWith('capsule') ? 'capsule' : shape, aspect, id, holo, finish);
       const camera = fitCamera(THREE, mesh, aspect);
       scene.add(mesh);
+      addStudioLights(THREE, scene, id);
       renderer.render(scene, camera);
-      out[`${id}-${shape}${holo ? '-holo' : ''}`] = canvas.toDataURL('image/webp', 0.9);
+      out[`${id}-${shape}${holo ? '-holo' : ''}${finish && finish !== 'a' ? `-${finish}` : ''}`] = canvas.toDataURL('image/webp', 0.9);
       mesh.geometry.dispose(); mesh.material.dispose();
     }
   }

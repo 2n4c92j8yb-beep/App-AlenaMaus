@@ -8,6 +8,7 @@
 //   prism  dark, aqua/lilac aurora, holo headline, chrome sphere + ring + capsule
 //   pearl  light, centred frosted panel, iridescent chrome at the panel's corners
 //   halo   black, one gold glow, a gold chrome capsule on a lit stage
+//   frost  sage: a frosted panel over a softly blurred photo, matte clay spheres
 //
 // Rules the code enforces (from the Prism Glass design system):
 //   one hero effect per slide; text never sits on chrome or on a holo fill;
@@ -65,7 +66,21 @@ function chrome(ctx, kind, x, y, w, h, o = {}) {
     ...(o.rotate ? { rotate: o.rotate } : {}),
     // objects further back sit slightly out of focus (depth of field), and throw no shadow on the slide
     ...(o.back ? { back: true } : {}),
+    // a second finish of the same studio (Frost: cream or slate clay)
+    ...(o.finish ? { finish: o.finish } : {}),
   });
+}
+
+/**
+ * Frost's ground: the deck's cover photo, softly out of focus under a sage veil, so the
+ * frosted glass has real shapes to blur. Without a photo, the aurora stands in.
+ */
+function photoGround(ctx, veil = 0.45) {
+  const img = ctx.deck.coverImage;
+  if (!img) return ground(ctx);
+  background(ctx);
+  ctx.els.push({ type: 'image', x: -0.4, y: -0.4, w: W + 0.8, h: H + 0.8, src: img.src, alt: '', fit: 'cover', natW: img.w, natH: img.h, seq: 0, filter: 'blur(14px) saturate(0.7) brightness(0.9)' });
+  rect(ctx, 0, 0, W, H, ctx.c.bg, { alpha: veil, seq: 0 });
 }
 
 /** A thin holographic (or gold) rule. */
@@ -297,7 +312,76 @@ const halo = {
   },
 };
 
-const GLASS = { prism, pearl, halo };
+// ---------------------------------------------------------------- Frost
+
+const frost = {
+  cover(ctx) {
+    const { c, m, deck } = ctx;
+    photoGround(ctx, 0.55);
+    // clay spheres to the right, one tucked behind the panel's edge
+    chrome(ctx, 'sphere', W - 4.35, 0.55, 2.5, 2.5, { finish: 'b' });
+    chrome(ctx, 'sphere', W - 2.55, 3.55, 1.7, 1.7, {});
+    chrome(ctx, 'sphere', W - 1.75, 0.45, 1.05, 1.05, { back: true });
+    const [px, py, pw, ph] = [m, m, W * 0.6, H - 2 * m];
+    glassPanel(ctx, px, py, pw, ph, { radius: 0.38, float: true });
+    const x = px + 0.65;
+    const w = pw - 1.3;
+    micro(ctx, deck.occasionLabel, { x, y: py + 0.6, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    text(ctx, 'display', deck.title, { x, y: py + 1.15, w, h: 2.9 }, { max: 48, min: 26, bold: true, valign: 'middle', maxLines: 4, lineHeight: 1.12, seq: 1 });
+    text(ctx, 'body', deck.subtitle ?? '', { x, y: py + 4.2, w: w - 0.6, h: 0.8 }, { max: 16, min: 12, color: c.muted, maxLines: 2, seq: 2 });
+    micro(ctx, [deck.author, deck.date].filter(Boolean).join('  ·  '), { x, y: py + ph - 0.65, w, h: 0.3 }, { seq: 3 });
+    return true;
+  },
+  section(ctx, s) {
+    const { c, m } = ctx;
+    photoGround(ctx, 0.55);
+    chrome(ctx, 'sphere', W - 3.2, H - 3.3, 2.4, 2.4, { finish: 'b' });
+    glassPanel(ctx, m, 1.3, 3.8, 3.8, { radius: 0.38, seq: 1 });
+    text(ctx, 'display', String(s.number).padStart(2, '0'), { x: m + 0.2, y: 1.3, w: 3.4, h: 3.8 }, { max: 120, min: 80, align: 'center', valign: 'middle', maxLines: 1, caps: false, color: c.accent, seq: 1 });
+    micro(ctx, `${label_(ctx.deck.language, 'Part')} ${String(s.number).padStart(2, '0')}`, { x: m + 4.4, y: 2.3, w: 5, h: 0.3 }, { color: c.accentText, seq: 2 });
+    text(ctx, 'display', s.label, { x: m + 4.4, y: 2.7, w: W - m - 4.4 - 3.6, h: 2.0 }, { max: 44, min: 24, bold: true, maxLines: 3, seq: 2 });
+    corner(ctx);
+  },
+  statement(ctx, item, kick) {
+    const { c, m } = ctx;
+    ground(ctx);
+    const [px, py, pw, ph] = [m + 0.4, 1.0, W - 2 * m - 0.8, H - 2.3];
+    chrome(ctx, 'sphere', px + pw - 1.1, py - 0.75, 1.6, 1.6, {});
+    glassPanel(ctx, px, py, pw, ph, { radius: 0.38 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: px + 0.7, y: py + 0.55, w: pw - 1.4, h: 0.3 }, { color: c.accentText, seq: 1 });
+    text(ctx, 'display', item.text, { x: px + 0.7, y: py + 1.0, w: pw - 1.4, h: ph - 1.8 }, { max: 36, min: 20, valign: 'middle', maxLines: 5, lineHeight: 1.2, seq: 1 });
+    if (item.note) text(ctx, 'body', item.note, { x: px + 0.7, y: py + ph - 0.8, w: pw - 1.4, h: 0.5 }, { max: 15, min: 11, color: c.muted, maxLines: 2, seq: 3 });
+    corner(ctx);
+  },
+  question(ctx, item, kick) {
+    const { c, m } = ctx;
+    ground(ctx);
+    chrome(ctx, 'sphere', W - 4.4, 1.2, 3.1, 3.1, { finish: 'b' });
+    chrome(ctx, 'sphere', W - 2.3, 4.0, 1.6, 1.6, {});
+    const w = W * 0.56;
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    text(ctx, 'display', item.text, { x: m, y: 1.95, w, h: 3.4 }, { max: 42, min: 22, bold: true, valign: 'middle', maxLines: 5, lineHeight: 1.12, seq: 1 });
+    if (item.hint) text(ctx, 'body', item.hint, { x: m, y: 5.6, w, h: 0.7 }, { max: 17, min: 12, color: c.muted, maxLines: 2, seq: 3 });
+    corner(ctx);
+  },
+  bigNumber(ctx, item, kick) {
+    const { c, m } = ctx;
+    ground(ctx, 0.7);
+    const cw = 5.4;
+    micro(ctx, kick ?? item.title, { x: m, y: m, w: W - 2 * m, h: 0.3 }, { color: c.accentText, seq: 1 });
+    glowCard(ctx, m, 1.45, cw, H - 2.75);
+    text(ctx, 'display', item.value, { x: m + 0.4, y: 1.75, w: cw - 0.8, h: 2.6 }, { max: 120, min: 50, valign: 'middle', maxLines: 1, caps: false, color: c.accent, seq: 1 });
+    text(ctx, 'body', item.label, { x: m + 0.4, y: 4.45, w: cw - 0.8, h: 1.1 }, { max: 18, min: 12, color: c.muted, maxLines: 3, seq: 2 });
+    const rx = m + cw + 0.7;
+    const rw = W - rx - m;
+    const t = text(ctx, 'display', item.title ?? '', { x: rx, y: 1.6, w: rw, h: 1.6 }, { max: 30, min: 18, bold: true, maxLines: 3, seq: 2 });
+    const cap = text(ctx, 'body', item.caption ?? '', { x: rx, y: 1.6 + t.height + 0.3, w: rw, h: 2.6 }, { max: 19, min: 13, color: c.muted, seq: 3 });
+    if (item.source) micro(ctx, item.source, { x: rx, y: 1.6 + t.height + 0.5 + cap.height, w: rw, h: 0.5 }, { maxLines: 2, seq: 3 });
+    corner(ctx);
+  },
+};
+
+const GLASS = { prism, pearl, halo, frost };
 
 /** The glass layout for this slide, if the direction has one. */
 export function glassForm(dir, form) {

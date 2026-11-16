@@ -7,9 +7,10 @@ everyone else's. Based on the idea overview "AI decks that don't look AI-made".
 
 ## Four looks
 
-- **Texture**: Survey, Drafting, Grain, Memphis, Terra and Riso, built around generated
-  surfaces (contour lines, blueprint grid, grainy gradient, Memphis squiggles and
-  terrazzo, organic blobs, two-ink risograph halftone).
+- **Texture**: Survey, Drafting, Grain, Memphis, Terra, Riso, Press, Waveform and Redline,
+  built around generated surfaces (contour lines, blueprint grid, grainy gradient, Memphis
+  squiggles and terrazzo, organic blobs, two-ink risograph halftone, op-art line waves,
+  hand-drawn scalloped frames).
 
 ## Design kits: one identity, several effects
 
@@ -41,6 +42,23 @@ panel for key figures. A planner places them per deck:
   use the regular forms in the same type and colours.
 - **Editorial:** the 15 directions below, plus six built on the design laws:
   Bauhaus, Couture, Riot, Bento, Specimen and Duotone.
+
+
+## Directions from reference pictures
+
+Five directions were built from Alena's own design references (posters, landing pages,
+brand illustration), grouped by what they share. They follow the references' principles,
+not any one design:
+
+- **Knockout** (Poster): teal-tinted photos, one giant white word across the cover, numbers
+  cut out of the paper with the photo inside. From the word-meets-photo posters.
+- **Press** (Texture): a photo panel over one full-width olive word, typewriter labels,
+  grain. From the print-shop posters.
+- **Waveform** (Texture): charcoal, a generated ring of fine orange-to-magenta lines.
+- **Redline** (Texture): cream and one oxblood ink, hand-drawn scalloped frames and
+  corner sketches, italic Garamond.
+- **Frost** (Glass): a frosted panel over the deck's cover photo, softly blurred, with
+  matte clay spheres (baked in two finishes, lit by a key light) instead of chrome.
 
 ## Design laws
 
@@ -160,7 +178,7 @@ preview and the PowerPoint export draw from the same data.
 1. **Design library and previews: done** (sample content, no AI). No decorative lines; signature colour areas per direction; picture slides; picture upload; Present mode with builds
 2. Poster look: 3 test directions done; extend after review
 2b. Glass look: 3 directions done (Prism, Pearl, Halo)
-2c. Texture look: 6 of 8 directions done (Survey, Drafting, Grain, Memphis, Terra, Riso)
+2c. Texture look: 9 directions (Survey, Drafting, Grain, Memphis, Terra, Riso, Press, Waveform, Redline)
 2d. Design laws: every direction states and passes them (see above)
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs

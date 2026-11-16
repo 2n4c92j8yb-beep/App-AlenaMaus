@@ -20,6 +20,11 @@ export const STUDIOS = {
     sky: '#D3D5E0', horizon: '#545270', floor: '#B4B2C6',
     shadow: { color: '#1E1C3C', alpha: 0.18 }, bounce: { color: '#B9A4FF', alpha: 0.12 },
   },
+  frost: {
+    tint: 'matte', finishes: { a: '#E6D7B6', b: '#6E7E86' }, cards: ['#C9D6BC', '#E9D9B4', '#AFC1C8'],
+    sky: '#C9C4B8', horizon: '#55574F', floor: '#3E403A',
+    shadow: { color: '#141A16', alpha: 0.42 }, bounce: { color: '#E9D9B4', alpha: 0.1 },
+  },
   halo: {
     tint: 'gold', cards: ['#E2B66B', '#8A5A26', '#FFE7B8'],
     sky: '#FFF4E0', horizon: '#120C05', floor: '#6B5232',
@@ -30,13 +35,15 @@ export const STUDIOS = {
 export const METAL = {
   silver: { color: 0xf1f3f7, roughness: 0.07 },
   gold: { color: 0xe9c27a, roughness: 0.11 },
+  // matte clay (Frost): no metal, a soft satin sheen
+  matte: { color: 0xe6d7b6, roughness: 0.62, matte: true },
 };
 
 /** The baked picture of a chrome element: one per studio, shape and finish. */
 export function chromeSrc(el) {
   if (!el.studio || !STUDIOS[el.studio]) return null;
   const shape = el.kind === 'capsule' ? (el.h >= el.w ? 'capsule-v' : 'capsule-h') : el.kind;
-  return `src/render/chrome/${el.studio}-${shape}${el.holo ? '-holo' : ''}.webp`;
+  return `src/render/chrome/${el.studio}-${shape}${el.holo ? '-holo' : ''}${el.finish && el.finish !== 'a' ? `-${el.finish}` : ''}.webp`;
 }
 
 /** Aspect (width / height) each baked capsule is rendered at; boxes within ±15% stretch to fit. */
@@ -127,8 +134,9 @@ export function buildEnvironment(THREE, renderer, studioId, { holo = false } = {
 }
 
 /** A chrome object as polished, clear-coated metal; iridescent ones get a thin-film shimmer. */
-export function makeChromeMesh(THREE, kind, aspect, studioId, holo) {
-  const metal = METAL[STUDIOS[studioId]?.tint ?? 'silver'];
+export function makeChromeMesh(THREE, kind, aspect, studioId, holo, finish) {
+  const studio = STUDIOS[studioId];
+  const metal = METAL[studio?.tint ?? 'silver'];
   let geo;
   if (kind === 'sphere') geo = new THREE.SphereGeometry(0.5, 128, 96);
   else if (kind === 'ring') geo = new THREE.TorusGeometry(0.4, 0.09, 96, 256);
@@ -137,7 +145,10 @@ export function makeChromeMesh(THREE, kind, aspect, studioId, holo) {
     const r = 0.5 / long;
     geo = new THREE.CapsuleGeometry(r, 1 - 2 * r, 32, 96);
   }
-  const mat = new THREE.MeshPhysicalMaterial({
+  const mat = metal.matte ? new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(studio.finishes?.[finish ?? 'a'] ?? metal.color), metalness: 0, roughness: metal.roughness,
+    sheen: 0.35, sheenRoughness: 0.55, sheenColor: 0xffffff, envMapIntensity: 0.55,
+  }) : new THREE.MeshPhysicalMaterial({
     color: metal.color, metalness: 1, roughness: holo ? 0.06 : metal.roughness,
     // a clear coat adds the lacquered sparkle of polished chrome; on iridescent pieces it would wash out the film
     clearcoat: holo ? 0 : 1, clearcoatRoughness: 0.03, envMapIntensity: holo ? 1.35 : 1.2,
@@ -150,6 +161,19 @@ export function makeChromeMesh(THREE, kind, aspect, studioId, holo) {
   if (kind === 'ring') { mesh.rotation.x = 0.55; mesh.rotation.y = -0.3; }
   if (kind === 'sphere') mesh.rotation.y = 0.6;
   return mesh;
+}
+
+/**
+ * Lights for matte studios: clay has no reflections to show its form, so a warm key light
+ * from the top left and a faint cool fill model it, the way the reference spheres are lit.
+ */
+export function addStudioLights(THREE, scene, studioId) {
+  if (STUDIOS[studioId]?.tint !== 'matte') return;
+  const key = new THREE.DirectionalLight(0xfff3e2, 2.6);
+  key.position.set(-3, 4, 3.5);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35);
+  fill.position.set(4, -1, 2);
+  scene.add(key, fill);
 }
 
 /** An orthographic camera and scale that make the mesh fill a w × h box. */

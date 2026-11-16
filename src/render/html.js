@@ -26,7 +26,7 @@ export function renderSlide(els, { label, present = false } = {}) {
       if (el.soft) node.dataset.soft = '1';
       if (el.mood) node.dataset.mood = '1';
       if (el.type === 'text') node.dataset.size = String(el.size);
-      if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.studio) node.dataset.studio = el.studio; if (el.holo) node.dataset.holo = '1'; }
+      if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.studio) node.dataset.studio = el.studio; if (el.finish) node.dataset.finish = el.finish; if (el.holo) node.dataset.holo = '1'; }
     }
     slide.append(node);
   }

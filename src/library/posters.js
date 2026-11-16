@@ -8,6 +8,8 @@
 //   summit    the giant word sits behind the subject (photo → word → cut-out)
 //   cutout    the photo shows through the letters of a giant vertical word
 //   monolith  an ultra-condensed word spans the width above a symmetrical photo
+//   knockout  a tinted photo; one giant word in white over it, or cut out of the paper
+//             with the photo showing through its letters (from Alena's references)
 
 import { t as label_ } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
@@ -31,7 +33,9 @@ export const GRADE_FILTER = {
 
 function photo(ctx, mood, box = { x: 0, y: 0, w: W, h: H }, o = {}) {
   if (o.cut && !mood.cut) return;
-  const filter = mood.src ? GRADE_FILTER[ctx.dir.grade] : undefined;
+  // bundled photos come pre-graded; online photos get the grade as a filter. A direction
+  // may add its own tint on top (Knockout's teal), baked in by the PowerPoint export.
+  const filter = [mood.src ? GRADE_FILTER[ctx.dir.grade] : '', ctx.dir.moodTint ?? ''].join(' ').trim() || undefined;
   ctx.els.push({
     type: 'image', ...box, src: moodSrc(mood, ctx.dir.grade, o.cut), alt: o.cut ? '' : mood.alt,
     fit: 'cover', pos: o.pos ?? mood.pos ?? 'center', natW: mood.w, natH: mood.h, seq: o.seq ?? 0, mood: true,
@@ -253,7 +257,69 @@ const monolith = {
   },
 };
 
-const POSTERS = { summit, cutout, monolith };
+// ---------------------------------------------------------------- Knockout
+
+/** The mood photo's URL with the direction's tint, for letters the photo shows through. */
+const fillSrc = (ctx, mood) => (mood ? moodSrc(mood, ctx.dir.grade) : undefined);
+
+const knockout = {
+  cover(ctx, _item, _k, slide) {
+    const { c, deck } = ctx;
+    const mood = slide.mood;
+    if (!mood) return false;
+    background(ctx);
+    // the photo fills the slide; a scrim darkens its left side, where the words stand
+    photo(ctx, mood, undefined, { pos: 'center 55%' });
+    scrim(ctx, 0.42);
+    micro(ctx, deck.occasionLabel, { x: 0.8, y: 0.6, w: 6, h: 0.25 }, { color: c.ink, tracking: 0.4, seq: 1 });
+    text(ctx, 'display', deck.title, { x: 0.8, y: 1.05, w: 6.4, h: 2.3 }, { font: ctx.dir.fonts.poster, max: 44, min: 24, caps: true, lineHeight: 1.0, maxLines: 4, color: c.ink, seq: 1 });
+    const sub = text(ctx, 'body', deck.subtitle ?? '', { x: W - 5.3, y: 1.05, w: 4.5, h: 1.2 }, { max: 15, min: 11, color: c.ink, lineHeight: 1.6, maxLines: 4, seq: 2 });
+    micro(ctx, meta(deck), { x: W - 5.3, y: 1.05 + sub.height + 0.25, w: 4.5, h: 0.22 }, { color: c.ink, seq: 3 });
+    // one giant word across the bottom, in white, running off the edge
+    bigWord(ctx, word(deck, 0), { x: 0.5, y: H - 3.25, w: W - 0.6, h: 3.3 }, { align: 'left', color: '#FFFFFF', max: 330, lineHeight: 0.86, seq: 2 });
+    return true;
+  },
+  section(ctx, s, _k, slide) {
+    const { c } = ctx;
+    background(ctx);
+    // the paper half holds a giant number with the photo inside its letters; the photo half is the photo
+    if (slide.mood) photo(ctx, slide.mood, { x: W * 0.5, y: 0, w: W * 0.5, h: H });
+    bigWord(ctx, String(s.number).padStart(2, '0'), { x: 0.5, y: 0.45, w: W * 0.5 - 0.7, h: H - 2.3 }, { align: 'left', fillImage: fillSrc(ctx, slide.mood), color: c.accent, max: 470, lineHeight: 0.84 });
+    micro(ctx, `${label_(ctx.deck.language, 'Part')} ${String(s.number).padStart(2, '0')}`, { x: 0.6, y: H - 1.75, w: 5, h: 0.22 }, { color: c.accentText, seq: 2 });
+    text(ctx, 'display', s.label, { x: 0.6, y: H - 1.45, w: W * 0.5 - 1.0, h: 1.0 }, { font: ctx.dir.fonts.poster, max: 48, min: 24, caps: true, maxLines: 2, lineHeight: 0.95, seq: 2 });
+    return true;
+  },
+  statement(ctx, item, kick, slide) {
+    const { c } = ctx;
+    background(ctx);
+    const imgW = W * 0.36;
+    if (slide.mood) photo(ctx, slide.mood, { x: W - imgW, y: 0, w: imgW, h: H });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: 0.8, y: 0.9, w: 6, h: 0.25 }, { color: c.accentText, seq: 1 });
+    text(ctx, 'display', item.text, { x: 0.8, y: 1.35, w: W - imgW - 1.6, h: H - 2.6 }, { font: ctx.dir.fonts.poster, max: 62, min: 28, caps: true, lineHeight: 1.0, valign: 'middle', maxLines: 6, color: c.ink });
+    micro(ctx, pageNo(ctx), { x: 0.8, y: H - 0.6, w: 3, h: 0.22 });
+    return true;
+  },
+  question(ctx, item, kick, slide) {
+    const { c } = ctx;
+    background(ctx);
+    if (slide.mood) { photo(ctx, slide.mood); scrim(ctx, 0.6); }
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 1, y: 1.3, w: W - 2, h: 0.25 }, { align: 'center', color: c.ink, seq: 1, tracking: 0.45 });
+    text(ctx, 'display', item.text, { x: 1.4, y: 1.8, w: W - 2.8, h: 3.6 }, { font: ctx.dir.fonts.poster, max: 70, min: 30, caps: true, lineHeight: 1.0, align: 'center', valign: 'middle', maxLines: 4, color: '#FFFFFF' });
+    if (item.hint) text(ctx, 'body', item.hint, { x: 2, y: H - 1.6, w: W - 4, h: 0.6 }, { max: 16, min: 12, align: 'center', color: c.ink, seq: 3 });
+    return true;
+  },
+  bigNumber(ctx, item, kick, slide) {
+    const { c } = ctx;
+    background(ctx);
+    bigWord(ctx, item.value, { x: 0.5, y: 0.3, w: 6.2, h: H - 0.6 }, { align: 'left', fillImage: fillSrc(ctx, slide.mood), color: c.accent, max: 560, lineHeight: 0.85 });
+    micro(ctx, kick ?? label_(ctx.deck.language, 'Key figure'), { x: 7.0, y: 1.5, w: 5.6, h: 0.25 }, { color: c.accentText, seq: 1 });
+    const t = text(ctx, 'display', item.label, { x: 7.0, y: 1.9, w: 5.6, h: 1.8 }, { font: ctx.dir.fonts.poster, max: 48, min: 24, caps: true, maxLines: 2, lineHeight: 1.0, seq: 2 });
+    text(ctx, 'body', item.caption ?? '', { x: 7.0, y: 1.9 + t.height + 0.35, w: 5.4, h: 2.6 }, { max: 18, min: 12, color: c.muted, seq: 3 });
+    return true;
+  },
+};
+
+const POSTERS = { summit, cutout, monolith, knockout };
 
 /** The poster layout for this slide, if the direction has one. */
 export function posterForm(dir, form) {
@@ -268,6 +334,7 @@ const WANTS = {
   summit:   { cover: ['depth'], section: ['interior', 'wide'], statement: ['texture'], question: ['city', 'wide'] },
   cutout:   { cover: ['architecture'], coverFill: ['texture'], section: ['texture'], statement: ['interior', 'texture'], question: ['city'], bigNumber: ['depth', 'architecture'] },
   monolith: { cover: ['interior'], statement: ['texture'], question: ['architecture', 'wide'] },
+  knockout: { cover: ['wide', 'city', 'depth'], section: ['texture', 'architecture'], statement: ['depth', 'architecture'], question: ['wide', 'city'], bigNumber: ['texture', 'interior'] },
 };
 
 export function assignMood(plan, deck, dir) {

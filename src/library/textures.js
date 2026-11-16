@@ -371,5 +371,126 @@ function halftone({ seed, variant = 0, colors }, id) {
   return svgOpen(layer(a, 15, 16, 0, 0, c1) + layer(b ?? a, 75, 16, mis, mis * 0.6, c2));
 }
 
-const GENERATORS = { contour, grid, grain, film, heat, ripple, landscape, graphite, fluted, squiggle, blobs, halftone };
+// ---------------------------------------------------------------- line waves
+
+/**
+ * Waveform: dozens of fine closed curves, each a circle bent by smooth noise and shifted a
+ * little along a diagonal, so together they read as a ribbon turning in space (op-art line
+ * work). Colours run from the first to the last stop across the lines. The ring sits at the
+ * right edge, clear of the text column, over a film grain.
+ */
+function waves({ seed, variant = 0, colors }, id) {
+  const noise = makeNoise(`waves:${seed}`);
+  const stops = colors.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  const at = (t) => {
+    const k = t * (stops.length - 1);
+    const i = Math.min(stops.length - 2, Math.floor(k));
+    const f = k - i;
+    return `rgb(${stops[i].map((v, j) => Math.round(v + (stops[i + 1][j] - v) * f)).join(',')})`;
+  };
+  const spots = [[0.84, 0.62], [0.86, 0.4], [0.8, 0.7], [0.88, 0.55]];
+  const [sx, sy] = spots[variant % spots.length];
+  const cx = PW * sx; const cy = PH * sy;
+  const R = PH * 0.31;
+  const lines = 44;
+  let body = '';
+  for (let i = 0; i < lines; i++) {
+    const t = i / (lines - 1);
+    const ox = cx - 120 + t * 160;
+    const oy = cy + 50 - t * 90;
+    const r = R * (0.72 + 0.28 * Math.sin(t * Math.PI));
+    const pts = [];
+    const n = 120;
+    for (let k = 0; k <= n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const wob = (noise(Math.cos(a) * 1.4 + t * 0.9 + variant, Math.sin(a) * 1.4 + t * 0.6) - 0.5) * 0.75;
+      const rr = r * (1 + wob);
+      pts.push(`${(ox + Math.cos(a) * rr).toFixed(1)},${(oy + Math.sin(a) * rr * 0.92).toFixed(1)}`);
+    }
+    body += `<polyline points="${pts.join(' ')}" fill="none" stroke="${at(t)}" stroke-width="1.4" stroke-opacity="0.9"/>`;
+  }
+  const grain = `<filter id="${id}g" x="0" y="0"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.09 0"/></filter>`;
+  return svgOpen(`<rect width="${PW}" height="${PH}" filter="url(#${id}g)"/>${body}`, grain);
+}
+
+// ---------------------------------------------------------------- one-ink line work
+
+/** A line that wobbles slightly, as drawn by hand. */
+function handPath(noise, pts, amp, k0 = 0) {
+  return pts.map(([x, y], i) => {
+    const dx = (noise(i * 0.31 + k0, 3.1) - 0.5) * amp;
+    const dy = (noise(7.7, i * 0.29 + k0) - 0.5) * amp;
+    return `${i ? 'L' : 'M'}${(x + dx).toFixed(1)} ${(y + dy).toFixed(1)}`;
+  }).join(' ');
+}
+
+/** A rectangle whose edge runs in small waves, like a scalloped napkin or a matchbox label. */
+function wavyRect(x, y, w, h, wave, amp) {
+  const pts = [];
+  const edge = (x0, y0, x1, y1) => {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    const n = Math.max(2, Math.round(len / wave));
+    const nx = -(y1 - y0) / len; const ny = (x1 - x0) / len;
+    for (let k = 0; k < n * 8; k++) {
+      const t = k / (n * 8);
+      const s = Math.sin(t * n * Math.PI * 2) * amp;
+      pts.push([x0 + (x1 - x0) * t + nx * s, y0 + (y1 - y0) * t + ny * s]);
+    }
+  };
+  edge(x, y, x + w, y); edge(x + w, y, x + w, y + h); edge(x + w, y + h, x, y + h); edge(x, y + h, x, y);
+  pts.push(pts[0]);
+  return pts;
+}
+
+/**
+ * Redline frame: a hand-drawn double border, the inner line scalloped, with a small
+ * four-point sparkle at each corner. Everything in one ink.
+ */
+function scallop({ seed, variant = 0, color }, id) {
+  const noise = makeNoise(`scallop:${seed}:${variant}`);
+  const ink = color;
+  const o = 26;
+  const outer = handPath(noise, [[o, o], [PW - o, o], [PW - o, PH - o], [o, PH - o], [o, o]].flatMap(([x, y], i, a) => {
+    if (i === a.length - 1) return [[x, y]];
+    const [nx, ny] = a[i + 1];
+    return Array.from({ length: 24 }, (_, k) => [x + (nx - x) * (k / 24), y + (ny - y) * (k / 24)]);
+  }), 2.4);
+  const inner = handPath(noise, wavyRect(o + 16, o + 16, PW - 2 * o - 32, PH - 2 * o - 32, 34, 4.5), 1.4, 5);
+  const sparkle = (x, y, r) => `<path d="M${x} ${y - r} Q${x} ${y} ${x + r} ${y} Q${x} ${y} ${x} ${y + r} Q${x} ${y} ${x - r} ${y} Q${x} ${y} ${x} ${y - r}Z" fill="${ink}"/>`;
+  const sp = [[o + 16, o + 16], [PW - o - 16, o + 16], [PW - o - 16, PH - o - 16], [o + 16, PH - o - 16]].map(([x, y]) => sparkle(x, y, 13)).join('');
+  return svgOpen(`<g fill="none" stroke="${ink}" stroke-linecap="round" stroke-linejoin="round"><path d="${outer}" stroke-width="2.6"/><path d="${inner}" stroke-width="1.6"/></g>${sp}`);
+}
+
+/**
+ * Redline corners: a tilted wavy-edged card (like a matchbox label) running off one corner,
+ * and a scatter of sparkles and dots in the opposite one, drawn in one ink.
+ */
+function sketch({ seed, variant = 0, color }, id) {
+  const noise = makeNoise(`sketch:${seed}:${variant}`);
+  const rng = createRng(`sketch:${seed}:${variant}`);
+  const ink = color;
+  const flip = variant % 2 === 1;
+  const cx = flip ? 110 : PW - 110;
+  const cy = flip ? PH - 90 : 90;
+  const card = wavyRect(-150, -95, 300, 190, 30, 5).map(([x, y]) => [x, y]);
+  const inner = wavyRect(-118, -64, 236, 128, 26, 3.5);
+  const rot = flip ? 14 : -16;
+  const g = (d, w) => `<path d="${d}" stroke-width="${w}"/>`;
+  let body = `<g transform="translate(${cx} ${cy}) rotate(${rot})" fill="none" stroke="${ink}" stroke-linecap="round" stroke-linejoin="round">${g(handPath(noise, card, 2), 2.4)}${g(handPath(noise, inner, 1.5, 9), 1.5)}`;
+  // hatching inside the card's lower edge
+  for (let k = 0; k < 9; k++) body += `<path d="M${-100 + k * 24} 40 l14 -16" stroke-width="1.3"/>`;
+  body += '</g>';
+  // sparkles and dots in the opposite corner
+  const ox = flip ? PW - 170 : 60;
+  const oy = flip ? 60 : PH - 170;
+  for (let k = 0; k < 6; k++) {
+    const x = ox + rng.next() * 110; const y = oy + rng.next() * 110; const r = 5 + rng.next() * 9;
+    body += k % 2
+      ? `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(r * 0.45).toFixed(1)}" fill="${ink}"/>`
+      : `<path d="M${x} ${y - r} Q${x} ${y} ${x + r} ${y} Q${x} ${y} ${x} ${y + r} Q${x} ${y} ${x - r} ${y} Q${x} ${y} ${x} ${y - r}Z" fill="${ink}"/>`;
+  }
+  return svgOpen(body);
+}
+
+const GENERATORS = { contour, grid, grain, film, heat, ripple, landscape, graphite, fluted, squiggle, blobs, halftone, waves, scallop, sketch };
 export const TEXTURE_KINDS = Object.keys(GENERATORS);

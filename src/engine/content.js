@@ -48,7 +48,7 @@ ${JSON.stringify(EXAMPLE_SHAPE, null, 1)}
 ${userPrompt(notes, occasionName)}`;
 }
 
-const EXAMPLE_SHAPE = {
+export const EXAMPLE_SHAPE = {
   deck: { language: 'en', title: '', shortTitle: '', subtitle: '', author: '', course: '', date: '', worksCitedTitle: '', posterWords: ['', '', ''], posterLines: [''], placeShort: '' },
   claims: [{ text: '', role: 'thesis', note: '' }],
   definitions: [{ term: '', gloss: '', text: '' }],

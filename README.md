@@ -66,6 +66,40 @@ Setup: the Vercel project needs the environment variable `ANTHROPIC_API_KEY` for
 and Preview. Set a monthly spend limit in the Anthropic Console. Per visitor: six decks an
 hour (best effort), notes up to 15,000 characters.
 
+## Redesigning an AI-made deck
+
+"Upload AI slides" on the start screen takes a deck made with ChatGPT, Claude, Gamma,
+Copilot, Canva or similar and rebuilds it in the closest of our directions, keeping its
+general look (light or dark, type, accent colour, content) but dropping the AI tells.
+
+1. **Reading, on the device** (`src/engine/import.js`): PDF pages become pictures with
+   pdf.js 4.10 (`vendor/pdfjs/`, Apache-2.0, loaded only for PDFs); PowerPoint files are
+   opened with the JSZip inside `vendor/pptxgen.bundle.js` (text, speaker notes, theme
+   colours and fonts, background kinds, the largest pictures; browsers can't draw .pptx,
+   so the app suggests a PDF export for the most faithful match); screenshots are used as
+   they are; text and Markdown are notes. Up to 10 slide pictures, spread over the deck.
+   Tool credits ("Made with Gamma"), page numbers, repeated footers and emoji are removed;
+   the text lands in the notes box, where it can be edited, with Undo.
+2. **Looking, on the server** (`api/analyse.js`, prompt in `src/engine/style.js`): Claude
+   gets the pictures, text and theme and returns the content (same rules and shape as the
+   writing step, nothing invented) plus a style profile: light/dark/tint, serif/sans, tone,
+   background, text and accent colours, surface (flat, gradient, glass, texture, photo),
+   imagery, headline size, alignment, density, and the AI tells it can see (purple
+   gradients, card grids, emoji bullets, stock icons, everything centred, generic stock
+   photos, gradient text, glow blobs, bullet walls, drop shadows).
+3. **Choosing, in code** (`src/engine/match.js`): every direction is scored against the
+   profile (look fit, light/dark, type, tone, alignment, accent hue, background lightness);
+   the best one is shown as "Closest to your deck", the best directions of two other looks
+   as alternatives. Each card says why it fits and lists what changes.
+4. **Keeping the theme:** the chosen direction's accent moves to the deck's accent hue and
+   is checked for at least 3:1 contrast with the background; fonts, layout and background
+   stay the direction's own.
+
+The results page shows the uploaded slides above the three cards (before and after).
+Adjust → Tone re-runs the match; picking a look shows that look's own three directions,
+and "Show the best match again" comes back. Same limits as the writing step (six an hour
+per visitor); pictures of the slides go to Claude, as the privacy note says.
+
 ## PowerPoint export
 
 `src/export/pptx.js` (PptxGenJS 3.12, MIT, loaded on demand). Text stays editable; shapes,
@@ -121,6 +155,7 @@ preview and the PowerPoint export draw from the same data.
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)
+4b. Redesigning an uploaded AI deck: stage A done (PDF, PowerPoint, screenshots, text; closest look and two alternatives). Still open: keeping the original slide order
 5. PowerPoint export: done (display fonts as pictures, see below)
 
 ## Pictures for any topic

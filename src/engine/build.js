@@ -11,9 +11,15 @@ import { t } from '../library/labels.js';
 export function buildDirections({ pool, occasionId, density = 'medium', formality = 'neutral', seed, family = 'editorial' }) {
   const occasion = occasionById(occasionId);
   const dirs = sampleDirections({ occasionId: occasion.id, formality, seed, family });
-  const structs = sampleStructures({ occasionId: occasion.id, seed, count: dirs.length });
+  return buildFromDirections({ pool, occasionId, density, seed, directions: dirs });
+}
+
+/** Decks for directions chosen elsewhere (e.g. matched to an uploaded deck, src/engine/match.js). */
+export function buildFromDirections({ pool, occasionId, density = 'medium', seed, directions }) {
+  const occasion = occasionById(occasionId);
+  const structs = sampleStructures({ occasionId: occasion.id, seed, count: directions.length });
   const deck = { ...pool, occasionLabel: t(pool.language, occasion.name) };
-  return dirs.map((direction, i) => buildDeck({ deck, direction, structure: structs[i], density }));
+  return directions.map((direction, i) => buildDeck({ deck, direction, structure: structs[i], density }));
 }
 
 export function buildDeck({ deck, direction, structure, density = 'medium' }) {

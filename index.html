@@ -36,10 +36,17 @@
                 <span class="attach-icon" aria-hidden="true"></span>
                 <span>Add pictures</span>
               </label>
+              <span class="sr-only" id="deck-label">Redesign a deck made with an AI tool: PDF, PowerPoint, screenshots or text</span>
+              <label class="attach attach-deck" for="deck-file">
+                <input type="file" id="deck-file" accept=".pdf,.pptx,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,text/plain,text/markdown" multiple aria-labelledby="deck-label">
+                <span class="attach-icon attach-icon-deck" aria-hidden="true"></span>
+                <span>Upload AI slides</span>
+              </label>
               <ul class="thumbs" id="thumbs" aria-label="Your pictures"></ul>
               <button type="button" class="btn btn-link clear-pictures" id="clear-pictures" hidden>Remove</button>
             </div>
           </div>
+          <p class="field-help import-status" id="import-status" aria-live="polite" hidden><span id="import-text"></span> <button type="button" class="btn btn-link" id="import-undo">Undo</button></p>
         </div>
 
         <fieldset class="field">
@@ -83,7 +90,7 @@
         <button type="button" class="btn btn-link" id="show-fallback">Use my own Claude instead</button>
         <button type="button" class="btn btn-link" id="show-privacy" aria-expanded="false" aria-controls="privacy-note">Privacy</button>
       </div>
-      <p class="field-help" id="privacy-note" hidden>The button sends your notes to Claude (Anthropic), which writes the slide content. Short search terms for matching photos go to Unsplash and Wikimedia Commons. Pictures you add yourself stay on your device.</p>
+      <p class="field-help" id="privacy-note" hidden>The button sends your notes to Claude (Anthropic), which writes the slide content. Short search terms for matching photos go to Unsplash and Wikimedia Commons. If you upload slides made with an AI tool, pictures of those slides and their text go to Claude too, so it can describe their look and content. Pictures you add yourself stay on your device.</p>
     </div>
   </div>
 
@@ -119,6 +126,14 @@
       </div>
     </div>
     <p class="sr-only" aria-live="polite" id="status"></p>
+    <section class="original" id="original" aria-labelledby="original-title" hidden>
+      <div class="original-head">
+        <h3 id="original-title">Your upload</h3>
+        <p class="field-help" id="original-summary"></p>
+        <button type="button" class="btn btn-secondary" id="show-match" hidden>Show the best match again</button>
+      </div>
+      <ul class="original-strip" id="original-strip" aria-label="Slides you uploaded"></ul>
+    </section>
     <div class="cards" id="cards"></div>
   </section>
 

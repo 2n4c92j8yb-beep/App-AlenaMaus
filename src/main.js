@@ -1,7 +1,7 @@
 // App controller: input → three directions → detail view.
 
 import { OCCASIONS } from './library/occasions.js';
-import { buildDirections } from './engine/build.js';
+import { buildDirections, buildFromDirections } from './engine/build.js';
 import { renderSlide } from './render/html.js';
 import { playSlide, transition, hasGsap } from './render/present.js';
 import { upgradeChrome } from './render/chrome3d.js';
@@ -10,6 +10,8 @@ import { toPool, parseAnswer, copyPastePrompt } from './engine/content.js';
 import { attachPictures } from './engine/pictures.js';
 import { occasionById } from './library/occasions.js';
 import { exportPptx, bundledFontsOf, exportsAsPicture } from './export/pptx.js';
+import { readDeck, kindOf } from './engine/import.js';
+import { matchDirections, familyName } from './engine/match.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -29,16 +31,23 @@ const state = {
   openIndex: null,
   uploads: [],      // { src, w, h, name } — the user's own pictures, kept in memory only
   present: null,    // { deck, index }
+  original: null,   // { images, name, source } of the analysed upload, for the before/after view
   pool: null,       // the content written from the user's notes (null: the sample)
   poolKey: '',      // notes + occasion the pool was written for
   busy: false,
+  imported: null,   // an uploaded AI deck, read on the device (src/engine/import.js)
+  style: null,      // that deck's style profile, from the analysis step (api/analyse.js)
+  match: null,      // the best direction and two alternatives for it (src/engine/match.js)
 };
 
 const $ = (id) => document.getElementById(id);
 
 function init() {
   renderOccasions();
-  $('input-form').addEventListener('submit', (e) => { e.preventDefault(); write(); });
+  $('input-form').addEventListener('submit', (e) => { e.preventDefault(); if (state.imported) redesign(); else write(); });
+  $('deck-file').addEventListener('change', (e) => { importDeck([...e.target.files]); e.target.value = ''; });
+  $('import-undo').addEventListener('click', undoImport);
+  $('show-match').addEventListener('click', () => { rematch(); generate(); });
   $('copy-prompt').addEventListener('click', copyPrompt);
   $('use-answer').addEventListener('click', useAnswer);
   $('show-fallback').addEventListener('click', () => { if ($('input-form').reportValidity()) openFallback(''); });
@@ -46,6 +55,8 @@ function init() {
     if (state.busy) return;
     if (!$('notes').value.trim()) $('notes').value = SAMPLE_NOTES; // never replaces notes someone typed
     hideFallback();
+    if (state.imported) undoImport();
+    leaveMatch();
     state.pool = null; state.poolKey = ''; // no pool: the directions are built from the sample content
     generate(true);
   });
@@ -55,8 +66,9 @@ function init() {
     e.currentTarget.setAttribute('aria-expanded', String(!note.hidden));
   });
   document.querySelectorAll('[data-density]').forEach((b) => b.addEventListener('click', () => { state.density = b.dataset.density; generate(); }));
-  document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; generate(); }));
-  document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; generate(); }));
+  document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; if (state.match) rematch(state.formality); generate(); }));
+  // picking a look leaves the matched directions and shows that look's own three
+  document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; state.match = null; generate(); }));
   $('reroll').addEventListener('click', () => { state.round += 1; generate(); });
   $('back').addEventListener('click', closeDetail);
   $('edit-notes').addEventListener('click', () => showView('start', () => { window.scrollTo(0, 0); $('notes').focus(); }));
@@ -93,7 +105,14 @@ function setupDropzone() {
   zone.addEventListener('dragenter', over(true));
   zone.addEventListener('dragover', over(true));
   zone.addEventListener('dragleave', over(false));
-  zone.addEventListener('drop', (e) => { if (!e.dataTransfer?.files?.length) return; over(false)(e); addPictures([...e.dataTransfer.files]); });
+  zone.addEventListener('drop', (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    over(false)(e);
+    const files = [...e.dataTransfer.files];
+    // a deck (PDF, PowerPoint, text) goes to the redesign; pictures stay pictures
+    if (files.some((f) => ['pdf', 'pptx', 'text', 'unsupported'].includes(kindOf(f)))) importDeck(files);
+    else addPictures(files);
+  });
 }
 
 // Scale photos down on the device (iPad photos are large) and keep them in memory.
@@ -182,6 +201,7 @@ const isSample = () => $('notes').value.trim() === SAMPLE_NOTES.trim();
 async function write() {
   if (state.busy) return;
   hideFallback();
+  leaveMatch();
   if (isSample()) { state.pool = null; state.poolKey = ''; generate(true); return; }
   if (state.pool && state.poolKey === notesKey()) { generate(true); return; }
   setBusy(true);
@@ -210,11 +230,13 @@ function setBusy(on, phase = 'writing') {
   const btn = $('submit-btn');
   btn.disabled = on;
   btn.classList.toggle('is-busy', on);
-  btn.querySelector('.label').textContent = !on ? 'Show three directions' : phase === 'pictures' ? 'Finding pictures…' : 'Writing your slides…';
+  btn.querySelector('.label').textContent = !on ? submitLabel() : phase === 'pictures' ? 'Finding pictures…' : phase === 'looking' ? 'Looking at your slides…' : 'Writing your slides…';
   // read out for screen readers; sighted users get the bar
   $('busy-note').textContent = !on ? '' : phase === 'pictures'
     ? 'Looking for photos on Unsplash and Wikimedia Commons.'
-    : 'Claude is writing the content of your slides. This usually takes under a minute.';
+    : phase === 'looking'
+      ? 'Claude is looking at your slides to find the closest look and to read their content. This usually takes under a minute.'
+      : 'Claude is writing the content of your slides. This usually takes under a minute.';
   progress(on, phase);
 }
 
@@ -269,6 +291,115 @@ async function useAnswer() {
   state.poolKey = notesKey();
   setBusy(false);
   generate(true);
+}
+
+// ---------- redesigning an uploaded AI deck ----------
+
+const submitLabel = () => (state.imported ? 'Redesign my deck' : 'Show three directions');
+
+/** Read the chosen deck on the device and put its text into the notes box. */
+async function importDeck(files) {
+  if (state.busy) return;
+  const status = $('import-status');
+  status.hidden = false;
+  $('import-undo').hidden = true;
+  $('import-text').textContent = 'Reading your slides…';
+  try {
+    const deck = await readDeck(files);
+    const notesBefore = state.imported ? state.imported.notesBefore : $('notes').value;
+    state.imported = { ...deck, notesBefore };
+    $('notes').value = deck.text;
+    // screenshots carry no text, so the notes box may stay empty
+    $('notes').required = false;
+    const what = deck.source === 'text' ? `the text of “${deck.name}”`
+      : deck.source === 'images' ? `${deck.count} screenshot${deck.count === 1 ? '' : 's'}`
+      : `${deck.count} slide${deck.count === 1 ? '' : 's'} from “${deck.name}”`;
+    const notes = [`Read ${what}.`];
+    if (deck.source === 'pptx') notes.push('Tip: a PDF export of the same deck lets the app see the slides exactly as they look.');
+    if (deck.source === 'pdf' && deck.count > deck.images.length) notes.push(`Claude will look at ${deck.images.length} of them, spread across the deck, and read all the text.`);
+    if (deck.trimmed) notes.push(deck.source === 'images' ? 'Only the first 10 screenshots are used.' : 'The text was long, so speaker notes or the end were left out.');
+    notes.push('Press “Redesign my deck” to find the closest look.');
+    $('import-text').textContent = notes.join(' ');
+    $('import-undo').hidden = false;
+    $('submit-btn').querySelector('.label').textContent = submitLabel();
+  } catch (err) {
+    $('import-text').textContent = err.message;
+    $('import-undo').hidden = !state.imported;
+  }
+}
+
+function undoImport() {
+  if (!state.imported) return;
+  $('notes').value = state.imported.notesBefore;
+  state.imported = null;
+  $('notes').required = true;
+  $('import-status').hidden = true;
+  $('submit-btn').querySelector('.label').textContent = submitLabel();
+}
+
+/** Send the slides to Claude, then show the closest direction and two alternatives. */
+async function redesign() {
+  if (state.busy) return;
+  hideFallback();
+  const imp = state.imported;
+  const text = $('notes').value.trim();
+  if (!imp.images.length && text.length < 40) { $('import-text').textContent = 'There is too little text to work with. Add a few lines to the notes box.'; return; }
+  // the same upload, text and occasion again: no need to ask Claude a second time
+  const key = `${state.occasionId}|${imp.name}|${imp.count}|${text}`;
+  if (state.style && state.analysedKey === key) { rematch(); generate(true); return; }
+  setBusy(true, 'looking');
+  try {
+    const res = await fetch('/api/analyse', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: imp.images, text, theme: imp.theme, source: imp.source, occasion: state.occasionId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `The redesign step failed (${res.status}).`);
+    if (!data.pool?.items?.length || !data.style) throw new Error('The server sent no slide content.');
+    setBusy(true, 'pictures');
+    state.pool = await attachPictures(data.pool);
+    state.poolKey = '';
+    state.style = data.style;
+    state.original = { images: imp.images, name: imp.name, source: imp.source };
+    state.analysedKey = key;
+    rematch();
+    setBusy(false);
+    generate(true);
+  } catch (err) {
+    setBusy(false);
+    $('import-status').hidden = false;
+    $('import-text').textContent = err.message === 'Failed to fetch' ? 'The app could not reach the server.' : err.message;
+  }
+}
+
+/** Match the analysed deck to our directions again (after a tone change, or to come back to it). */
+function rematch(tone) {
+  if (!state.style) return;
+  state.match = matchDirections(state.style, { occasionId: state.occasionId, tone });
+}
+
+/** Notes typed or the example: the matched view of an earlier upload no longer applies. */
+function leaveMatch() {
+  state.match = null;
+  state.style = null;
+  state.original = null;
+  state.analysedKey = '';
+}
+
+function renderOriginal() {
+  const box = $('original');
+  box.hidden = !state.style;
+  if (!state.style) return;
+  $('original-summary').textContent = state.style.summary || `Read from “${state.original?.name ?? 'your upload'}”.`;
+  $('show-match').hidden = Boolean(state.match);
+  const strip = $('original-strip');
+  const imgs = state.original?.source === 'pptx' ? [] : state.original?.images ?? []; // PowerPoint pictures are photos from the deck, not slides
+  strip.hidden = !imgs.length;
+  strip.replaceChildren(...imgs.slice(0, 6).map((src, i) => {
+    const li = document.createElement('li');
+    li.append(Object.assign(document.createElement('img'), { src, alt: `Uploaded slide ${i + 1}` }));
+    return li;
+  }));
 }
 
 // ---------- views ----------
@@ -468,7 +599,9 @@ function syncToggles() {
   document.querySelectorAll('[data-density]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.density === state.density)));
   document.querySelectorAll('[data-formality]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.formality === state.formality)));
   const looks = [...document.querySelectorAll('[data-family]')];
-  looks.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.family === state.family)));
+  // while showing the matched directions no single look is chosen
+  looks.forEach((b) => b.setAttribute('aria-pressed', String(!state.match && b.dataset.family === state.family)));
+  document.querySelector('.looks').classList.toggle('is-matched', Boolean(state.match));
   document.querySelector('.looks').style.setProperty('--i', String(looks.findIndex((b) => b.dataset.family === state.family)));
 }
 
@@ -476,17 +609,27 @@ function syncToggles() {
 
 function generate(fromStart = false) {
   syncToggles();
-  state.decks = buildDirections({
-    pool: currentPool(),
-    occasionId: state.occasionId,
-    density: state.density,
-    formality: state.formality,
-    family: state.family,
-    seed: `${state.baseSeed}:${state.round}`,
-  });
+  const seed = `${state.baseSeed}:${state.round}`;
+  if (state.match) {
+    state.decks = buildFromDirections({ pool: currentPool(), occasionId: state.occasionId, density: state.density, seed, directions: state.match.map((m) => m.direction) })
+      .map((deck, i) => ({ ...deck, match: state.match[i] }));
+  } else {
+    state.decks = buildDirections({
+      pool: currentPool(),
+      occasionId: state.occasionId,
+      density: state.density,
+      formality: state.formality,
+      family: state.family,
+      seed,
+    });
+  }
+  $('results-title').textContent = state.match ? 'The closest look, and two others' : 'Pick a direction';
+  renderOriginal();
   renderCards();
   if (state.openIndex !== null) openDetail(state.openIndex, false);
-  $('status').textContent = `Three directions ready: ${state.decks.map((d) => d.direction.name).join(', ')}.`;
+  $('status').textContent = state.match
+    ? `Closest to your deck: ${state.decks[0].direction.name}. Also: ${state.decks.slice(1).map((d) => d.direction.name).join(', ')}.`
+    : `Three directions ready: ${state.decks.map((d) => d.direction.name).join(', ')}.`;
   if (fromStart) showView('results', () => { window.scrollTo(0, 0); $('results-title').setAttribute('tabindex', '-1'); $('results-title').focus({ preventScroll: true }); });
 }
 
@@ -529,13 +672,26 @@ function renderCards() {
     const body = document.createElement('div');
     body.className = 'card-body';
     body.innerHTML = '<h3></h3><p class="card-meta"></p>';
-    body.querySelector('h3').textContent = d.name;
+    body.querySelector('h3').textContent = deck.match ? `${familyName(d.family)} · ${d.name}` : d.name;
     body.querySelector('.card-meta').textContent = s.name;
+    if (deck.match) {
+      const badge = Object.assign(document.createElement('p'), { className: `match-badge${deck.match.role === 'best' ? ' is-best' : ''}`, textContent: deck.match.role === 'best' ? 'Closest to your deck' : 'Another option' });
+      const why = Object.assign(document.createElement('p'), { className: 'match-reason', textContent: deck.match.reason });
+      body.prepend(badge);
+      body.append(why);
+    }
     const open = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-primary', innerHTML: 'Open <span class="arrow" aria-hidden="true">→</span>' });
     open.setAttribute('aria-label', `Open ${d.name}`);
     open.addEventListener('click', () => openDetail(i, true));
     foot.append(body, open);
     card.append(foot);
+    if (deck.match?.changes.length) {
+      const more = document.createElement('details');
+      more.className = 'match-changes';
+      more.innerHTML = '<summary>What changes</summary><ul></ul>';
+      more.querySelector('ul').append(...deck.match.changes.map((c) => Object.assign(document.createElement('li'), { textContent: c })));
+      card.append(more);
+    }
     box.append(card);
   });
 }
@@ -559,7 +715,7 @@ function openDetail(i, focus) {
   const { direction: d, structure: s, slides, overflow } = deck;
   const fill = () => {
     $('detail-title').textContent = d.name;
-    $('detail-meta').textContent = s.name;
+    $('detail-meta').textContent = deck.match ? `${familyName(d.family)} · ${s.name} · ${deck.match.reason}` : s.name;
     $('export-note').hidden = true;
     const check = $('detail-check');
     check.hidden = overflow.length === 0;

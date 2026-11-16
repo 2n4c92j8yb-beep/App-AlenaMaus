@@ -17,6 +17,7 @@
 //   photo       'bleed' | 'framed' | 'offset' | 'round'   how pictures sit on the slide
 //   scale       multiplier for headline sizes
 //   footer      show page number and short title
+//   steps       optional: 'open' sets process steps as open columns instead of cards
 // tags: tone (formal | neutral | relaxed), mode (light | dark | tint), type (serif | sans | mixed)
 // suits: weight per occasion id (0 = never)
 
@@ -309,7 +310,7 @@ DIRECTIONS.push(
     blurb: 'Soft peach, lilac and butter colour fields with film grain, bold rounded headlines, everything centred.',
     fonts: { display: 'manrope', body: 'manrope', label: 'manrope' },
     colors: { bg: '#F3ECE6', ink: '#221E26', muted: '#4A4350', accent: '#A63D63', soft: '#EADFD7' },
-    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'round', scale: 1.0, footer: false, boldDisplay: true },
+    layout: { margin: 0.9, align: 'center', titlePos: 'top', numbers: 'small', cover: 'center', labels: 'upper', labelTracking: 0.16, kicker: 'text', signature: 'none', photo: 'round', scale: 1.0, footer: false, boldDisplay: true, steps: 'open' },
     tags: { tone: 'relaxed', mode: 'tint', type: 'sans' },
     suits: ALL_OCCASIONS,
   },

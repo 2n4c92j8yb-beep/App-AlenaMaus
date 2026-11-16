@@ -502,6 +502,24 @@ function processForm(ctx, item, kick) {
       const hd = text(ctx, 'display', s.title, { x: tx, y: y + 0.16, w: tw, h: rowH * 0.42 }, { max: 24, min: 15, italic: false, maxLines: 2, seq });
       text(ctx, 'body', s.text, { x: tx, y: y + 0.2 + hd.height, w: tw, h: rowH - hd.height - 0.42 }, { max: Math.round(18 * dz), min: 13, color: c.muted, seq });
     });
+  } else if (L.steps === 'open') {
+    // open columns without cards: numbers and space carry the order, and the step
+    // headings stay well below the slide headline (avoids the three-card pattern)
+    const gap = 0.6;
+    const colW = (b.w - gap * (n - 1)) / n;
+    const align = L.align === 'center' ? 'center' : 'left';
+    const first = ctx.els.length;
+    const xs = steps.map((_, i) => b.x + i * (colW + gap));
+    // numbers and headings first, so every column's text starts on the same line
+    const nbs = steps.map((_, i) => text(ctx, 'display', String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.6 }, { max: 28, min: 18, color: c.accentText, italic: false, caps: false, maxLines: 1, align, seq: 2 + i }));
+    const ty = b.y + Math.max(...nbs.map((r) => r.height)) + 0.2;
+    const hds = steps.map((s, i) => text(ctx, 'display', s.title, { x: xs[i], y: ty, w: colW, h: 1.0 }, { max: 22, min: 15, italic: false, maxLines: 3, align, seq: 2 + i }));
+    const by = ty + Math.max(...hds.map((r) => r.height)) + 0.15;
+    const bodies = steps.map((s, i) => text(ctx, 'body', s.text, { x: xs[i], y: by, w: colW, h: b.y + b.h - by - 0.2 }, { max: Math.round(17 * dz), min: 13, color: c.muted, align, seq: 2 + i }));
+    // then the group sits slightly above the middle of the free space
+    const used = by + Math.max(...bodies.map((r) => r.height)) - b.y;
+    const shift = Math.max(0, (b.h - used) * 0.4);
+    for (const el of ctx.els.slice(first)) el.y += shift;
   } else {
     // a staircase: each step starts a little higher than the one before
     const gap = 0.35;

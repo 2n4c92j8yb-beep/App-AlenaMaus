@@ -237,3 +237,34 @@ test('text fitting shrinks to fit and reports when it cannot', () => {
   assert.ok(r.fits && r.size < 40);
   assert.equal(fitText('word '.repeat(400), 2, 1, { max: 20, min: 12, factor: 0.5 }).fits, false);
 });
+
+test('the glowing key-figure panel never runs into the text around it', () => {
+  const overlaps = (a, b) => !(a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h);
+  for (const family of ['editorial', 'poster', 'glass', 'texture']) for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family })) {
+      for (const sl of deck.slides) {
+        const panel = sl.els.find((e) => e.accent === 'glow');
+        if (!panel) continue;
+        const fig = sl.els[sl.els.indexOf(panel) + 1];
+        for (const t of sl.els.filter((e) => e.type === 'text' && e !== fig && e.text?.trim())) {
+          assert.ok(!overlaps(panel, t), `${deck.direction.id} ${sl.form}: glow panel covers "${t.text.slice(0, 30)}"`);
+        }
+      }
+    }
+  }
+});
+
+test('open process steps draw no cards, and step headings stay below the slide headline', () => {
+  for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family: 'texture' })) {
+      if (deck.direction.layout.steps !== 'open') continue;
+      for (const sl of deck.slides.filter((x) => x.form === 'process')) {
+        const cards = sl.els.filter((e) => e.type === 'rect' && e.w < SLIDE_W - 0.1);
+        if (sl.item.steps.length <= 4) assert.equal(cards.length, 0, `${deck.direction.id}: ${cards.length} cards on a process slide`);
+        const display = sl.els.filter((e) => e.type === 'text' && e.role === 'display' && e.text.trim().split(/\s+/).length > 1).map((e) => e.size);
+        const [head, ...rest] = display;
+        for (const size of rest) assert.ok(head >= size * 1.4, `${deck.direction.id}: step heading ${size}pt against headline ${head}pt`);
+      }
+    }
+  }
+});

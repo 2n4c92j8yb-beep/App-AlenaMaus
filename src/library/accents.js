@@ -163,10 +163,12 @@ function glowBehindFigure(ctx) {
   const texts = ctx.els.filter((e) => e.type === 'text' && e.role === 'display');
   if (!texts.length) return;
   const fig = texts.reduce((p, q) => (q.size > p.size ? q : p));
-  const h = (fig.size / 72) * fig.lineHeight + 0.5;
+  // the panel stays inside the figure's own box, so it never runs into the label or headline around it
+  const h = Math.min((fig.size / 72) * fig.lineHeight + 0.5, fig.h);
   const w = Math.min(fig.w, String(fig.text).length * (fig.size / 72) * 0.62 + 0.9);
   const x = fig.align === 'center' ? fig.x + (fig.w - w) / 2 : fig.x - 0.35;
-  const y = fig.valign === 'middle' ? fig.y + (fig.h - h) / 2 : fig.y - 0.15;
+  const want = fig.valign === 'middle' ? fig.y + (fig.h - h) / 2 : fig.y - 0.15;
+  const y = Math.min(Math.max(want, fig.y), fig.y + fig.h - h);
   const panel = {
     type: 'rect', x: Math.max(0.2, x), y: Math.max(0.2, y), w, h, fill: '#FFFFFF8C', radius: 0.3, seq: fig.seq, accent: 'glow',
     glass: { edge: '#FFFFFFF2', rim: '#FFFFFF' }, glow: { color: `${c.accent}59`, blur: 0.45, edge: `${c.accent}66` },

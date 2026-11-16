@@ -291,6 +291,11 @@ function frame(ctx, title, kick) {
 
 // ---------- forms ----------
 
+// height for a cover subtitle box so it ends just above the author line
+function aboveMeta(y, h, metaY) {
+  return Math.max(0.3, Math.min(h, metaY - 0.15 - y));
+}
+
 function cover(ctx) {
   const { L, c, m, scale, deck } = ctx;
   const meta = [deck.author, deck.course, deck.date].filter(Boolean).join('  ·  ');
@@ -304,7 +309,7 @@ function cover(ctx) {
       if (img) image(ctx, img, { x: W * 0.56, y: 0, w: W * 0.44, h: H }, { style: 'bleed', seq: 0 });
       label(ctx, deck.occasionLabel, { x: m, y: m, w: tw, h: 0.3 }, { color: ink, seq: 1 });
       text(ctx, 'display', deck.title, { x: m, y: H * 0.26, w: tw, h: H * 0.46 }, { max: titleMax + 6, min: 28, color: ink, valign: 'bottom', maxLines: 5 });
-      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: H * 0.74, w: tw, h: 0.8 }, { max: 20, min: 14, color: ink });
+      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: H * 0.74, w: tw, h: aboveMeta(H * 0.74, 0.8, H - m - 0.55) }, { max: 20, min: 14, color: ink });
       label(ctx, meta, { x: m, y: H - m - 0.55, w: tw, h: 0.55 }, { color: ink, maxLines: 2, seq: 3 });
       return;
     }
@@ -315,10 +320,14 @@ function cover(ctx) {
         image(ctx, img, { x: 0, y: 0, w: panelW, h: H }, { style: 'bleed', seq: 0 });
         const x = panelW + 0.8;
         const w = W - x - m;
+        const metaY = H - m - 0.6;
+        const ty = m + 0.8;
         label(ctx, deck.occasionLabel, { x, y: m, w, h: 0.3 }, { seq: 1 });
-        const t = text(ctx, 'display', deck.title, { x, y: m + 0.8, w, h: H * 0.5 }, { max: titleMax, min: 26, maxLines: 5 });
-        text(ctx, 'body', deck.subtitle ?? '', { x, y: m + 0.8 + t.height + 0.35, w, h: 1.2 }, { max: 20, min: 14, color: c.muted });
-        label(ctx, meta, { x, y: H - m - 0.6, w, h: 0.6 }, { maxLines: 2, seq: 3 });
+        // the title gives up size before the subtitle can reach the author line
+        const t = text(ctx, 'display', deck.title, { x, y: ty, w, h: Math.min(H * 0.5, metaY - 1.1 - ty) }, { max: titleMax, min: 26, maxLines: 5 });
+        const sy = ty + t.height + 0.35;
+        text(ctx, 'body', deck.subtitle ?? '', { x, y: sy, w, h: aboveMeta(sy, 1.2, metaY) }, { max: 20, min: 14, color: c.muted });
+        label(ctx, meta, { x, y: metaY, w, h: 0.6 }, { maxLines: 2, seq: 3 });
         return;
       }
       rect(ctx, 0, 0, panelW, H, sig(ctx) === 'bleed' ? c.accent : c.soft);
@@ -360,7 +369,8 @@ function cover(ctx) {
       const tw = img ? W * 0.5 : W * 0.82;
       if (img) image(ctx, img, { x: W * 0.58, y: top, w: W * 0.42 - m, h: H - top - m - 0.4 }, { seq: 0 });
       const t = text(ctx, 'display', deck.title, { x: m, y: top, w: tw, h: H * 0.42 }, { max: titleMax + 4, min: 28, maxLines: 4 });
-      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: top + t.height + 0.35, w: tw, h: 1.0 }, { max: 22, min: 14, color: c.muted });
+      const sy = top + t.height + 0.35;
+      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: sy, w: tw, h: aboveMeta(sy, 1.0, H - m - 0.55) }, { max: 22, min: 14, color: c.muted });
       label(ctx, meta, { x: m, y: H - m - 0.55, w: tw, h: 0.55 }, { maxLines: 2, seq: 3 });
       return;
     }
@@ -371,7 +381,7 @@ function cover(ctx) {
       if (img) image(ctx, img, { x: W * 0.6, y: L.photo === 'framed' ? m : 0, w: W * 0.4 - (L.photo === 'framed' ? m : 0), h: L.photo === 'framed' ? H - 2 * m : H }, { seq: 0 });
       label(ctx, deck.occasionLabel, { x: m, y: m, w: tw, h: 0.3 }, { seq: 1 });
       text(ctx, 'display', deck.title, { x: m, y: H * 0.26, w: tw, h: H * 0.42 }, { max: titleMax, min: 26, valign: 'bottom', maxLines: 5 });
-      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: H * 0.7, w: tw, h: 0.8 }, { max: 20, min: 14, color: c.muted });
+      text(ctx, 'body', deck.subtitle ?? '', { x: m, y: H * 0.7, w: tw, h: aboveMeta(H * 0.7, 0.8, H - m - 0.55) }, { max: 20, min: 14, color: c.muted });
       label(ctx, meta, { x: m, y: H - m - 0.55, w: tw, h: 0.55 }, { maxLines: 2, seq: 3 });
     }
   }

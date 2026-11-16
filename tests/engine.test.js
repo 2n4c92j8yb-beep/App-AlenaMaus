@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDirections } from '../src/engine/build.js';
+import { buildDirections, buildDeck } from '../src/engine/build.js';
 import { distance, sampleDirections } from '../src/engine/sampler.js';
 import { fitText, countLines, SLIDE_W, SLIDE_H } from '../src/engine/fit.js';
 import { DIRECTIONS } from '../src/library/directions.js';
@@ -265,6 +265,30 @@ test('open process steps draw no cards, and step headings stay below the slide h
         const [head, ...rest] = display;
         for (const size of rest) assert.ok(head >= size * 1.4, `${deck.direction.id}: step heading ${size}pt against headline ${head}pt`);
       }
+    }
+  }
+});
+
+test('cover text never runs into the author line, even with a long title', () => {
+  // at the app's own limits: deck titles are clipped to 80 characters, subtitles to 90
+  const long = { ...SAMPLE_POOL, title: 'Why English spelling stopped matching its sounds, and why it still matters today', subtitle: 'The Great Vowel Shift, c. 1400–1700, and what it left behind in our modern spelling' };
+  // poster and glass draw their own covers (posters layer giant words over the text on purpose)
+  for (const pool of [SAMPLE_POOL, long]) for (const direction of DIRECTIONS.filter((d) => d.family !== 'poster' && d.family !== 'glass')) {
+    const deck = buildDeck({ deck: { ...pool, occasionLabel: 'Seminar presentation' }, direction, structure: STRUCTURES[0] });
+    // measure the lines actually set, not the box reserved for them
+    const span = (e) => {
+      const f = FONTS[e.font] ?? { factor: 0.55 };
+      const factor = ((e.caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + (e.tracking ?? 0)) * (e.bold ? 1.06 : 1) * (/\d.*\d/.test(e.text) && e.text.replace(/\D/g, '').length / e.text.length > 0.5 ? 1.3 : 1);
+      const { lines } = countLines(e.text, e.w, e.size, factor);
+      const hh = lines * (e.size / 72) * (e.lineHeight ?? 1.2);
+      const top = e.valign === 'bottom' ? e.y + e.h - hh : e.valign === 'middle' ? e.y + (e.h - hh) / 2 : e.y;
+      return { top, bottom: top + hh };
+    };
+    const texts = deck.slides[0].els.filter((e) => e.type === 'text' && e.text?.trim()).map((e) => ({ e, ...span(e) })).sort((a, b) => a.top - b.top);
+    for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
+      const a = texts[i], b = texts[j];
+      const sameColumn = a.e.x < b.e.x + b.e.w && b.e.x < a.e.x + a.e.w;
+      if (sameColumn) assert.ok(a.bottom <= b.top + 0.02, `${direction.id} cover: "${a.e.text.slice(0, 24)}" runs into "${b.e.text.slice(0, 24)}"`);
     }
   }
 });

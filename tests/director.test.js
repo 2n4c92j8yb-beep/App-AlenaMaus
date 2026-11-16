@@ -46,6 +46,7 @@ const forms = (spec) => spec.plan.map((s) => s.form);
 test('the prompt names the tells and offers only editorial directions that suit the occasion', () => {
   for (const tell of TELLS) assert.ok(SYSTEM_PROMPT.includes(tell), tell);
   assert.ok(jsonPrompt().includes('"direction"') && jsonPrompt().includes('"dropped"'));
+  assert.ok(SYSTEM_PROMPT.includes('8 to 12 slides'));
   for (const o of OCCASIONS) {
     const offered = catalogue(o.id);
     assert.ok(offered.length >= 3, o.id);
@@ -294,6 +295,8 @@ test('a refusal, unreadable JSON and an empty spec fall back to the sampled dire
   const good = await run(client, { avoid: ['swiss'], take: 1 });
   assert.equal(good.directed.direction.id, 'archive');
   assert.equal(good.directed.structure.id, 'director-1');
+  assert.equal(good.spec.direction, 'archive');
+  assert.deepEqual(good.spec.plan, toSpec(ANSWER, pool, opts).plan);
   assert.deepEqual(good.decks.map((d) => d.direction.id), classic);
   assert.ok(!client.seen.params.messages[0].content.includes('- swiss '), 'avoid reaches the prompt');
   assert.ok(!JSON.stringify(client.seen.params).includes('"src"'), 'only the brief leaves the device');

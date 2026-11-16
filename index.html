@@ -21,6 +21,13 @@
 
   <main id="main">
   <div class="wrap view start" id="view-start">
+    <div class="resume" id="resume" hidden>
+      <p><b>Continue your deck</b> <span id="resume-title"></span></p>
+      <div class="resume-tools">
+        <button type="button" class="btn btn-primary" id="resume-go">Continue</button>
+        <button type="button" class="btn btn-link" id="resume-drop">Start fresh</button>
+      </div>
+    </div>
     <h1 id="intro-title">Slides that don’t look like everyone else’s</h1>
 
     <div class="start-main">
@@ -153,9 +160,38 @@
       </div>
     </div>
     <p class="field-help export-note" id="export-note" aria-live="polite" hidden></p>
+    <div class="edit-bar" id="edit-bar">
+      <p class="edit-note" id="edit-note" aria-live="polite">Edit any slide: the layout adjusts to your text. Edits are saved on this device.</p>
+      <div class="edit-tools">
+        <button type="button" class="btn btn-secondary" id="undo" disabled>Undo</button>
+        <button type="button" class="btn btn-secondary" id="redo" disabled>Redo</button>
+        <button type="button" class="btn btn-link" id="discard" hidden>Discard all edits</button>
+      </div>
+    </div>
     <p class="check warn" id="detail-check" hidden></p>
     <ol class="slide-list" id="slide-list"></ol>
+    <button type="button" class="btn btn-secondary add-slide" id="add-slide">+ Add a slide before Works Cited</button>
   </section>
+
+  <aside class="editor" id="editor" role="dialog" aria-modal="false" aria-labelledby="editor-title" hidden>
+    <div class="editor-head">
+      <h3 id="editor-title">Edit slide</h3>
+      <button type="button" class="icon-btn" id="editor-close" aria-label="Close without saving">×</button>
+    </div>
+    <div class="editor-body">
+      <div id="editor-form">
+        <div class="editor-preview" id="editor-preview"></div>
+        <p class="check warn editor-fit" id="editor-fit" hidden></p>
+        <div class="editor-fields" id="editor-fields"></div>
+      </div>
+      <div class="editor-add" id="editor-add" hidden></div>
+    </div>
+    <div class="editor-foot">
+      <button type="button" class="btn btn-ghost" id="editor-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="editor-done">Save changes</button>
+    </div>
+  </aside>
+  <input type="file" id="replace-picture" accept="image/*" hidden>
 
   </main>
 

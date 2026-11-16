@@ -14,6 +14,8 @@ import { occasionById } from './library/occasions.js';
 import { exportPptx, bundledFontsOf, exportsAsPicture } from './export/pptx.js';
 import { readDeck, kindOf } from './engine/import.js';
 import { matchDirections, familyName } from './engine/match.js';
+import { emptyEdits, withIds, applyEdits, applyPlans, deckKey, isEdited, setItem, setCover, setSection, moveSlide, deleteSlide, duplicateSlide, addSlide, unusedItems } from './engine/edits.js';
+import { openSlideEditor, openAddPicker, close as closeEditor } from './editor.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -41,6 +43,9 @@ const state = {
   style: null,      // that deck's style profile, from the analysis step (api/analyse.js)
   match: null,      // the best direction and two alternatives for it (src/engine/match.js)
   order: 'original', // matched decks: keep the uploaded slide order, or re-tell it in our story structures
+  edits: emptyEdits(), // the person's changes to the slides (src/engine/edits.js), saved on this device
+  history: [],      // earlier edits, for Undo
+  future: [],       // undone edits, for Redo
 };
 
 const $ = (id) => document.getElementById(id);
@@ -60,6 +65,7 @@ function init() {
     hideFallback();
     if (state.imported) undoImport();
     leaveMatch();
+    if (state.pool) resetEdits(); // edits made for other content don't apply to the example
     state.pool = null; state.poolKey = ''; // no pool: the directions are built from the sample content
     generate(true);
   });
@@ -82,6 +88,15 @@ function init() {
   $('clear-pictures').addEventListener('click', () => { state.uploads = []; $('pictures').value = ''; renderThumbs(); if (!$('results').hidden) generate(); });
   $('present').addEventListener('click', () => startPresenting(state.decks[state.openIndex]));
   $('export-pptx').addEventListener('click', downloadPptx);
+  $('undo').addEventListener('click', undo);
+  $('redo').addEventListener('click', redo);
+  $('discard').addEventListener('click', (e) => discardEdits(e.currentTarget));
+  $('add-slide').addEventListener('click', (e) => {
+    // at the end of the talk, but before Works Cited
+    const { slides } = state.decks[state.openIndex];
+    const last = slides.at(-1)?.form === 'references' ? slides.length - 2 : slides.length - 1;
+    pickNewSlide(last, e.currentTarget);
+  });
   $('p-next').addEventListener('click', () => step(1));
   $('p-prev').addEventListener('click', () => step(-1));
   $('p-close').addEventListener('click', stopPresenting);
@@ -90,6 +105,7 @@ function init() {
   document.addEventListener('keydown', onKey);
   syncToggles();
   renderHero();
+  offerResume();
 }
 
 // ---------- pictures ----------
@@ -150,7 +166,11 @@ function renderThumbs() {
 
 // The user's pictures take the place of the sample pictures, in order.
 function currentPool() {
-  const base = state.pool ?? SAMPLE_POOL;
+  return applyEdits(poolWithPictures(), state.edits);
+}
+
+function poolWithPictures() {
+  const base = withIds(state.pool ?? SAMPLE_POOL);
   if (!state.uploads.length) return base;
   const ups = [...state.uploads];
   const captions = [...(base.pictureCaptions ?? [])];
@@ -160,7 +180,7 @@ function currentPool() {
   };
   // the user's pictures take the place of the sample pictures; with written content they are added as picture slides
   let items = base.items.map((it) => (it.kind === 'image' && ups.length ? { ...it, ...own(ups.shift()), citation: undefined } : it));
-  if (base.generated) items = [...items, ...ups.splice(0, 2).map((u) => ({ kind: 'image', tags: ['evidence'], weight: 2, ...own(u) }))];
+  if (base.generated) items = [...items, ...ups.splice(0, 2).map((u, k) => ({ id: `upload-${k}`, kind: 'image', tags: ['evidence'], weight: 2, ...own(u) }))];
   const coverImage = ups.length ? { ...own(ups.shift()), citation: undefined } : base.coverImage;
   return { ...base, items, coverImage };
 }
@@ -206,7 +226,7 @@ async function write() {
   if (state.busy) return;
   hideFallback();
   leaveMatch();
-  if (isSample()) { state.pool = null; state.poolKey = ''; generate(true); return; }
+  if (isSample()) { if (state.pool) resetEdits(); state.pool = null; state.poolKey = ''; generate(true); return; }
   if (state.pool && state.poolKey === notesKey()) { generate(true); return; }
   setBusy(true);
   try {
@@ -219,6 +239,7 @@ async function write() {
     if (!data.pool?.items?.length) throw new Error('The server sent no slide content.');
     // already cleaned on the server with the same rules (toPool); now the pictures
     setBusy(true, 'pictures');
+    resetEdits();
     state.pool = await attachPictures(data.pool);
     state.poolKey = notesKey();
     setBusy(false);
@@ -291,7 +312,8 @@ async function useAnswer() {
   }
   hideFallback();
   setBusy(true, 'pictures');
-  state.pool = await attachPictures(pool);
+  resetEdits();
+    state.pool = await attachPictures(pool);
   state.poolKey = notesKey();
   setBusy(false);
   generate(true);
@@ -361,6 +383,7 @@ async function redesign() {
     if (!res.ok) throw new Error(data.error ?? `The redesign step failed (${res.status}).`);
     if (!data.pool?.items?.length || !data.style) throw new Error('The server sent no slide content.');
     setBusy(true, 'pictures');
+    resetEdits();
     state.pool = await attachPictures(data.pool);
     state.poolKey = '';
     state.style = data.style;
@@ -412,13 +435,19 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Switch between the start, results and detail screens with a short cross-fade. */
 function showView(name, after) {
+  if (name !== 'detail') closeEditor();
   const apply = () => {
     $('view-start').hidden = name !== 'start';
     $('results').hidden = name !== 'results';
     $('detail').hidden = name !== 'detail';
     after?.();
   };
-  if (document.startViewTransition && !reduced()) document.startViewTransition(apply);
+  if (document.startViewTransition && !reduced()) {
+    // a second view change while one is running skips the first; that is fine
+    const t = document.startViewTransition(apply);
+    t.ready?.catch(() => {});
+    t.finished?.catch(() => {});
+  }
   else apply();
 }
 
@@ -627,6 +656,7 @@ function generate(fromStart = false) {
     const structures = keepsOrder(pool) ? state.match.map(() => AS_UPLOADED) : undefined;
     state.decks = buildFromDirections({ pool, occasionId: state.occasionId, density: state.density, seed, directions: state.match.map((m) => m.direction), structures })
       .map((deck, i) => ({ ...deck, match: state.match[i] }));
+    state.decks = applyPlans(state.decks, pool, state.edits).map((deck, i) => ({ ...deck, match: state.match[i] }));
   } else {
     state.decks = buildDirections({
       pool: currentPool(),
@@ -636,7 +666,9 @@ function generate(fromStart = false) {
       family: state.family,
       seed,
     });
+    state.decks = applyPlans(state.decks, currentPool(), state.edits);
   }
+  saveProject();
   $('results-title').textContent = state.match ? 'The closest look, and two others' : 'Pick a direction';
   renderOriginal();
   renderCards();
@@ -688,6 +720,7 @@ function renderCards() {
     body.innerHTML = '<h3></h3><p class="card-meta"></p>';
     body.querySelector('h3').textContent = deck.match ? `${familyName(d.family)} · ${d.name}` : d.name;
     body.querySelector('.card-meta').textContent = s.name;
+    if (isEdited(deck, state.edits)) body.querySelector('h3').append(Object.assign(document.createElement('span'), { className: 'edited-badge', textContent: 'Edited' }));
     if (deck.match) {
       const badge = Object.assign(document.createElement('p'), { className: `match-badge${deck.match.role === 'best' ? ' is-best' : ''}`, textContent: deck.match.role === 'best' ? 'Closest to your deck' : 'Another option' });
       const why = Object.assign(document.createElement('p'), { className: 'match-reason', textContent: deck.match.reason });
@@ -735,19 +768,24 @@ function openDetail(i, focus) {
     check.hidden = overflow.length === 0;
     check.textContent = `${overflow.length} text box(es) may be too full (marked with a dashed outline).`;
     const list = $('slide-list');
+    // rebuilt after every edit: no entrance animation then
+    list.toggleAttribute('data-static', !focus);
     list.replaceChildren(...slides.map((sl, n) => {
       const li = document.createElement('li');
       li.style.setProperty('--n', String(n));
-      const cap = document.createElement('p');
+      const cap = document.createElement('div');
       cap.className = 'slide-caption';
       cap.innerHTML = '<b></b><span></span>';
       cap.querySelector('b').textContent = String(n + 1);
       cap.querySelector('span').textContent = FORM_LABELS[sl.form] ?? sl.form;
+      cap.append(slideTools(deck, n));
       li.append(renderSlide(sl.els, { label: `Slide ${n + 1}: ${FORM_LABELS[sl.form]}` }), cap);
       return li;
     }));
+    syncEditBar();
   };
   if (!focus) { fill(); return; }
+  saveProject(); // remembers which deck is open
   showView('detail', () => { fill(); window.scrollTo(0, 0); $('detail-title').setAttribute('tabindex', '-1'); $('detail-title').focus({ preventScroll: true }); });
 }
 
@@ -758,6 +796,174 @@ function closeDetail() {
     const btn = $('cards').querySelectorAll('.card-foot button')[i];
     if (btn) { btn.scrollIntoView({ block: 'center' }); btn.focus({ preventScroll: true }); }
   });
+}
+
+// ---------- editing ----------
+
+/** The buttons under each slide: edit, move, duplicate, delete (the cover can only be edited). */
+function slideTools(deck, n) {
+  const box = document.createElement('div');
+  box.className = 'slide-tools';
+  const label = `slide ${n + 1}`;
+  const btn = (text, aria, fn, { cls = 'icon-btn', disabled = false } = {}) => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: cls, textContent: text, disabled });
+    b.setAttribute('aria-label', `${aria} ${label}`);
+    b.addEventListener('click', (e) => fn(e.currentTarget));
+    box.append(b);
+    return b;
+  };
+  btn('Edit', 'Edit', (b) => editSlide(n, b), { cls: 'btn btn-secondary btn-small' });
+  if (n === 0) return box;
+  const last = n === deck.slides.length - 1;
+  btn('↑', 'Move up', () => commit(moveSlide(state.edits, deck, n, -1), `Moved slide ${n + 1} up.`), { disabled: n === 1 });
+  btn('↓', 'Move down', () => commit(moveSlide(state.edits, deck, n, 1), `Moved slide ${n + 1} down.`), { disabled: last });
+  btn('+', 'Add a slide after', (b) => pickNewSlide(n, b));
+  btn('⧉', 'Duplicate', () => commit(duplicateSlide(state.edits, deck, n), `Duplicated slide ${n + 1}.`));
+  btn('×', 'Delete', () => commit(deleteSlide(state.edits, deck, n), `Deleted slide ${n + 1}. Undo brings it back.`), { disabled: deck.slides.length <= 2 });
+  return box;
+}
+
+function editSlide(n, opener) {
+  const deck = state.decks[state.openIndex];
+  openSlideEditor({
+    deck, index: n, opener, pickPicture,
+    onDone: (change) => {
+      const next = change.type === 'cover' ? setCover(state.edits, change.fields)
+        : change.type === 'section' ? setSection(state.edits, deck, n, change.label)
+        : setItem(state.edits, change.id, change.item);
+      commit(next, `Saved slide ${n + 1}.${change.type === 'item' ? ' The change also shows in the other directions.' : ''}`);
+    },
+  });
+}
+
+function pickNewSlide(after, opener) {
+  const deck = state.decks[state.openIndex];
+  openAddPicker({ deck, index: after, unused: unusedItems(deck), opener, onPick: (what) => commit(addSlide(state.edits, deck, after, what), `Added a slide after slide ${after + 1}.`) });
+}
+
+/** Ask for a picture and shrink it like the other uploads. */
+function pickPicture() {
+  return new Promise((resolve) => {
+    const input = $('replace-picture');
+    input.value = '';
+    input.onchange = async () => {
+      const f = input.files?.[0];
+      try { resolve(f ? await shrink(f) : null); } catch { resolve(null); }
+    };
+    input.click();
+  });
+}
+
+/** Apply new edits, remember the old ones for Undo, rebuild and save. */
+function commit(next, message) {
+  state.history.push(JSON.stringify(state.edits));
+  if (state.history.length > 50) state.history.shift();
+  state.future = [];
+  state.edits = next;
+  generate();
+  note(message);
+}
+
+function undo() {
+  if (!state.history.length) return;
+  state.future.push(JSON.stringify(state.edits));
+  state.edits = JSON.parse(state.history.pop());
+  generate();
+  note('Undone.');
+}
+
+function redo() {
+  if (!state.future.length) return;
+  state.history.push(JSON.stringify(state.edits));
+  state.edits = JSON.parse(state.future.pop());
+  generate();
+  note('Redone.');
+}
+
+let confirmTimer;
+function discardEdits(btn) {
+  // a second click within a few seconds confirms (the viewer can't show dialogs everywhere)
+  if (btn.dataset.armed !== '1') {
+    btn.dataset.armed = '1';
+    btn.textContent = 'Click again to discard all edits';
+    clearTimeout(confirmTimer);
+    confirmTimer = setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Discard all edits'; }, 4000);
+    return;
+  }
+  btn.dataset.armed = '';
+  btn.textContent = 'Discard all edits';
+  commit(emptyEdits(), 'All edits discarded. Undo brings them back.');
+}
+
+const hasEdits = (e = state.edits) => Object.keys(e.items).length > 0 || Object.keys(e.cover).length > 0 || Object.keys(e.plans).length > 0;
+
+function syncEditBar() {
+  $('undo').disabled = !state.history.length;
+  $('redo').disabled = !state.future.length;
+  $('discard').hidden = !hasEdits();
+}
+
+function note(message) {
+  if (message) $('edit-note').textContent = message;
+  syncEditBar();
+}
+
+/** New content (other notes, another upload): edits made for the old content no longer apply. */
+function resetEdits() {
+  state.edits = emptyEdits();
+  state.history = [];
+  state.future = [];
+}
+
+// ---------- saving on this device ----------
+
+const STORE = 'unprompted:project:v1';
+
+function saveProject() {
+  if (!state.pool && !hasEdits() && !state.uploads.length) { try { localStorage.removeItem(STORE); } catch { /* storage blocked */ } return; }
+  const data = {
+    v: 1, notes: $('notes').value, occasionId: state.occasionId, density: state.density, formality: state.formality, family: state.family,
+    baseSeed: state.baseSeed, round: state.round, order: state.order, pool: state.pool, style: state.style, edits: state.edits,
+    uploads: state.uploads, open: state.openIndex !== null && state.decks[state.openIndex] ? deckKey(state.decks[state.openIndex]) : null,
+    title: currentPool().title,
+  };
+  try { localStorage.setItem(STORE, JSON.stringify(data)); return; } catch { /* probably full: try without the pictures */ }
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ ...data, uploads: [] }));
+    note('Your pictures are too large to keep on this device; your text and slide edits are saved.');
+  } catch { note('This browser doesn’t let the app save your edits. They last until you close the tab.'); }
+}
+
+function loadProject() {
+  try { const d = JSON.parse(localStorage.getItem(STORE) ?? 'null'); return d?.v === 1 ? d : null; } catch { return null; }
+}
+
+function offerResume() {
+  const saved = loadProject();
+  if (!saved) return;
+  $('resume').hidden = false;
+  $('resume-title').textContent = saved.title ? `“${saved.title}”` : '';
+  $('resume-go').onclick = () => {
+    Object.assign(state, {
+      occasionId: saved.occasionId ?? state.occasionId, density: saved.density ?? 'medium', formality: saved.formality ?? 'neutral',
+      family: saved.family ?? 'glass', baseSeed: saved.baseSeed ?? state.baseSeed, round: saved.round ?? 0, order: saved.order ?? 'original',
+      pool: saved.pool ?? null, style: saved.style ?? null, edits: saved.edits ?? emptyEdits(), uploads: saved.uploads ?? [], history: [], future: [],
+    });
+    $('notes').value = saved.notes ?? '';
+    document.querySelectorAll('input[name="occasion"]').forEach((r) => { r.checked = r.value === state.occasionId; });
+    renderThumbs();
+    state.original = state.style ? { images: [], name: 'your upload', source: 'pdf' } : null;
+    state.match = state.style ? matchDirections(state.style, { occasionId: state.occasionId, tone: saved.formality !== 'neutral' ? saved.formality : undefined }) : null;
+    $('resume').hidden = true;
+    state.openIndex = null;
+    generate(true);
+    const i = state.decks.findIndex((d) => deckKey(d) === saved.open);
+    if (i >= 0) openDetail(i, true);
+  };
+  $('resume-drop').onclick = () => {
+    try { localStorage.removeItem(STORE); } catch { /* storage blocked */ }
+    $('resume').hidden = true;
+  };
 }
 
 init();

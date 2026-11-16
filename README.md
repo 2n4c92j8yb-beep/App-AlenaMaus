@@ -108,6 +108,28 @@ Adjust → Tone re-runs the match; picking a look shows that look's own three di
 and "Show the best match again" comes back. Same limits as the writing step (six an hour
 per visitor); pictures of the slides go to Claude, as the privacy note says.
 
+## Editing slides
+
+On the detail page every slide has **Edit**, move up/down, add after, duplicate and delete
+(the cover can only be edited). Edit opens a panel with the slide's fields (beside the slides
+on wide screens, a bottom sheet on phones) and a live preview: people change *content*, the
+design engine lays the slide out again in the chosen direction on every keystroke, and a
+message says when text no longer fits. Lists (points, steps, timeline events, comparison
+points, sources) can grow, shrink and be reordered; pictures can be replaced; the cover edits
+title, subtitle, author, course and date. "Add a slide" offers content Claude wrote that this
+direction doesn't use, or an empty slide of six kinds.
+
+- `src/engine/edits.js` (no DOM, tested in `tests/edits.test.js`): edits are one plain
+  object. `items` (edited content by item id) and `cover` follow the content into every
+  direction; `plans` hold the slide order of one deck (direction + story + density) once a
+  slide is moved, deleted, duplicated or added, so other decks keep their own order and
+  switching back restores it. `buildDeck({ plan })` lays out a stored order.
+- `src/editor.js`: the panel, built from the field schemas in `edits.js`.
+- Undo/Redo (50 steps) and "Discard all edits" (click twice). The project (notes, content,
+  pictures, choices, edits, the open deck) is saved in the browser's localStorage after every
+  change; the start screen offers "Continue your deck". New notes or a new upload start
+  without the old edits. Present mode and the PowerPoint download use the edited slides.
+
 ## PowerPoint export
 
 `src/export/pptx.js` (PptxGenJS 3.12, MIT, loaded on demand). Text stays editable; shapes,
@@ -163,6 +185,7 @@ preview and the PowerPoint export draw from the same data.
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)
+4c. Editing slides: done (fields panel with live preview, slide order, undo, saved on the device)
 4b. Redesigning an uploaded AI deck: done (PDF, PowerPoint, screenshots, text; closest look and two alternatives; original slide order kept)
 5. PowerPoint export: done (display fonts as pictures, see below)
 

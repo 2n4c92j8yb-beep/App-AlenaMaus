@@ -22,8 +22,10 @@ export function buildFromDirections({ pool, occasionId, density = 'medium', seed
   return directions.map((direction, i) => buildDeck({ deck, direction, structure: structs[i], density }));
 }
 
-export function buildDeck({ deck, direction, structure, density = 'medium' }) {
-  const plan = assignAccents(assignMood(localize(assembleDeck(deck, structure, density), deck.language), deck, direction), deck, direction, structure);
+/** One deck. `plan` (slides chosen and ordered by the person, src/engine/edits.js) replaces the story structure's order. */
+export function buildDeck({ deck, direction, structure, density = 'medium', plan: own }) {
+  const base = own ? own.map((s) => ({ form: s.form, item: s.item, kicker: s.kicker, sectionNo: s.sectionNo ?? 0 })) : localize(assembleDeck(deck, structure, density), deck.language);
+  const plan = assignAccents(assignMood(base, deck, direction), deck, direction, structure);
   const lay = (s, i) => ({ ...s, els: layoutSlide(direction, deck, s, i, plan.length, density) });
   // pictures are cited once they are known to be on a slide, so Works Cited lists exactly what the deck shows
   const laid = plan.map(lay);
@@ -52,6 +54,6 @@ function withImageCitations(plan, deck, laid) {
   const cites = [...new Set(pictures.filter((it) => it?.citation && shows(it)).map((it) => it.citation))];
   if (!cites.length) return plan;
   return plan.map((s) => (s.form === 'references'
-    ? { ...s, item: { ...s.item, entries: [...s.item.entries, ...cites].sort((a, b) => a.localeCompare(b)) } }
+    ? { ...s, item: { ...s.item, entries: [...new Set([...s.item.entries, ...cites])].sort((a, b) => a.localeCompare(b)) } }
     : s));
 }

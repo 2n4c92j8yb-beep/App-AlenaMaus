@@ -414,7 +414,8 @@ function section(ctx, s) {
 function statement(ctx, item, kick) {
   const { L, c, m, scale, dz } = ctx;
   const center = L.align === 'center';
-  const full = !!L.accentStatements;
+  // the whole slide in the accent colour: the direction's own habit, or the one loud moment the art director marked
+  const full = !!L.accentStatements || ctx.slide?.moment === 'loud';
   background(ctx, full ? c.accent : undefined);
   if (!full) signature(ctx, 'statement');
   const band = sig(ctx) === 'band';

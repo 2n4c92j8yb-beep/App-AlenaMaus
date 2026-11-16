@@ -37,6 +37,7 @@ export function planOf(deck) {
     form: s.form,
     ...(s.item?.id ? { id: s.item.id } : s.item ? { item: { ...s.item } } : {}),
     ...(s.kicker ? { kicker: s.kicker } : {}),
+    ...(s.moment ? { moment: s.moment } : {}),
     sectionNo: s.sectionNo ?? 0,
   }));
 }
@@ -45,8 +46,10 @@ export function planOf(deck) {
 export function resolvePlan(plan, pool, edits) {
   const byId = new Map(withIds(pool).items.map((it) => [it.id, it]));
   const find = (id) => (edits?.items?.[id] ? { ...edits.items[id], id } : byId.get(id));
+  // `moment` is the art director's loud or quiet mark (src/engine/director.js); it stays with its slide
+  const mark = (e) => (e.moment ? { moment: e.moment } : {});
   return plan
-    .map((e) => (e.id ? (find(e.id) ? { form: e.form, item: find(e.id), kicker: e.kicker, sectionNo: e.sectionNo } : null) : { form: e.form, ...(e.item ? { item: e.item } : {}), kicker: e.kicker, sectionNo: e.sectionNo }))
+    .map((e) => (e.id ? (find(e.id) ? { form: e.form, item: find(e.id), kicker: e.kicker, sectionNo: e.sectionNo, ...mark(e) } : null) : { form: e.form, ...(e.item ? { item: e.item } : {}), kicker: e.kicker, sectionNo: e.sectionNo }))
     .filter(Boolean);
 }
 

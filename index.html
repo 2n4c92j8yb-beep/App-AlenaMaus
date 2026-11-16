@@ -135,6 +135,7 @@
           </div>
         </details>
         <button type="button" class="btn btn-secondary" id="reroll">New directions</button>
+        <button type="button" class="btn btn-secondary" id="show-directed" hidden>Back to the designed deck</button>
       </div>
     </div>
     <p class="sr-only" aria-live="polite" id="status"></p>
@@ -146,13 +147,29 @@
       </div>
       <ul class="original-strip" id="original-strip" aria-label="Slides you uploaded"></ul>
     </section>
+    <section class="directed" id="directed" aria-labelledby="directed-name" hidden>
+      <div class="directed-preview" id="directed-preview"></div>
+      <div class="directed-strip" id="directed-strip"></div>
+      <div class="directed-foot">
+        <div class="directed-body">
+          <h3 id="directed-name"></h3>
+          <p class="directed-why" id="directed-why"></p>
+        </div>
+        <div class="directed-tools">
+          <button type="button" class="btn btn-primary" id="directed-open">Open <span class="arrow" aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn-secondary" id="another-take"><span class="label">Another take</span></button>
+          <button type="button" class="btn btn-link" id="show-classic">See classic directions</button>
+        </div>
+      </div>
+      <p class="field-help directed-note" id="directed-note" aria-live="polite"></p>
+    </section>
     <div class="cards" id="cards"></div>
   </section>
 
   <section id="detail" class="wrap view" aria-labelledby="detail-title" hidden>
     <h2 id="detail-title"></h2>
     <div class="detail-head">
-      <button type="button" class="btn btn-ghost" id="back"><span class="arrow" aria-hidden="true">←</span> All three directions</button>
+      <button type="button" class="btn btn-ghost" id="back"><span class="arrow" aria-hidden="true">←</span> <span class="label">All three directions</span></button>
       <p class="detail-meta" id="detail-meta"></p>
       <div class="export-buttons">
         <button type="button" class="btn btn-secondary" id="export-pptx">Download PowerPoint</button>

@@ -1,7 +1,8 @@
 // App controller: input → three directions → detail view.
 
 import { OCCASIONS } from './library/occasions.js';
-import { buildDirections, buildFromDirections } from './engine/build.js';
+import { buildDirections, buildFromDirections, buildDirected, askDirector } from './engine/build.js';
+import { catalogue } from './engine/director.js';
 import { hasSlideOrder } from './engine/assemble.js';
 import { AS_UPLOADED } from './library/structures.js';
 import { renderSlide } from './render/html.js';
@@ -46,7 +47,12 @@ const state = {
   edits: emptyEdits(), // the person's changes to the slides (src/engine/edits.js), saved on this device
   history: [],      // earlier edits, for Undo
   future: [],       // undone edits, for Redo
+  directed: null,   // the art director's take: { key, spec, take, avoid } (src/engine/director.js)
+  view: 'directed', // with a take: that one deck large, or the 'classic' three directions
 };
+
+// The art director is tried behind a flag (?director=1) until the blind comparison decides.
+const DIRECTOR = new URLSearchParams(location.search).get('director') === '1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -67,7 +73,7 @@ function init() {
     leaveMatch();
     if (state.pool) resetEdits(); // edits made for other content don't apply to the example
     state.pool = null; state.poolKey = ''; // no pool: the directions are built from the sample content
-    generate(true);
+    show(`sample|${state.occasionId}`);
   });
   $('show-privacy').addEventListener('click', (e) => {
     const note = $('privacy-note');
@@ -80,6 +86,10 @@ function init() {
   // picking a look leaves the matched directions and shows that look's own three
   document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; state.match = null; generate(); }));
   $('reroll').addEventListener('click', () => { state.round += 1; generate(); });
+  $('directed-open').addEventListener('click', () => openDetail(0, true));
+  $('another-take').addEventListener('click', anotherTake);
+  $('show-classic').addEventListener('click', () => switchView('classic'));
+  $('show-directed').addEventListener('click', () => switchView('directed'));
   $('back').addEventListener('click', closeDetail);
   $('edit-notes').addEventListener('click', () => showView('start', () => { window.scrollTo(0, 0); $('notes').focus(); }));
   $('pictures').addEventListener('change', (e) => addPictures([...e.target.files]));
@@ -226,8 +236,8 @@ async function write() {
   if (state.busy) return;
   hideFallback();
   leaveMatch();
-  if (isSample()) { if (state.pool) resetEdits(); state.pool = null; state.poolKey = ''; generate(true); return; }
-  if (state.pool && state.poolKey === notesKey()) { generate(true); return; }
+  if (isSample()) { if (state.pool) resetEdits(); state.pool = null; state.poolKey = ''; show(`sample|${state.occasionId}`); return; }
+  if (state.pool && state.poolKey === notesKey()) { show(notesKey()); return; }
   setBusy(true);
   try {
     const res = await fetch('/api/generate', {
@@ -243,11 +253,112 @@ async function write() {
     state.pool = await attachPictures(data.pool);
     state.poolKey = notesKey();
     setBusy(false);
-    generate(true);
+    show(notesKey());
   } catch (err) {
     setBusy(false);
     openFallback(err.message === 'Failed to fetch' ? 'The app could not reach the server.' : err.message);
   }
+}
+
+// ---------- design step (the art director, behind ?director=1) ----------
+
+const showsDirected = () => DIRECTOR && Boolean(state.directed) && state.view === 'directed' && !state.match;
+
+/** Show the results for content that is ready. With the flag, the art director designs one deck first. */
+async function show(key) {
+  if (!DIRECTOR) { generate(true); return; }
+  if (state.directed?.key !== key) {
+    state.directed = null;
+    setBusy(true, 'designing');
+    await direct(key);
+    setBusy(false);
+  }
+  generate(true);
+}
+
+/**
+ * Ask for the design decisions (api/direct.js) and keep them if they make a deck. Anything
+ * else (no server, a refusal, an unusable answer) is no error: the classic directions show.
+ */
+async function direct(key, another = false) {
+  const current = another ? state.directed : null;
+  let avoid = current ? [...current.avoid, current.spec.direction] : [];
+  // every direction seen: start over, but never with the one on screen
+  if (current && catalogue(state.occasionId, avoid).some((d) => avoid.includes(d.id))) avoid = [current.spec.direction];
+  const take = current ? current.take + 1 : 0;
+  const ask = async (body) => {
+    const res = await fetch('/api/direct', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.spec) throw new Error(data.error ?? `The design step failed (${res.status}).`);
+    return data.spec;
+  };
+  const taken = await askDirector({ ask, pool: currentPool(), occasionId: state.occasionId, density: state.density, formality: state.formality, seed: state.baseSeed, avoid, take });
+  if (!taken) return false;
+  state.directed = { key, spec: taken.spec, take, avoid };
+  state.view = 'directed';
+  return true;
+}
+
+async function anotherTake() {
+  if (state.busy || !state.directed) return;
+  const btn = $('another-take');
+  state.busy = true;
+  btn.disabled = true;
+  btn.querySelector('.label').textContent = 'Designing another take…';
+  $('directed').classList.add('is-busy');
+  $('directed-note').textContent = 'Claude is designing another take. This usually takes under a minute.';
+  const ok = await direct(state.directed.key, true);
+  state.busy = false;
+  btn.disabled = false;
+  btn.querySelector('.label').textContent = 'Another take';
+  $('directed').classList.remove('is-busy');
+  if (ok) generate();
+  $('directed-note').textContent = ok ? '' : 'Another take could not be made just now. This one stays; try again in a moment.';
+  if (ok) $('directed-name').focus({ preventScroll: true });
+}
+
+function switchView(view) {
+  state.view = view;
+  generate();
+  const to = view === 'directed' ? $('directed-open') : $('show-directed');
+  to.focus({ preventScroll: true });
+}
+
+function renderDirected() {
+  const on = showsDirected();
+  $('directed').hidden = !on;
+  $('cards').hidden = on;
+  document.querySelector('.looks').hidden = on;
+  if (on) $('reroll').hidden = true;
+  $('show-directed').hidden = !(DIRECTOR && state.directed && state.view === 'classic' && !state.match);
+  if (!on) return;
+  const deck = state.decks[0];
+  const { direction: d, slides } = deck;
+  const name = $('directed-name');
+  name.textContent = d.name;
+  name.setAttribute('tabindex', '-1');
+  if (isEdited(deck, state.edits)) name.append(Object.assign(document.createElement('span'), { className: 'edited-badge', textContent: 'Edited' }));
+  // Claude's reason; without one (code had to choose the direction), the direction's own description
+  $('directed-why').textContent = deck.why || d.blurb;
+  const preview = $('directed-preview');
+  preview.replaceChildren(renderSlide(slides[0].els, { label: `Cover slide in the ${d.name} direction` }));
+  // a click on the big slide opens the deck; keyboard and screen readers use the Open button
+  preview.onclick = () => openDetail(0, true);
+  const strip = $('directed-strip');
+  strip.replaceChildren(...slides.map((sl, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', `Show slide ${k + 1}: ${FORM_LABELS[sl.form] ?? sl.form}`);
+    if (k === 0) b.setAttribute('aria-current', 'true');
+    b.append(renderSlide(sl.els));
+    b.addEventListener('click', () => {
+      strip.querySelectorAll('[aria-current]').forEach((x) => x.removeAttribute('aria-current'));
+      b.setAttribute('aria-current', 'true');
+      preview.firstElementChild?.classList.add('is-swapping');
+      setTimeout(() => preview.replaceChildren(renderSlide(sl.els, { label: `Slide ${k + 1}: ${FORM_LABELS[sl.form] ?? sl.form}` })), reduced() ? 0 : 140);
+    });
+    return b;
+  }));
 }
 
 function setBusy(on, phase = 'writing') {
@@ -255,10 +366,12 @@ function setBusy(on, phase = 'writing') {
   const btn = $('submit-btn');
   btn.disabled = on;
   btn.classList.toggle('is-busy', on);
-  btn.querySelector('.label').textContent = !on ? submitLabel() : phase === 'pictures' ? 'Finding pictures…' : phase === 'looking' ? 'Looking at your slides…' : 'Writing your slides…';
+  btn.querySelector('.label').textContent = !on ? submitLabel() : phase === 'pictures' ? 'Finding pictures…' : phase === 'looking' ? 'Looking at your slides…' : phase === 'designing' ? 'Designing your deck…' : 'Writing your slides…';
   // read out for screen readers; sighted users get the bar
   $('busy-note').textContent = !on ? '' : phase === 'pictures'
     ? 'Looking for photos on Unsplash and Wikimedia Commons.'
+    : phase === 'designing'
+      ? 'Claude is choosing a look and an order for your slides. This usually takes under a minute.'
     : phase === 'looking'
       ? 'Claude is looking at your slides to find the closest look and to read their content. This usually takes under a minute.'
       : 'Claude is writing the content of your slides. This usually takes under a minute.';
@@ -274,7 +387,7 @@ function progress(on, phase) {
   clearInterval(progressTimer);
   if (!on) { bar.hidden = true; return; }
   const from = bar.hidden ? 0 : Number(bar.getAttribute('aria-valuenow')) / 100;
-  const [to, tau] = phase === 'pictures' ? [0.97, 4000] : [0.85, 18000];
+  const [to, tau] = phase === 'pictures' ? [0.97, 4000] : phase === 'designing' ? [0.99, 14000] : [0.85, 18000];
   const t0 = performance.now();
   const paint = () => {
     const v = from + (to - from) * (1 - Math.exp(-(performance.now() - t0) / tau));
@@ -313,6 +426,7 @@ async function useAnswer() {
   hideFallback();
   setBusy(true, 'pictures');
   resetEdits();
+  state.directed = null; // the copy-and-paste path keeps the sampled directions
     state.pool = await attachPictures(pool);
   state.poolKey = notesKey();
   setBusy(false);
@@ -384,6 +498,7 @@ async function redesign() {
     if (!data.pool?.items?.length || !data.style) throw new Error('The server sent no slide content.');
     setBusy(true, 'pictures');
     resetEdits();
+    state.directed = null;
     state.pool = await attachPictures(data.pool);
     state.poolKey = '';
     state.style = data.style;
@@ -657,6 +772,10 @@ function generate(fromStart = false) {
     state.decks = buildFromDirections({ pool, occasionId: state.occasionId, density: state.density, seed, directions: state.match.map((m) => m.direction), structures })
       .map((deck, i) => ({ ...deck, match: state.match[i] }));
     state.decks = applyPlans(state.decks, pool, state.edits).map((deck, i) => ({ ...deck, match: state.match[i] }));
+  } else if (showsDirected() && directedDeck()) {
+    const pool = currentPool();
+    const deck = directedDeck();
+    state.decks = applyPlans([deck], pool, state.edits).map((d) => ({ ...d, directed: true, why: deck.why }));
   } else {
     state.decks = buildDirections({
       pool: currentPool(),
@@ -668,15 +787,25 @@ function generate(fromStart = false) {
     });
     state.decks = applyPlans(state.decks, currentPool(), state.edits);
   }
+  const one = Boolean(state.decks[0]?.directed);
+  if (!one && state.view === 'directed' && state.directed && !state.match) state.view = 'classic'; // the take no longer fits this content
   saveProject();
-  $('results-title').textContent = state.match ? 'The closest look, and two others' : 'Pick a direction';
+  $('results-title').textContent = state.match ? 'The closest look, and two others' : one ? 'Designed for your topic' : 'Pick a direction';
   renderOriginal();
-  renderCards();
+  renderDirected();
+  if (!one) renderCards();
   if (state.openIndex !== null) openDetail(state.openIndex, false);
   $('status').textContent = state.match
     ? `Closest to your deck: ${state.decks[0].direction.name}. Also: ${state.decks.slice(1).map((d) => d.direction.name).join(', ')}.`
+    : one ? `Your deck is ready in the ${state.decks[0].direction.name} direction, ${state.decks[0].slides.length} slides. ${state.decks[0].why}`
     : `Three directions ready: ${state.decks.map((d) => d.direction.name).join(', ')}.`;
   if (fromStart) showView('results', () => { window.scrollTo(0, 0); $('results-title').setAttribute('tabindex', '-1'); $('results-title').focus({ preventScroll: true }); });
+}
+
+/** The art director's take as a deck, for the content and density on screen (null if it no longer fits). */
+function directedDeck() {
+  const d = state.directed;
+  return d ? buildDirected({ pool: currentPool(), spec: d.spec, occasionId: state.occasionId, density: state.density, take: d.take }) : null;
 }
 
 function renderCards() {
@@ -762,7 +891,8 @@ function openDetail(i, focus) {
   const { direction: d, structure: s, slides, overflow } = deck;
   const fill = () => {
     $('detail-title').textContent = d.name;
-    $('detail-meta').textContent = deck.match ? `${familyName(d.family)} · ${s.name} · ${deck.match.reason}` : s.name;
+    $('detail-meta').textContent = deck.match ? `${familyName(d.family)} · ${s.name} · ${deck.match.reason}` : deck.directed ? (deck.why || d.blurb) : s.name;
+    $('back').querySelector('.label').textContent = deck.directed ? 'Overview' : 'All three directions';
     $('export-note').hidden = true;
     const check = $('detail-check');
     check.hidden = overflow.length === 0;
@@ -793,7 +923,7 @@ function closeDetail() {
   const i = state.openIndex;
   state.openIndex = null;
   showView('results', () => {
-    const btn = $('cards').querySelectorAll('.card-foot button')[i];
+    const btn = showsDirected() ? $('directed-open') : $('cards').querySelectorAll('.card-foot button')[i];
     if (btn) { btn.scrollIntoView({ block: 'center' }); btn.focus({ preventScroll: true }); }
   });
 }
@@ -924,6 +1054,7 @@ function saveProject() {
   const data = {
     v: 1, notes: $('notes').value, occasionId: state.occasionId, density: state.density, formality: state.formality, family: state.family,
     baseSeed: state.baseSeed, round: state.round, order: state.order, pool: state.pool, style: state.style, edits: state.edits,
+    directed: state.directed, view: state.view,
     uploads: state.uploads, open: state.openIndex !== null && state.decks[state.openIndex] ? deckKey(state.decks[state.openIndex]) : null,
     title: currentPool().title,
   };
@@ -947,6 +1078,7 @@ function offerResume() {
     Object.assign(state, {
       occasionId: saved.occasionId ?? state.occasionId, density: saved.density ?? 'medium', formality: saved.formality ?? 'neutral',
       family: saved.family ?? 'glass', baseSeed: saved.baseSeed ?? state.baseSeed, round: saved.round ?? 0, order: saved.order ?? 'original',
+      directed: DIRECTOR ? saved.directed ?? null : null, view: saved.view === 'classic' ? 'classic' : 'directed',
       pool: saved.pool ?? null, style: saved.style ?? null, edits: saved.edits ?? emptyEdits(), uploads: saved.uploads ?? [], history: [], future: [],
     });
     $('notes').value = saved.notes ?? '';

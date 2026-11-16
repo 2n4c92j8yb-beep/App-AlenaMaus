@@ -160,8 +160,14 @@ the fallback.
 
 ## How variety is created
 
-The variety does not come from the AI model. Ordinary code samples from a
-curated library, and the model (step 2) only fills in content:
+Two ways, side by side until a blind comparison decides between them.
+
+**Classic (the default):** the variety does not come from the AI model. Ordinary code samples
+from a curated library, and the model only fills in content.
+
+**Art director (behind `?director=1`):** after the writing step a second Claude call makes the
+design decisions for this one deck, and code draws them. See the next section. The library is
+then no longer a set of finished templates but the rules Claude composes within.
 
 | Library | File | Contents |
 |---|---|---|
@@ -176,6 +182,40 @@ curated library, and the model (step 2) only fills in content:
 each slide as renderer-neutral elements (inches on a 16:9 canvas), so the HTML
 preview and the PowerPoint export draw from the same data.
 
+## The art director (behind `?director=1`)
+
+Claude decides, code draws. `api/direct.js` sends the written pieces (ids, kinds, tags, weights
+and one line of text each; never pictures), the occasion, the tone and the editorial directions
+that suit the occasion to Claude (same model as the writing step, medium effort). The answer is
+a small spec, never coordinates, sizes, fonts or colour codes:
+
+```json
+{ "direction": "fieldnotes", "accentHue": 152, "why": "One sentence about the topic.",
+  "slides": [{ "id": "claim-1", "kicker": "Thesis", "moment": "loud" }, { "section": "How it started" }, { "id": "figure-6" }],
+  "dropped": ["points-17"] }
+```
+
+`toSpec()` in `src/engine/director.js` has the final word. It drops unknown and repeated
+pieces, replaces a direction that does not exist, belongs to another look, does not suit the
+occasion or was already shown (the sampler's first pick takes its place), adds a missing
+thesis, allows at most two points slides, two loud moments and 24 slides, moves or drops the
+third slide of one kind in a row, and removes empty or single section dividers. Every repair
+is listed in `warnings`. The result is a plan in the stored format of `edits.js`, so editing,
+undo, Present mode and the PowerPoint export work on a directed deck as on any other.
+
+- `accentHue` moves the direction's accent with `adaptDirection()`: type, layout, background
+  and ink stay, and the accent keeps 3:1 contrast with the background.
+- `moment: "loud"` on a statement fills the slide with the accent colour (in the slide data,
+  so preview and export agree). `quiet` is recorded for later. Textures, the second tone and
+  glow stay with `assignAccents()`.
+- The prompt asks for 8 to 12 slides and names the AI tells from `src/engine/match.js`.
+- The results page shows this one deck large with Claude's reason, **Another take** (asks
+  again without the directions already shown) and **See classic directions**. If the call
+  fails, is refused or gives nothing usable, the classic three directions appear without an
+  error. Copy and paste and the redesign of an uploaded deck keep the classic path.
+- Limits: takes are counted apart from decks (30 an hour per visitor, best effort per server
+  instance, like the writing step). A shared limit is still open.
+
 ## Status
 
 1. **Design library and previews: done** (sample content, no AI). No decorative lines; signature colour areas per direction; picture slides; picture upload; Present mode with builds
@@ -188,6 +228,7 @@ preview and the PowerPoint export draw from the same data.
 4c. Editing slides: done (fields panel with live preview, slide order, undo, saved on the device)
 4b. Redesigning an uploaded AI deck: done (PDF, PowerPoint, screenshots, text; closest look and two alternatives; original slide order kept)
 5. PowerPoint export: done (display fonts as pictures, see below)
+6. Art director: phase 1 done behind `?director=1` (spec, checks, server function, one-deck view, tests). Next: the blind comparison against the classic directions (`docs/handover-art-director.md`, phase 2); it decides whether this becomes the default
 
 ## Pictures for any topic
 
@@ -219,9 +260,9 @@ Manrope becomes editable Arial (almost identical widths); all other text stays e
 ## Run locally
 
 ```bash
-
-npm start          # serves on http://localhost:8080
+npm install        # the Anthropic SDK, for the server functions and their tests
+npm start          # serves on http://localhost:8080 (without the functions in api/)
 npm test           # engine tests (Node 20+)
 ```
 
-No build step and no dependencies yet.
+No build step. One dependency: `@anthropic-ai/sdk`.

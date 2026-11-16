@@ -66,20 +66,30 @@ export function buildDirected({ pool, spec, occasionId, density = 'medium', take
 }
 
 /**
- * The art director's deck when `ask` (the call to api/direct.js) gives a usable spec, with
- * today's three sampled directions beside it. A refusal, an unreadable answer or a failed
- * call simply leaves `directed` empty: the person sees the classic directions.
+ * One take from the art director. `ask` is the call to api/direct.js and returns its checked
+ * spec; the spec is checked again here, because its ids must be the ones in this pool.
+ * Returns { spec, deck }, or null after a refusal, an unreadable answer or a failed call.
+ */
+export async function askDirector({ ask, pool, occasionId, density = 'medium', formality = 'neutral', seed, avoid = [], take = 0 }) {
+  try {
+    const answer = await ask({ pool: briefOf(pool), occasionId, formality, avoid });
+    const checked = toSpec(answer, pool, { occasionId, formality, avoid, seed });
+    const spec = { ...checked, warnings: [...(Array.isArray(answer?.warnings) ? answer.warnings : []), ...checked.warnings] };
+    const deck = buildDirected({ pool, spec, occasionId, density, take });
+    return deck ? { spec, deck } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The art director's deck with today's three sampled directions beside it. Without a usable
+ * take `directed` stays empty and the person simply sees the classic directions.
  */
 export async function directOrSample({ ask, pool, occasionId, density = 'medium', formality = 'neutral', seed, family = 'editorial', avoid = [], take = 0 }) {
   const decks = buildDirections({ pool, occasionId, density, formality, seed, family });
-  let directed = null;
-  try {
-    const answer = await ask({ pool: briefOf(pool), occasionId, formality, avoid });
-    // checked again on the device: the ids must be the ones in this pool
-    const spec = toSpec(answer, pool, { occasionId, formality, avoid, seed });
-    directed = buildDirected({ pool, spec: { ...spec, warnings: [...(answer?.warnings ?? []), ...spec.warnings] }, occasionId, density, take });
-  } catch { /* the classic directions are the fallback */ }
-  return { directed, decks };
+  const taken = await askDirector({ ask, pool, occasionId, density, formality, seed, avoid, take });
+  return { directed: taken?.deck ?? null, spec: taken?.spec ?? null, decks };
 }
 
 // Section names and kickers come from the story structures (in English); show them in the deck's language.

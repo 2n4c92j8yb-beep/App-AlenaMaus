@@ -306,6 +306,28 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .card-meta { font-size: 0.86rem; color: var(--night); }
 .card-foot .btn { flex: none; }
 
+/* ---------- the art director's deck: one deck, large ---------- */
+.directed {
+  max-width: 1040px; margin: 0 auto; background: var(--surface-solid); border: 1px solid var(--line-strong); border-radius: var(--r-l); overflow: hidden;
+  box-shadow: var(--shadow-soft); animation: rise 520ms var(--ease) both;
+}
+.directed[hidden] { display: none; }
+.directed-preview { position: relative; overflow: hidden; cursor: pointer; }
+.directed-preview .slide-frame { transition: opacity 260ms var(--ease); }
+.directed-preview .slide-frame.is-swapping { opacity: 0.2; }
+.directed.is-busy .directed-preview { opacity: 0.55; transition: opacity 260ms var(--ease); }
+.directed-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; padding: 12px 18px 0; }
+.directed-strip button { padding: 0; border: 0; background: none; border-radius: 8px; overflow: hidden; opacity: 0.65; transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.directed-strip button:hover { opacity: 1; transform: translateY(-1px); }
+.directed-strip button[aria-current="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--heather); }
+.directed-foot { padding: 18px 18px 18px 22px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px 24px; }
+.directed-body { display: grid; gap: 6px; min-width: 0; flex: 1 1 320px; }
+.directed h3 { font: 700 1.4rem/1.2 var(--font-ui); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.directed-why { margin: 0; font-size: 0.98rem; line-height: 1.5; color: var(--muted); max-width: 60ch; overflow-wrap: anywhere; text-wrap: pretty; }
+.directed-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.directed-note { margin: 0; padding: 0 22px 16px; }
+.directed-note:empty { display: none; }
+
 /* ---------- redesign of an uploaded AI deck ---------- */
 .attach-icon-deck { border-radius: 6px; }
 .attach-icon-deck::before { width: 10px; height: 1.5px; transform: translate(-50%, -50%) rotate(0deg); }

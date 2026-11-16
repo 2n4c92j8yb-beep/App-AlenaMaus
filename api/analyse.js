@@ -38,14 +38,16 @@ export function readBody(body) {
     backgrounds: (Array.isArray(b.theme.backgrounds) ? b.theme.backgrounds : []).map((f) => String(f).slice(0, 20)).slice(0, 4),
   } : null;
   const source = ['pdf', 'pptx', 'images', 'text'].includes(b.source) ? b.source : 'images';
-  return { images, text, theme, source };
+  // which uploaded slide each picture shows (long PDFs send a spread of pages); none for PowerPoint photos
+  const pages = Array.isArray(b.pages) && b.pages.length === images.length && b.pages.every((n) => Number.isInteger(n) && n > 0 && n < 1000) ? b.pages : [];
+  return { images, text, theme, source, pages };
 }
 
 /** The user message: one picture per slide, then the text and theme read from the file. */
-export function userContent({ images, text, theme, source }, occasionName) {
+export function userContent({ images, text, theme, source, pages = [] }, occasionName) {
   const content = [];
   images.forEach((img, i) => {
-    content.push({ type: 'text', text: `Slide picture ${i + 1}:` });
+    content.push({ type: 'text', text: source === 'pptx' ? `Picture ${i + 1} used in the deck:` : `Picture of slide ${pages[i] ?? i + 1}:` });
     content.push({ type: 'image', source: { type: 'base64', ...img } });
   });
   const lines = [`Occasion: ${occasionName}`, `Uploaded as: ${source}`];

@@ -94,6 +94,14 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
 4. **Keeping the theme:** the chosen direction's accent moves to the deck's accent hue and
    is checked for at least 3:1 contrast with the background; fonts, layout and background
    stay the direction's own.
+5. **Keeping the order:** Claude marks every piece of content with the uploaded slide it
+   comes from (each slide picture is labelled with its slide number, also for long PDFs
+   where only a spread of pages is sent). When most pieces have one, the decks follow the
+   original order (`AS_UPLOADED` in `src/library/structures.js`, laid out by
+   `assembleInOrder()` in `src/engine/assemble.js`): pieces by slide number, topic photos
+   spread between them, Works Cited last, no section dividers; "Lighter" keeps about three
+   in five pieces, always the thesis, opening question and takeaway. Adjust → Order →
+   "Re-told" switches to our story structures instead (and brings back "New directions").
 
 The results page shows the uploaded slides above the three cards (before and after).
 Adjust → Tone re-runs the match; picking a look shows that look's own three directions,
@@ -155,7 +163,7 @@ preview and the PowerPoint export draw from the same data.
 3. Deployed on Vercel: done (deck-app-two.vercel.app). Photos for any topic: done
    (Wikimedia Commons, see below). Still open: ImageKit cut-outs
 4. Writing step: done (Claude API on the server, copy and paste as fallback)
-4b. Redesigning an uploaded AI deck: stage A done (PDF, PowerPoint, screenshots, text; closest look and two alternatives). Still open: keeping the original slide order
+4b. Redesigning an uploaded AI deck: done (PDF, PowerPoint, screenshots, text; closest look and two alternatives; original slide order kept)
 5. PowerPoint export: done (display fonts as pictures, see below)
 
 ## Pictures for any topic

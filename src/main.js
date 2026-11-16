@@ -2,6 +2,8 @@
 
 import { OCCASIONS } from './library/occasions.js';
 import { buildDirections, buildFromDirections } from './engine/build.js';
+import { hasSlideOrder } from './engine/assemble.js';
+import { AS_UPLOADED } from './library/structures.js';
 import { renderSlide } from './render/html.js';
 import { playSlide, transition, hasGsap } from './render/present.js';
 import { upgradeChrome } from './render/chrome3d.js';
@@ -38,6 +40,7 @@ const state = {
   imported: null,   // an uploaded AI deck, read on the device (src/engine/import.js)
   style: null,      // that deck's style profile, from the analysis step (api/analyse.js)
   match: null,      // the best direction and two alternatives for it (src/engine/match.js)
+  order: 'original', // matched decks: keep the uploaded slide order, or re-tell it in our story structures
 };
 
 const $ = (id) => document.getElementById(id);
@@ -66,6 +69,7 @@ function init() {
     e.currentTarget.setAttribute('aria-expanded', String(!note.hidden));
   });
   document.querySelectorAll('[data-density]').forEach((b) => b.addEventListener('click', () => { state.density = b.dataset.density; generate(); }));
+  document.querySelectorAll('[data-order]').forEach((b) => b.addEventListener('click', () => { state.order = b.dataset.order; generate(); }));
   document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; if (state.match) rematch(state.formality); generate(); }));
   // picking a look leaves the matched directions and shows that look's own three
   document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; state.match = null; generate(); }));
@@ -351,7 +355,7 @@ async function redesign() {
   try {
     const res = await fetch('/api/analyse', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images: imp.images, text, theme: imp.theme, source: imp.source, occasion: state.occasionId }),
+      body: JSON.stringify({ images: imp.images, pages: imp.pages ?? [], text, theme: imp.theme, source: imp.source, occasion: state.occasionId }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? `The redesign step failed (${res.status}).`);
@@ -595,7 +599,14 @@ function renderOccasions() {
   }
 }
 
+const keepsOrder = (pool) => Boolean(state.match) && state.order === 'original' && hasSlideOrder(pool);
+
 function syncToggles() {
+  const ordered = Boolean(state.match) && hasSlideOrder(currentPool());
+  $('order-seg').hidden = !ordered;
+  document.querySelectorAll('[data-order]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.order === state.order)));
+  // in the uploaded order there is no story to re-tell, so no new directions to draw
+  $('reroll').hidden = ordered && state.order === 'original';
   document.querySelectorAll('[data-density]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.density === state.density)));
   document.querySelectorAll('[data-formality]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.formality === state.formality)));
   const looks = [...document.querySelectorAll('[data-family]')];
@@ -611,7 +622,10 @@ function generate(fromStart = false) {
   syncToggles();
   const seed = `${state.baseSeed}:${state.round}`;
   if (state.match) {
-    state.decks = buildFromDirections({ pool: currentPool(), occasionId: state.occasionId, density: state.density, seed, directions: state.match.map((m) => m.direction) })
+    const pool = currentPool();
+    // the uploaded order when Claude could tell which slide each piece came from
+    const structures = keepsOrder(pool) ? state.match.map(() => AS_UPLOADED) : undefined;
+    state.decks = buildFromDirections({ pool, occasionId: state.occasionId, density: state.density, seed, directions: state.match.map((m) => m.direction), structures })
       .map((deck, i) => ({ ...deck, match: state.match[i] }));
   } else {
     state.decks = buildDirections({

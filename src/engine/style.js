@@ -24,6 +24,7 @@ export const ANALYSE_PROMPT = `You get a presentation that someone made with an 
 Job 1, the content. Treat the slide text (and any speaker notes) as the student's notes and follow these rules:
 
 ${SYSTEM_PROMPT.split('\n').slice(2).join('\n')}
+- slide: give every piece (claims, definitions, figures, pairs, timelines, processes, comparisons, quotes, questions, point lists) the number of the uploaded slide it comes from, so the new deck can keep the original order. Slides count from 1 in the order of the deck (the text marks them "Slide 1", "Slide 2" …; each picture says which slide it shows). Use 0 only for a piece that comes from no particular slide.
 
 Job 2, the style. Describe how the uploaded deck looks, so the engine can pick the closest design:
 - mode: "dark" for dark backgrounds, "light" for white or near-white, "tint" for clearly coloured but light backgrounds (cream, pastel, beige).
@@ -40,11 +41,15 @@ Job 2, the style. Describe how the uploaded deck looks, so the engine can pick t
 If you only have text and no pictures, guess the style from the text and the theme information given, and leave tells empty unless the text shows them (emoji bullets, walls of bullets).`;
 
 /** The full system prompt for the server, with the JSON shape to answer in. */
+// the writing step's shape, with the uploaded slide number on every piece that can have one
+const SLIDE_LISTS = ['claims', 'definitions', 'figures', 'pairs', 'timelines', 'processes', 'comparisons', 'quotes', 'questions', 'pointLists'];
+const CONTENT_SHAPE = Object.fromEntries(Object.entries(EXAMPLE_SHAPE).map(([k, v]) => [k, SLIDE_LISTS.includes(k) ? v.map((x) => ({ ...x, slide: 0 })) : v]));
+
 export function analysePrompt() {
   return `${ANALYSE_PROMPT}
 
 Answer with JSON only, no other text, in exactly this shape:
-${JSON.stringify({ content: EXAMPLE_SHAPE, style: STYLE_SHAPE }, null, 1)}`;
+${JSON.stringify({ content: CONTENT_SHAPE, style: STYLE_SHAPE }, null, 1)}`;
 }
 
 // ---------------------------------------------------------------- cleaning

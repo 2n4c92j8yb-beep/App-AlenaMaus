@@ -137,6 +137,16 @@ export const STRUCTURES = [
 export const structureById = (id) => STRUCTURES.find((s) => s.id === id);
 
 // Which slide form shows which kind of content.
+// Not a story structure from the library: the order of an uploaded AI deck, kept as it was
+// (src/engine/assemble.js lays the pool out by each piece's slide number).
+export const AS_UPLOADED = {
+  id: 'asUploaded',
+  name: 'Your original order',
+  blurb: 'The slides follow the order of the deck you uploaded.',
+  inOrder: true,
+  roles: [],
+};
+
 export const FORM_FOR_KIND = {
   claim: 'statement',
   definition: 'definition',

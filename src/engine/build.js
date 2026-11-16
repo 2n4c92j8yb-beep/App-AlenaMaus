@@ -15,9 +15,9 @@ export function buildDirections({ pool, occasionId, density = 'medium', formalit
 }
 
 /** Decks for directions chosen elsewhere (e.g. matched to an uploaded deck, src/engine/match.js). */
-export function buildFromDirections({ pool, occasionId, density = 'medium', seed, directions }) {
+export function buildFromDirections({ pool, occasionId, density = 'medium', seed, directions, structures }) {
   const occasion = occasionById(occasionId);
-  const structs = sampleStructures({ occasionId: occasion.id, seed, count: directions.length });
+  const structs = structures ?? sampleStructures({ occasionId: occasion.id, seed, count: directions.length });
   const deck = { ...pool, occasionLabel: t(pool.language, occasion.name) };
   return directions.map((direction, i) => buildDeck({ deck, direction, structure: structs[i], density }));
 }

@@ -248,3 +248,74 @@ test('the analysis returns a pool and a clean style profile, and handles refusal
   await assert.rejects(analyseDeck(input, 'seminar', fake(reply('', 'refusal'))), /declined/);
   await assert.rejects(analyseDeck(input, 'seminar', fake(reply('no json'))), /could not be read/);
 });
+
+// ---------------------------------------------------------------- keeping the uploaded order
+
+import { toPool } from '../src/engine/content.js';
+import { assembleDeck, hasSlideOrder } from '../src/engine/assemble.js';
+import { AS_UPLOADED, STRUCTURES } from '../src/library/structures.js';
+
+// an analysed deck whose pieces came from slides 1–7, listed out of order as the model groups them by kind
+const ORDERED = {
+  deck: { language: 'en', title: 'Sleep turns the school day into memory', shortTitle: 'Sleep and learning' },
+  claims: [
+    { text: 'Teenagers need more sleep than most get, and learning suffers.', role: 'thesis', slide: 2 },
+    { text: 'Schools can change start times and teach sleep habits.', role: 'takeaway', slide: 7 },
+  ],
+  definitions: [{ term: 'Slow-wave sleep', text: 'The deepest stage of sleep, with slow brain waves.', slide: 3 }],
+  figures: [{ title: 'Teenagers need eight to ten hours', value: '8–10 h', label: 'recommended sleep', slide: 5 }],
+  processes: [{ title: 'What schools can do', steps: [{ title: 'Later start times' }, { title: 'Sleep education in PE' }], slide: 6 }],
+  questions: [{ text: 'How much did you sleep last night?', role: 'hook', slide: 1 }],
+  pointLists: [{ title: 'Three benefits of sleep', points: [{ head: 'Memory' }, { head: 'Mood' }, { head: 'Focus' }], slide: 4 }],
+  sources: ['American Academy of Sleep Medicine. Recommended Amount of Sleep. 2016.'],
+};
+
+test('the analysis asks for the slide each piece comes from, and keeps it', () => {
+  assert.match(analysePrompt(), /"slide": 0/);
+  const pool = toPool(ORDERED);
+  assert.deepEqual(pool.items.filter((it) => it.kind !== 'sources').map((it) => it.slide).sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7]);
+  assert.ok(hasSlideOrder(pool));
+  // notes written in the app carry no slide numbers, and a stray value is dropped
+  assert.ok(!hasSlideOrder(SAMPLE_POOL));
+  assert.equal(toPool({ ...ORDERED, claims: [{ text: 'A claim long enough to count.', role: 'thesis', slide: 'two' }] }).items[0].slide, undefined);
+});
+
+test('pictures of a long PDF are labelled with the slide they show', () => {
+  const content = userContent({ images: [{ media_type: 'image/jpeg', data: 'A' }, { media_type: 'image/jpeg', data: 'B' }], text: '', theme: null, source: 'pdf', pages: [1, 40] }, 'Seminar presentation');
+  assert.equal(content[0].text, 'Picture of slide 1:');
+  assert.equal(content[2].text, 'Picture of slide 40:');
+  assert.deepEqual(readBody({ images: [PIXEL, PIXEL], pages: [1, 40] }).pages, [1, 40]);
+  assert.deepEqual(readBody({ images: [PIXEL, PIXEL], pages: [1] }).pages, [], 'pages that don’t match the pictures are ignored');
+});
+
+test('the uploaded order is kept: cover, pieces by slide, photos in between, Works Cited last', () => {
+  const photo = (n) => ({ kind: 'image', tags: ['evidence'], weight: 2, src: `p${n}.jpg`, w: 1600, h: 1000, title: `Photo ${n}`, caption: '' });
+  const pool = { ...toPool(ORDERED) };
+  pool.items = [...pool.items, photo(1), photo(2)];
+  const plan = assembleDeck(pool, AS_UPLOADED, 'medium');
+  const pieces = plan.filter((s) => s.item?.slide);
+  assert.equal(plan[0].form, 'cover');
+  assert.equal(plan.at(-1).form, 'references');
+  assert.deepEqual(pieces.map((s) => s.item.slide), [1, 2, 3, 4, 5, 6, 7]);
+  const photos = plan.map((s, i) => (s.item?.kind === 'image' ? i : -1)).filter((i) => i >= 0);
+  assert.equal(photos.length, 2);
+  assert.ok(photos.every((i) => i > 1 && i < plan.length - 2), 'photos sit between pieces');
+  assert.ok(!plan.some((s) => s.form === 'section'));
+  // the lighter version keeps the thesis, the hook and the takeaway, still in order
+  const light = assembleDeck(pool, AS_UPLOADED, 'light').filter((s) => s.item?.slide).map((s) => s.item.slide);
+  assert.ok(light.length < 7 && light.includes(1) && light.includes(2) && light.includes(7));
+  assert.deepEqual(light, [...light].sort((a, b) => a - b));
+  // the library structures still re-tell the same pool in their own order
+  assert.notDeepEqual(assembleDeck(pool, STRUCTURES[0]).filter((s) => s.item?.slide).map((s) => s.item.slide), [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('every look can lay out a deck in the uploaded order', () => {
+  const pool = toPool(ORDERED);
+  for (const density of ['light', 'medium', 'dense']) {
+    const decks = buildFromDirections({ pool, occasionId: 'seminar', density, seed: 'o', directions: DIRECTIONS, structures: DIRECTIONS.map(() => AS_UPLOADED) });
+    for (const deck of decks) {
+      assert.equal(deck.structure.name, 'Your original order');
+      assert.deepEqual(deck.overflow, [], `${deck.direction.id} ${density}: ${JSON.stringify(deck.overflow)}`);
+    }
+  }
+});

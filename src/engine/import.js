@@ -174,7 +174,8 @@ async function readPdf(file) {
     return tc.items.map((it) => `${it.str}${it.hasEOL ? '\n' : ' '}`).join('');
   }));
   const images = [];
-  for (const n of spread(doc.numPages)) {
+  const shown = spread(doc.numPages);
+  for (const n of shown) {
     const page = await doc.getPage(n);
     const base = page.getViewport({ scale: 1 });
     const viewport = page.getViewport({ scale: SHOT_WIDTH / base.width });
@@ -184,13 +185,13 @@ async function readPdf(file) {
   }
   const { text, trimmed } = cleanDeckText(pages);
   if (!text.trim() && !images.length) throw new Error('No slides could be read from this PDF.');
-  return { source: 'pdf', name: file.name, count: doc.numPages, images: fitBudget(images), text, trimmed, theme: null };
+  return { source: 'pdf', name: file.name, count: doc.numPages, images: fitBudget(images), pages: shown, text, trimmed, theme: null };
 }
 
 async function readShots(files) {
   const shots = files.slice(0, MAX_SLIDES);
   const canvases = await Promise.all(shots.map(async (f) => toCanvas(await loadImage(f), SHOT_WIDTH)));
-  return { source: 'images', name: files.length === 1 ? files[0].name : `${files.length} screenshots`, count: files.length, images: fitBudget(canvases), text: '', trimmed: files.length > MAX_SLIDES, theme: null };
+  return { source: 'images', name: files.length === 1 ? files[0].name : `${files.length} screenshots`, count: files.length, images: fitBudget(canvases), pages: shots.map((_, i) => i + 1), text: '', trimmed: files.length > MAX_SLIDES, theme: null };
 }
 
 let jszipLoading = null;

@@ -70,6 +70,8 @@ export const EXAMPLE_SHAPE = {
 const str = (v) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const list = (v) => (Array.isArray(v) ? v : []);
+// the uploaded slide a piece comes from (redesign of an AI deck, api/analyse.js); absent for notes
+const fromSlide = (x) => (Number.isInteger(Number(x?.slide)) && Number(x.slide) > 0 && Number(x.slide) < 500 ? { slide: Number(x.slide) } : {});
 
 /** Shorten at a word boundary if a piece is longer than a slide can hold. */
 export function clip(text, max) {
@@ -110,18 +112,18 @@ export function toPool(answer) {
     let role = str(c?.role);
     if (role === 'thesis' && thesisSeen) role = 'claim';
     if (role === 'thesis') thesisSeen = true;
-    items.push({ kind: 'claim', tags: ROLES.has(role) ? [role] : [], weight: role === 'thesis' ? 3 : 2, text, ...(str(c?.note) ? { note: clip(c.note, L.note) } : {}) });
+    items.push({ ...fromSlide(c), kind: 'claim', tags: ROLES.has(role) ? [role] : [], weight: role === 'thesis' ? 3 : 2, text, ...(str(c?.note) ? { note: clip(c.note, L.note) } : {}) });
   });
   list(a.definitions).forEach((x, i) => {
     const term = clip(x?.term, L.term);
     const text = clip(x?.text, L.defText);
-    if (term && text) items.push({ kind: 'definition', weight: weighted(a.definitions, i), term, text, ...(str(x?.gloss) ? { gloss: clip(x.gloss, L.gloss) } : {}) });
+    if (term && text) items.push({ ...fromSlide(x), kind: 'definition', weight: weighted(a.definitions, i), term, text, ...(str(x?.gloss) ? { gloss: clip(x.gloss, L.gloss) } : {}) });
   });
   list(a.figures).forEach((x, i) => {
     const value = keepNumber(str(x?.value));
     if (!value || value.length > L.value || !/\d/.test(value)) return; // a key figure is a number from the notes
     items.push({
-      kind: 'figure', tags: ['evidence'], weight: weighted(a.figures, i), year: yearOf(x?.year),
+      ...fromSlide(x), kind: 'figure', tags: ['evidence'], weight: weighted(a.figures, i), year: yearOf(x?.year),
       title: clip(x?.title, L.title) || clip(x?.label, L.title), value, label: clip(x?.label, L.label) || ' ',
       ...(str(x?.caption) ? { caption: clip(x.caption, L.caption) } : {}), ...(str(x?.source) ? { source: clip(x.source, L.item) } : {}),
     });
@@ -131,7 +133,7 @@ export function toPool(answer) {
     const after = keepNumber(clip(x?.after?.text, 24));
     if (!before || !after) return;
     items.push({
-      kind: 'pair', tags: ['evidence'], weight: weighted(a.pairs, i), year: yearOf(x?.year),
+      ...fromSlide(x), kind: 'pair', tags: ['evidence'], weight: weighted(a.pairs, i), year: yearOf(x?.year),
       title: clip(x?.title, L.title) || `${before} → ${after}`, ...(str(x?.word) ? { word: clip(x.word, 30) } : {}),
       left: { text: before, label: clip(x?.before?.label, 30) }, right: { text: after, label: clip(x?.after?.label, 30) },
       ...(str(x?.caption) ? { caption: clip(x.caption, L.caption) } : {}),
@@ -142,39 +144,39 @@ export function toPool(answer) {
     // more events means narrower columns, so shorter labels
     const events = raw.map((e) => ({ date: clip(e.date, 14), label: clip(e.label, raw.length > 4 ? 50 : 80) }));
     if (events.length < 3) return;
-    items.push({ kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || 'Timeline', events });
+    items.push({ ...fromSlide(x), kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || 'Timeline', events });
   });
   list(a.processes).forEach((x, i) => {
     const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, 5);
     if (steps.length < 2) return;
-    items.push({ kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || 'Step by step', steps });
+    items.push({ ...fromSlide(x), kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || 'Step by step', steps });
   });
   list(a.comparisons).forEach((x, i) => {
     const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, 3) });
     const left = side(x?.left);
     const right = side(x?.right);
     if (!left.heading || !right.heading || !left.points.length || !right.points.length) return;
-    items.push({ kind: 'comparison', tags: ['counter'], weight: weighted(a.comparisons, i), title: clip(x?.title, L.title) || `${left.heading} or ${right.heading}`, left, right, ...(str(x?.verdict) ? { verdict: clip(x.verdict, 150) } : {}) });
+    items.push({ ...fromSlide(x), kind: 'comparison', tags: ['counter'], weight: weighted(a.comparisons, i), title: clip(x?.title, L.title) || `${left.heading} or ${right.heading}`, left, right, ...(str(x?.verdict) ? { verdict: clip(x.verdict, 150) } : {}) });
   });
   list(a.quotes).forEach((x, i) => {
     const text = clip(x?.text, L.quote);
     const author = clip(x?.author, 60);
     if (!text || !author) return;
-    items.push({ kind: 'quote', tags: ['evidence'], weight: weighted(a.quotes, i), year: yearOf(x?.year), text, author, ...(str(x?.work) ? { work: clip(x.work, 80) } : {}), ...(str(x?.note) ? { note: clip(x.note, L.note) } : {}) });
+    items.push({ ...fromSlide(x), kind: 'quote', tags: ['evidence'], weight: weighted(a.quotes, i), year: yearOf(x?.year), text, author, ...(str(x?.work) ? { work: clip(x.work, 80) } : {}), ...(str(x?.note) ? { note: clip(x.note, L.note) } : {}) });
   });
   const QROLES = new Set(['hook', 'discussion', 'task']);
   list(a.questions).forEach((x) => {
     const text = clip(x?.text, L.question);
     if (!text) return;
     const role = QROLES.has(str(x?.role)) ? str(x.role) : 'discussion';
-    items.push({ kind: 'question', tags: role === 'discussion' ? ['discussion', 'counter'] : [role], weight: role === 'hook' ? 3 : 2, text, ...(str(x?.hint) ? { hint: clip(x.hint, 120) } : {}) });
+    items.push({ ...fromSlide(x), kind: 'question', tags: role === 'discussion' ? ['discussion', 'counter'] : [role], weight: role === 'hook' ? 3 : 2, text, ...(str(x?.hint) ? { hint: clip(x.hint, 120) } : {}) });
   });
   list(a.pointLists).forEach((x, i) => {
     const rawPoints = list(x?.points).filter((p) => str(p?.head)).slice(0, 4);
     const tight = rawPoints.length > 3; // four rows leave less room per point
     const points = rawPoints.map((p) => ({ head: clip(p.head, tight ? 55 : 70), text: clip(p?.text, tight ? 75 : 110) }));
     if (points.length < 2) return;
-    items.push({ kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || shortTitle, points: points.map((p) => (p.text ? p : { head: p.head })) });
+    items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || shortTitle, points: points.map((p) => (p.text ? p : { head: p.head })) });
   });
   const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, 10);
   // Works Cited is always there; with no sources in the notes it says so instead of inventing any

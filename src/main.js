@@ -16,6 +16,7 @@ import { readDeck, kindOf } from './engine/import.js';
 import { matchDirections, familyName } from './engine/match.js';
 import { emptyEdits, withIds, applyEdits, applyPlans, deckKey, isEdited, setItem, setCover, setSection, moveSlide, deleteSlide, duplicateSlide, addSlide, unusedItems } from './engine/edits.js';
 import { openSlideEditor, openAddPicker, close as closeEditor } from './editor.js';
+import { icon } from './icons.js';
 
 const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
@@ -289,6 +290,7 @@ function progress(on, phase) {
 function openFallback(message) {
   $('fallback').hidden = false;
   $('fallback-error').textContent = message ? `${message} You can still make the deck with your own Claude:` : 'Make the deck with your own Claude:';
+  $('fallback-error').classList.toggle('is-error', Boolean(message));
   $('fallback-prompt').value = copyPastePrompt($('notes').value.trim(), occasionById(state.occasionId).name);
   $('fallback-answer').value = '';
   $('fallback-status').textContent = '';
@@ -329,6 +331,7 @@ async function importDeck(files) {
   const status = $('import-status');
   status.hidden = false;
   $('import-undo').hidden = true;
+  status.classList.remove('is-error');
   $('import-text').textContent = 'Reading your slides…';
   try {
     const deck = await readDeck(files);
@@ -349,6 +352,7 @@ async function importDeck(files) {
     $('import-undo').hidden = false;
     $('submit-btn').querySelector('.label').textContent = submitLabel();
   } catch (err) {
+    status.classList.add('is-error');
     $('import-text').textContent = err.message;
     $('import-undo').hidden = !state.imported;
   }
@@ -369,7 +373,7 @@ async function redesign() {
   hideFallback();
   const imp = state.imported;
   const text = $('notes').value.trim();
-  if (!imp.images.length && text.length < 40) { $('import-text').textContent = 'There is too little text to work with. Add a few lines to the notes box.'; return; }
+  if (!imp.images.length && text.length < 40) { $('import-status').classList.add('is-error'); $('import-text').textContent = 'There is too little text to work with. Add a few lines to the notes box.'; return; }
   // the same upload, text and occasion again: no need to ask Claude a second time
   const key = `${state.occasionId}|${imp.name}|${imp.count}|${text}`;
   if (state.style && state.analysedKey === key) { rematch(); generate(true); return; }
@@ -395,6 +399,7 @@ async function redesign() {
   } catch (err) {
     setBusy(false);
     $('import-status').hidden = false;
+    $('import-status').classList.add('is-error');
     $('import-text').textContent = err.message === 'Failed to fetch' ? 'The app could not reach the server.' : err.message;
   }
 }
@@ -805,8 +810,9 @@ function slideTools(deck, n) {
   const box = document.createElement('div');
   box.className = 'slide-tools';
   const label = `slide ${n + 1}`;
-  const btn = (text, aria, fn, { cls = 'icon-btn', disabled = false } = {}) => {
-    const b = Object.assign(document.createElement('button'), { type: 'button', className: cls, textContent: text, disabled });
+  const btn = (content, aria, fn, { cls = 'icon-btn', disabled = false } = {}) => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: cls, disabled });
+    if (cls === 'icon-btn') b.append(icon(content)); else b.textContent = content;
     b.setAttribute('aria-label', `${aria} ${label}`);
     b.addEventListener('click', (e) => fn(e.currentTarget));
     box.append(b);
@@ -815,11 +821,11 @@ function slideTools(deck, n) {
   btn('Edit', 'Edit', (b) => editSlide(n, b), { cls: 'btn btn-secondary btn-small' });
   if (n === 0) return box;
   const last = n === deck.slides.length - 1;
-  btn('↑', 'Move up', () => commit(moveSlide(state.edits, deck, n, -1), `Moved slide ${n + 1} up.`), { disabled: n === 1 });
-  btn('↓', 'Move down', () => commit(moveSlide(state.edits, deck, n, 1), `Moved slide ${n + 1} down.`), { disabled: last });
-  btn('+', 'Add a slide after', (b) => pickNewSlide(n, b));
-  btn('⧉', 'Duplicate', () => commit(duplicateSlide(state.edits, deck, n), `Duplicated slide ${n + 1}.`));
-  btn('×', 'Delete', () => commit(deleteSlide(state.edits, deck, n), `Deleted slide ${n + 1}. Undo brings it back.`), { disabled: deck.slides.length <= 2 });
+  btn('up', 'Move up', () => commit(moveSlide(state.edits, deck, n, -1), `Moved slide ${n + 1} up.`), { disabled: n === 1 });
+  btn('down', 'Move down', () => commit(moveSlide(state.edits, deck, n, 1), `Moved slide ${n + 1} down.`), { disabled: last });
+  btn('plus', 'Add a slide after', (b) => pickNewSlide(n, b));
+  btn('copy', 'Duplicate', () => commit(duplicateSlide(state.edits, deck, n), `Duplicated slide ${n + 1}.`));
+  btn('trash', 'Delete', () => commit(deleteSlide(state.edits, deck, n), `Deleted slide ${n + 1}. Undo brings it back.`), { disabled: deck.slides.length <= 2 });
   return box;
 }
 
@@ -960,7 +966,17 @@ function offerResume() {
     const i = state.decks.findIndex((d) => deckKey(d) === saved.open);
     if (i >= 0) openDetail(i, true);
   };
-  $('resume-drop').onclick = () => {
+  // deleting the saved deck can't be undone: the first click asks, a second one within a few seconds deletes
+  let armed;
+  $('resume-drop').onclick = (e) => {
+    const b = e.currentTarget;
+    if (!armed) {
+      b.textContent = 'Click again to delete the saved deck';
+      armed = setTimeout(() => { armed = null; b.textContent = 'Start fresh'; }, 4000);
+      return;
+    }
+    clearTimeout(armed);
+    armed = null;
     try { localStorage.removeItem(STORE); } catch { /* storage blocked */ }
     $('resume').hidden = true;
   };

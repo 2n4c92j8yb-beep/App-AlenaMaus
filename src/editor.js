@@ -5,6 +5,7 @@
 import { layoutSlide } from './library/forms.js';
 import { renderSlide } from './render/html.js';
 import { schemaFor, getPath, setPath, SCHEMAS, NEW_KINDS } from './engine/edits.js';
+import { icon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const clone = (x) => JSON.parse(JSON.stringify(x ?? null));
@@ -180,15 +181,16 @@ function fieldFor(f, current, change) {
     head.append(Object.assign(document.createElement('span'), { textContent: `${f.type === 'strings' ? 'Line' : f.row[0].label} ${i + 1}` }));
     const tools = document.createElement('div');
     tools.className = 'ef-tools';
-    const tool = (text, label, disabled, fn) => {
-      const b = Object.assign(document.createElement('button'), { type: 'button', className: 'icon-btn', textContent: text, disabled });
+    const tool = (name, label, disabled, fn) => {
+      const b = Object.assign(document.createElement('button'), { type: 'button', className: 'icon-btn', disabled });
+      b.append(icon(name));
       b.setAttribute('aria-label', `${label} ${i + 1}`);
       b.addEventListener('click', fn);
       tools.append(b);
     };
-    tool('↑', 'Move up', i === 0, () => { const n = clone(rows); [n[i - 1], n[i]] = [n[i], n[i - 1]]; commit(n, true); });
-    tool('↓', 'Move down', i === rows.length - 1, () => { const n = clone(rows); [n[i + 1], n[i]] = [n[i], n[i + 1]]; commit(n, true); });
-    tool('×', 'Remove', rows.length <= (f.min ?? 0), () => { const n = clone(rows); n.splice(i, 1); commit(n, true); });
+    tool('up', 'Move up', i === 0, () => { const n = clone(rows); [n[i - 1], n[i]] = [n[i], n[i - 1]]; commit(n, true); });
+    tool('down', 'Move down', i === rows.length - 1, () => { const n = clone(rows); [n[i + 1], n[i]] = [n[i], n[i + 1]]; commit(n, true); });
+    tool('close', 'Remove', rows.length <= (f.min ?? 0), () => { const n = clone(rows); n.splice(i, 1); commit(n, true); });
     head.append(tools);
     r.append(head);
     if (f.type === 'strings') {

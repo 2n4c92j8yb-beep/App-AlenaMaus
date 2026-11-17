@@ -320,6 +320,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .attach-icon-deck::before { width: 10px; height: 1.5px; transform: translate(-50%, -50%) rotate(0deg); }
 .attach-icon-deck::after { width: 1.5px; height: 8px; top: 45%; }
 .import-status { margin-top: 8px; }
+.import-status.is-error, .field-help.is-error { color: var(--warn); }
 .import-status .btn-link { min-height: 32px; padding: 2px 6px; font-size: var(--fs-small); }
 .looks.is-matched::before { opacity: 0; }
 .original { margin: 0 0 24px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.6); display: grid; gap: 12px; }
@@ -426,7 +427,7 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 }
 
 /* ---------- editing slides ---------- */
-.resume { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 auto 18px; max-width: 760px; padding: 12px 14px 12px 18px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface-solid); box-shadow: var(--shadow-soft); }
+.resume { grid-column: 1 / -1; justify-self: center; width: min(760px, 100%); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 auto 18px; max-width: 760px; padding: 12px 14px 12px 18px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface-solid); box-shadow: var(--shadow-soft); }
 .resume p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .resume-tools { display: flex; gap: 6px; align-items: center; }
 .edit-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 20px; padding: 10px 12px 10px 16px; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.6); }
@@ -438,11 +439,13 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .slide-caption { align-items: center; flex-wrap: wrap; gap: 6px 8px; }
 .slide-caption > span { margin-right: auto; }
 .slide-tools { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-.icon-btn { min-width: 36px; min-height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--pill); background: var(--surface-solid); color: var(--night); font: var(--fw-ui) var(--fs-body)/1 var(--font-ui); cursor: pointer; }
+.icon-btn { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--pill); background: var(--surface-solid); color: var(--night); font: var(--fw-ui) var(--fs-body)/1 var(--font-ui); cursor: pointer; }
 .icon-btn:hover:not(:disabled) { background: var(--tint); }
+.icon, .icon svg { display: block; width: 16px; height: 16px; }
 .icon-btn:disabled { opacity: 0.35; cursor: default; }
 .icon-btn:focus-visible { outline: 2px solid var(--night); outline-offset: 2px; }
-@media (pointer: coarse) { .icon-btn { min-width: 44px; min-height: 44px; } }
+/* fingers need 44px: every control on touch screens (the card thumbnails stay previews; the big slide above them opens the same direction) */
+@media (pointer: coarse) { .icon-btn, .btn, .btn-small, .seg button, .ef-tools .icon-btn { min-width: 44px; min-height: 44px; } }
 .add-slide { margin-top: 24px; }
 .edited-badge { margin-left: 8px; padding: 2px 8px; border-radius: var(--pill); background: var(--tint); color: var(--heather); font: var(--fw-head) var(--fs-micro) var(--font-ui); letter-spacing: 0.07em; text-transform: uppercase; vertical-align: middle; }
 
@@ -491,3 +494,6 @@ textarea:focus { outline: none; border-color: var(--heather); box-shadow: 0 0 0 
 .add-option span { color: var(--muted); }
 .add-option:hover { border-color: var(--heather); }
 .add-option:focus-visible { outline: 2px solid var(--night); outline-offset: 2px; }
+
+/* touch screens: controls whose desktop size is set by a more specific rule above */
+@media (pointer: coarse) { .ef-tools .icon-btn, .edit-tools .btn, .start-foot .btn-link, .seg button { min-width: 44px; min-height: 44px; } }

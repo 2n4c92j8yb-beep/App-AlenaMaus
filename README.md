@@ -18,6 +18,10 @@ no giant slide numbers running off the edge, and list and step numbers stay smal
 (`numbers: 'large'` in a direction is drawn small). Where a design uses big type, it goes to
 meaningful words: headlines, statements, questions, and a key figure that is itself content.
 Orders saved with a divider slide drop it (`buildDeck`).
+The same goes for decoration: shapes that hold nothing (colour spots, circles, glow blobs,
+empty panels, corner squares, chrome objects) are gone; shapes that contain or frame
+information (glass panels with text, the key figure's glowing card, the headline column,
+the section tab) stay. Nothing spins, floats or drifts.
 
 ## Design kits: one identity, several effects
 
@@ -28,20 +32,22 @@ gradient, film grain, thermal gradient, water ripples, single-hued landscape, sp
 graphite and fluted glass, plus a second background tone (`invert`) and a glowing glass
 panel for key figures. A planner places them per deck:
 
-1. an effect only where it means something (grid behind a process, ripples behind a
-   question, contour lines opening a section, a landscape near the end …)
+1. textures are decoration, so they only go on the cover, which has no content to compete
+   with; content slides stay plain or take the second tone (`invert`, no texture over it) or,
+   for a key figure, the glowing panel that contains it
 2. about a third of the slides; lists, comparisons, works cited and picture slides stay plain
 3. never the same effect twice in a row, never two strong effects side by side
 4. seeded by the deck, so "New directions" gives a new mix
 
 - **Glass** (default): Prism, Pearl and Halo (`src/library/glass.js`).
-  Frosted glass over soft coloured light, chrome objects (sphere, capsule, ring),
-  holographic or gold headlines and one glowing key figure per slide. Cover,
+  Frosted glass panels that hold the text, over soft coloured light, holographic or gold
+  headlines and one glowing key figure per slide. No chrome objects or spotlights: they
+  carried no information. On covers, small glass cards carry the deck's key facts. Cover,
   section, statement, question and key-figure slides have their own layouts;
   content slides use the regular forms, re-dressed by `glassify()` (soft panels
   become glass, pictures get rounded corners, Halo lights pictures like products).
   Fonts: Unbounded and Manrope (`fonts/`, SIL Open Font License). In the PowerPoint
-  export, blur and chrome will become pictures; all text stays editable.
+  export, blur becomes a picture; all text stays editable.
 - **Poster**: Summit, Cut-out and Monolith (`src/library/posters.js`).
   Cover, section, statement, key-figure and question slides are built like film
   posters: a colour-graded photo, one giant word (behind the subject, filled with
@@ -177,9 +183,9 @@ that are not part of Office are not embedded: the app links them after the downl
 
 ## 3D chrome
 
-In Present mode, chrome objects become real 3D metal with Three.js (r169, MIT, loaded on
-demand): reflections of a small studio that drift slowly, iridescence on holo pieces.
-Thumbnails, the slide list and exports keep the vector drawings; without WebGL they stay.
+The layouts no longer place chrome objects. The renderer (`src/render/chrome3d.js`, Three.js
+r169, MIT) is kept for any that come back, and draws them once, standing still: nothing turns
+or drifts.
 
 ## Present mode
 
@@ -190,7 +196,7 @@ per step where order carries meaning (process steps, timeline events, list point
 second side of a comparison). Timeline bars grow along the time axis, key figures count up,
 quotes and statements sharpen into focus, poster photos settle from a slight zoom. Slide
 transitions follow the look: blur cross-fade (Glass), hard cut (Poster), slide-over
-(Editorial, Texture). One ambient motion per slide at most. Back shows the previous slide
+(Editorial, Texture). No ambient motion: once a slide has appeared, nothing on it keeps moving. Back shows the previous slide
 complete; Shift+→ or S shows the rest of a slide at once; a click mid-animation finishes it.
 Under "reduce motion" everything appears without movement. Without GSAP, a CSS build is
 the fallback.

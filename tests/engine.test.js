@@ -125,7 +125,7 @@ test('poster decks: three poster directions, mood photos on key slides, all cred
   }
 });
 
-test('glass decks: three glass directions, fitted text, chrome and glass on every deck', () => {
+test('glass decks: three glass directions, fitted text, glass that holds content, no chrome objects', () => {
   for (const o of OCCASIONS) for (const density of DENSITIES) for (let s = 0; s < 4; s++) {
     const decks = buildDirections({ pool: SAMPLE_POOL, occasionId: o.id, density, seed: s, family: 'glass' });
     assert.deepEqual(decks.map((d) => d.direction.family), ['glass', 'glass', 'glass']);
@@ -134,7 +134,7 @@ test('glass decks: three glass directions, fitted text, chrome and glass on ever
       const name = `${deck.direction.id}/${deck.structure.id}/${density}`;
       assert.deepEqual(deck.overflow, [], name);
       const els = deck.slides.flatMap((x) => x.els);
-      assert.ok(deck.slides[0].els.some((e) => e.type === 'chrome'), `${name}: cover has a chrome object`);
+      assert.ok(!els.some((e) => e.type === 'chrome'), `${name}: no decorative chrome objects`);
       assert.ok(els.some((e) => e.glass || e.glow), `${name}: uses glass or glow`);
       for (const sl of deck.slides) {
         // one hero effect: at most one glowing card per slide
@@ -172,7 +172,8 @@ test('design kits: effects on about a third of the slides, never on dense slides
       const name = `${deck.direction.id}/${deck.structure.id}`;
       const acc = deck.slides.map((x) => x.accent);
       const n = acc.filter(Boolean).length;
-      assert.ok(n >= 1, `${name}: no effect at all`);
+      // textures are decoration, so only the cover may carry one; invert is a plain second tone
+      deck.slides.forEach((sl) => { if (sl.accent?.kind === 'texture') assert.equal(sl.form, 'cover', `${name}: texture on a ${sl.form} slide`); if (sl.accent?.kind === 'invert') assert.ok(!sl.accent.texture, `${name}: texture over inverted content`); });
       assert.ok(n <= Math.round(deck.slides.length * SHARE), `${name}: ${n} of ${deck.slides.length} slides carry an effect`);
       deck.slides.forEach((sl, i) => {
         if (sl.accent) assert.ok(!plain.has(sl.form), `${name}: effect on a ${sl.form} slide`);

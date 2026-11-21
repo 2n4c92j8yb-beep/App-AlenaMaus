@@ -180,54 +180,22 @@ function signature(ctx, kind) {
   const { c, slideIndex: i, slide } = ctx;
   const v = i % 3;
   switch (sig(ctx)) {
-    case 'spots': {
-      const big = kind === 'content' || kind === 'quiet' ? 0.6 : 1;
-      if (kind === 'quiet') return;
-      const spots = [
-        [W - 3.4 * big, -2.2 * big, 5.6 * big],
-        [-1.6 * big, H - 2.4 * big, 4.2 * big],
-        [W - 2.6 * big, H - 2.2 * big, 4 * big],
-      ];
-      ellipse(ctx, ...spots[v].slice(0, 2), spots[v][2], spots[v][2], c.accent, { alpha: kind === 'content' ? 0.08 : 0.14 });
-      if (kind !== 'content') ellipse(ctx, ...spots[(v + 1) % 3].slice(0, 2), spots[(v + 1) % 3][2] * 0.7, spots[(v + 1) % 3][2] * 0.7, c.ink, { alpha: 0.05 });
+    // spots, circles, blocks and glows were decoration without information: left out
+    case 'spots':
+    case 'circles':
+    case 'blocks':
+    case 'glow':
       return;
-    }
-    case 'circles': {
-      if (kind === 'quiet') return;
-      if (kind === 'content') { ellipse(ctx, W - 2.1, -1.4, 3.6, 3.6, c.soft); return; }
-      ellipse(ctx, -2.2 + v * 0.6, H - 4.2, 6.2, 6.2, c.soft);
-      ellipse(ctx, W - 3.2, -1.5 + v * 0.4, 4, 4, c.accent, { alpha: 0.16 });
-      return;
-    }
-    case 'blocks': {
-      if (kind === 'quiet') return;
-      const s = kind === 'content' ? 0.7 : 1;
-      rect(ctx, W - 4.2 * s, -0.5, 4.8 * s, 3.6 * s, c.accent, { alpha: 0.1 });
-      rect(ctx, W - 2.8 * s, 1.8 * s, 3.4 * s, 4.2 * s, c.accent, { alpha: 0.07 });
-      return;
-    }
-    case 'glow': {
-      if (kind === 'quiet') return;
-      if (kind === 'content') { ellipse(ctx, W - 3.5, H - 3.2, 5.5, 5.5, c.accent, { alpha: 0.07 }); return; }
-      ellipse(ctx, W * 0.5, -2.2, 8.5, 8.5, c.accent, { alpha: 0.13 });
-      return;
-    }
     case 'tabs': {
       // an index tab on the right edge, lower for each section
       const n = slide?.sectionNo ?? 0;
       if (kind !== 'quiet') rect(ctx, W - 0.32, 0.7 + (n % 4) * 1.35, 0.32, 1.15, c.accent);
       return;
     }
-    case 'plate': {
-      if (kind === 'section') rect(ctx, 0, 0, W * 0.4, H, c.soft);
-      if (kind === 'statement') rect(ctx, W * 0.74, 0, W * 0.26, H, c.soft);
+    // empty colour panels and corner squares hold nothing: left out
+    case 'plate':
+    case 'offset':
       return;
-    }
-    case 'offset': {
-      if (kind === 'statement') rect(ctx, W - 1.6, 0, 1.6, 1.6, c.accent);
-      if (kind === 'content') rect(ctx, W - 0.7, 0, 0.7, 0.7, c.accent);
-      return;
-    }
     case 'masthead': {
       if (kind === 'statement') rect(ctx, 0, 0, W, 0.5, c.ink);
       return;

@@ -10,6 +10,15 @@ everyone else's. Based on the idea overview "AI decks that don't look AI-made".
 - **Texture** (new): Survey, Drafting and Grain, built around generated surfaces
   (contour lines, blueprint grid, grainy gradient).
 
+## Content first: no decorative numbers
+
+The relevant information is the main character of every slide; design must not add
+extraneous load. So there are no chapter divider slides (a giant "01" with a section name),
+no giant slide numbers running off the edge, and list and step numbers stay small labels
+(`numbers: 'large'` in a direction is drawn small). Where a design uses big type, it goes to
+meaningful words: headlines, statements, questions, and a key figure that is itself content.
+Orders saved with a divider slide drop it (`buildDeck`).
+
 ## Design kits: one identity, several effects
 
 Every direction in every look keeps one identity (colours, type) but owns a small kit
@@ -109,7 +118,7 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    where only a spread of pages is sent). When most pieces have one, the decks follow the
    original order (`AS_UPLOADED` in `src/library/structures.js`, laid out by
    `assembleInOrder()` in `src/engine/assemble.js`): pieces by slide number, Works Cited
-   last (only if the deck had one), no section dividers. Adjust → Order →
+   last (only if the deck had one). Adjust → Order →
    "Re-told" switches to our story structures instead (and brings back "New directions").
 
 The results page shows the uploaded slides above the three cards (before and after).

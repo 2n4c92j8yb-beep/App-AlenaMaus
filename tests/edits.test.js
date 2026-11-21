@@ -91,13 +91,21 @@ test('slides can be added from unused content or as empty slides of every kind',
   assert.ok(!others.some((s) => s.item?.added));
 });
 
-test('a section label is changed in the deck’s own order', () => {
+test('no chapter divider slides and no oversized numbers: the content carries the slide', async () => {
+  const { buildFromDirections } = await import('../src/engine/build.js');
+  for (const family of ['editorial', 'poster', 'glass', 'texture']) for (const density of ['light', 'medium', 'dense']) {
+    for (const deck of buildDirections({ pool, occasionId: 'seminar', density, seed: 3, family })) {
+      assert.ok(!deck.slides.some((s) => s.form === 'section'), `${deck.direction.id}: no divider`);
+      for (const s of deck.slides) for (const e of s.els) {
+        // a number shown big is only ever a key figure (content), never numbering or decoration
+        if (e.type === 'text' && /^\d{1,2}$/.test(String(e.text).trim()) && s.form !== 'bigNumber') assert.ok(e.size <= 14, `${deck.direction.id}/${s.form}: "${e.text}" at ${e.size}pt`);
+      }
+    }
+  }
+  // an order saved with a divider slide drops it
   const deck = buildDeck({ deck: { ...pool, occasionLabel: 'Seminar' }, direction: DIRECTIONS[0], structure: STRUCTURES[0], density: 'medium' });
-  const i = deck.slides.findIndex((s) => s.form === 'section');
-  assert.ok(i > 0);
-  const edits = setSection(emptyEdits(), deck, i, 'My section');
-  const again = buildDeck({ deck: deck.deck, direction: deck.direction, structure: deck.structure, density: 'medium', plan: resolvePlan(edits.plans[deckKey(deck)], pool, edits) });
-  assert.equal(again.slides[i].item.label, 'My section');
+  const plan = [deck.slides[0], { form: 'section', item: { number: 1, label: 'Old' } }, ...deck.slides.slice(1)];
+  assert.ok(!buildDeck({ deck: deck.deck, direction: deck.direction, plan }).slides.some((s) => s.form === 'section'));
 });
 
 test('stored order survives a round trip through JSON, and missing items are dropped', () => {

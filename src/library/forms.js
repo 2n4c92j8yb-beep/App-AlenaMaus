@@ -50,7 +50,8 @@ function makeCtx(dir, deck, slide, index, total, density) {
   const c = slide?.accent?.kind === 'invert' ? invertPalette({ ...dir.colors }, contrast) : { ...dir.colors };
   c.accentText = c.accentText ?? (contrast(c.accent, c.bg) >= 3 ? c.accent : c.ink);
   return {
-    dir, L: dir.layout, c, deck, slide, slideIndex: index, total, density,
+    // list and step numbers stay small: the content is the main character, not the numbering
+    dir, L: dir.layout.numbers === 'large' ? { ...dir.layout, numbers: 'small' } : dir.layout, c, deck, slide, slideIndex: index, total, density,
     m: dir.layout.margin,
     scale: dir.layout.scale ?? 1,
     dz: density === 'dense' ? 0.88 : density === 'light' ? 1.1 : 1,
@@ -271,7 +272,6 @@ function frame(ctx, title, kick) {
   if (L.titlePos === 'side') {
     const colW = 3.55;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
-    if (sig(ctx) === 'bleed') bleedNumber(ctx, ctx.slideIndex + 1, { side: 'left', size: 230 });
     let y = m;
     y += kicker(ctx, kick, m, y, colW);
     text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
@@ -521,7 +521,7 @@ function processForm(ctx, item, kick) {
     const first = ctx.els.length;
     const xs = steps.map((_, i) => b.x + i * (colW + gap));
     // numbers and headings first, so every column's text starts on the same line
-    const nbs = steps.map((_, i) => text(ctx, 'display', String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.6 }, { max: 28, min: 18, color: c.accentText, italic: false, caps: false, maxLines: 1, align, seq: 2 + i }));
+    const nbs = steps.map((_, i) => label(ctx, String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.3 }, { max: 13, min: 10, color: c.accentText, maxLines: 1, align, seq: 2 + i }));
     const ty = b.y + Math.max(...nbs.map((r) => r.height)) + 0.2;
     const hds = steps.map((s, i) => text(ctx, 'display', s.title, { x: xs[i], y: ty, w: colW, h: 1.0 }, { max: 22, min: 15, italic: false, maxLines: 3, align, seq: 2 + i }));
     const by = ty + Math.max(...hds.map((r) => r.height)) + 0.15;

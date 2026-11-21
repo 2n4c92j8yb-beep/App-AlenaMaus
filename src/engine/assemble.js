@@ -23,9 +23,9 @@ export function assembleDeck(pool, structure, density = 'medium') {
     const items = pick(pool.items, role, n, used, density);
     if (!items.length) continue;
     if (structure.chronological) items.sort((a, b) => (a.year ?? 0) - (b.year ?? 0));
-    if (role.section && density !== 'light') {
-      slides.push({ form: 'section', item: { number: ++sectionCount, label: role.section }, sectionNo: sectionCount });
-    }
+    // no chapter divider slides (a big "01" and a label add load, not information);
+    // the section number only steers quiet cues such as an index tab
+    if (role.section && density !== 'light') sectionCount++;
     items.forEach((item, i) => {
       used.add(item);
       let form = FORM_FOR_KIND[item.kind];
@@ -35,9 +35,7 @@ export function assembleDeck(pool, structure, density = 'medium') {
     });
   }
 
-  // A single section divider adds nothing; drop it.
-  const sections = slides.filter((s) => s.form === 'section');
-  return sections.length < 2 ? slides.filter((s) => s.form !== 'section') : slides;
+  return slides;
 }
 
 function pick(items, role, n, used, density) {

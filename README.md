@@ -81,8 +81,14 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    Tool credits ("Made with Gamma"), page numbers, repeated footers and emoji are removed;
    the text lands in the notes box, where it can be edited, with Undo.
 2. **Looking, on the server** (`api/analyse.js`, prompt in `src/engine/style.js`): Claude
-   gets the pictures, text and theme and returns the content (same rules and shape as the
-   writing step, nothing invented) plus a style profile: light/dark/tint, serif/sans, tone,
+   gets the pictures, text and theme and returns the content plus a style profile. The
+   content is the deck's own text, **word for word**: one piece per uploaded slide, headlines
+   and bullets unchanged (no rephrasing, shortening, merging or splitting), in the piece that
+   matches how the slide is built (a bullet list stays a list of up to eight points, a block
+   of text stays one block). `toPool(answer, { verbatim: true })` does not shorten it (the
+   layout shrinks the type instead and the editor says if something doesn't fit), adds no
+   topic photos and no Works Cited slide the deck didn't have, and "Lighter" keeps every
+   slide. The style profile covers light/dark/tint, serif/sans, tone,
    background, text and accent colours, surface (flat, gradient, glass, texture, photo),
    imagery, headline size, alignment, density, and the AI tells it can see (purple
    gradients, card grids, emoji bullets, stock icons, everything centred, generic stock
@@ -98,9 +104,8 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    comes from (each slide picture is labelled with its slide number, also for long PDFs
    where only a spread of pages is sent). When most pieces have one, the decks follow the
    original order (`AS_UPLOADED` in `src/library/structures.js`, laid out by
-   `assembleInOrder()` in `src/engine/assemble.js`): pieces by slide number, topic photos
-   spread between them, Works Cited last, no section dividers; "Lighter" keeps about three
-   in five pieces, always the thesis, opening question and takeaway. Adjust → Order →
+   `assembleInOrder()` in `src/engine/assemble.js`): pieces by slide number, Works Cited
+   last (only if the deck had one), no section dividers. Adjust → Order →
    "Re-told" switches to our story structures instead (and brings back "New directions").
 
 The results page shows the uploaded slides above the three cards (before and after).

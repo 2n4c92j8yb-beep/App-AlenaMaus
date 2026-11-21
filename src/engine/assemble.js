@@ -74,6 +74,7 @@ const KEEP = new Set(['thesis', 'takeaway', 'hook']);
 export function hasSlideOrder(pool) {
   const pieces = (pool?.items ?? []).filter((it) => it.kind !== 'sources' && it.kind !== 'image');
   const placed = pieces.filter((it) => it.slide > 0);
+  if (pool?.verbatim) return placed.length > 0 && placed.length >= pieces.length * 0.6;
   return placed.length >= 3 && placed.length >= pieces.length * 0.6;
 }
 
@@ -89,7 +90,8 @@ export function assembleInOrder(pool, density = 'medium') {
     .map((it, i) => ({ it, i, at: it.slide > 0 ? it.slide : Infinity }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
     .map((x) => x.it);
-  if (density === 'light' && pieces.length > 3) {
+  // a redesigned deck keeps every slide of the original (pool.verbatim): density only changes the type
+  if (density === 'light' && pieces.length > 3 && !pool.verbatim) {
     // about three in five pieces: those with a fixed job first, then the stronger ones, back in order
     const rank = (it) => ((it.tags ?? []).some((t) => KEEP.has(t)) ? 10 : 0) + (it.weight ?? 1);
     const keep = new Set([...pieces].sort((a, b) => rank(b) - rank(a)).slice(0, Math.max(3, Math.ceil(pieces.length * 0.6))));

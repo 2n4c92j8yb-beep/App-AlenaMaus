@@ -633,12 +633,18 @@ function points(ctx, item, kick) {
   const rowH = b.h / n;
   const nw = L.numbers === 'none' ? 0 : L.numbers === 'large' ? 1.0 : 0.7;
   const centered = L.align === 'center' && nw === 0;
+  // plain bullets (no detail lines, e.g. a redesigned deck's own list) get the whole row and regular weight
+  const plain = list.every((p) => !p.text);
+  const single = n === 1;
   list.forEach((p, i) => {
     const seq = 2 + i;
     const y = b.y + i * rowH;
-    if (isLedger(ctx)) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
-    numberEl(ctx, i + 1, { x: b.x, y: y + 0.12, w: nw, h: Math.min(rowH - 0.2, 0.75) }, { large: 34, seq });
-    const hd = text(ctx, 'body', p.head, { x: b.x + nw, y: y + 0.14, w: b.w - nw, h: rowH * 0.45 }, { max: Math.round(25 * dz), min: 15, bold: true, maxLines: 2, align: centered ? 'center' : 'left', seq });
+    if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
+    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + 0.12, w: nw, h: Math.min(rowH - 0.2, 0.75) }, { large: 34, seq });
+    const x = single ? b.x : b.x + nw;
+    const hd = text(ctx, 'body', p.head, { x, y: y + 0.14, w: b.x + b.w - x, h: plain ? rowH - 0.2 : rowH * 0.45 }, {
+      max: Math.round((single ? 28 : 25) * dz), min: n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+    });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
   footer(ctx);

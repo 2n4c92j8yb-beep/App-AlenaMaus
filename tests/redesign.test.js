@@ -105,7 +105,8 @@ test('a style profile is cleaned whatever the model sends', () => {
 
 test('the analysis prompt asks for content and style and names every AI tell', () => {
   const p = analysePrompt();
-  assert.match(p, /Never invent a statistic/);
+  assert.match(p, /Word for word/);
+  assert.match(p, /Never add a word/);
   assert.match(p, /"style"/);
   assert.match(p, /"content"/);
   for (const t of TELLS) assert.ok(p.includes(t), t);
@@ -318,4 +319,38 @@ test('every look can lay out a deck in the uploaded order', () => {
       assert.deepEqual(deck.overflow, [], `${deck.direction.id} ${density}: ${JSON.stringify(deck.overflow)}`);
     }
   }
+});
+
+// ---------------------------------------------------------------- the slide text stays as it was
+
+test('a redesigned deck keeps every slide and its text word for word, and adds nothing', async () => {
+  const { toPool } = await import('../src/engine/content.js');
+  const { AS_UPLOADED } = await import('../src/library/structures.js');
+  const long = 'During the night, the brain replays what was learned during the day, strengthening the connections between neurons. This process, known as memory consolidation, is why students who sleep well after studying tend to remember more than those who stay up late cramming for an exam.';
+  const bullets = ['Memory consolidation happens mainly during deep sleep stages', 'Emotional regulation improves after a full night of rest', 'Attention and focus drop sharply after only one short night', 'Teenagers need between eight and ten hours of sleep per night', 'Screen use before bed delays the release of melatonin', 'Regular sleep schedules support better academic performance'];
+  const answer = {
+    deck: { language: 'en', title: 'The Role of Sleep in Learning', shortTitle: 'Sleep and Learning', subtitle: 'How rest shapes memory', author: 'A. Student', course: '', date: '', worksCitedTitle: '', posterWords: ['Sleep'], posterLines: [] },
+    pointLists: [
+      { slide: 2, title: 'Why Sleep Matters', points: bullets.map((head) => ({ head, text: '' })) },
+      { slide: 3, title: 'What Happens at Night', points: [{ head: long, text: '' }] },
+    ],
+    figures: [{ slide: 4, title: 'Most Teens Are Sleep-Deprived', value: '73 %', label: 'of high school students sleep less than 8 hours', caption: '', source: '', year: 0 }],
+    questions: [{ slide: 5, text: 'How could our school help students sleep better?', role: 'discussion', hint: '' }],
+    sources: [],
+    pictures: [{ search: 'sleeping student', kind: 'detail', title: 'x', caption: 'y' }],
+  };
+  const pool = toPool(answer, { verbatim: true });
+  assert.equal(pool.verbatim, true);
+  assert.deepEqual(pool.pictureSearches, [], 'no topic photos the deck did not have');
+  assert.ok(!pool.items.some((i) => i.kind === 'sources'), 'no Works Cited the deck did not have');
+  assert.deepEqual(pool.items.find((i) => i.slide === 2).points.map((p) => p.head), bullets, 'six bullets, unchanged');
+  assert.equal(pool.items.find((i) => i.slide === 3).points[0].head, long, 'running text is not shortened');
+  for (const density of ['light', 'medium', 'dense']) for (let k = 0; k < DIRECTIONS.length; k += 3) {
+    const dirs = DIRECTIONS.slice(k, k + 3);
+    for (const deck of buildFromDirections({ pool, occasionId: 'seminar', density, seed: 1, directions: dirs, structures: dirs.map(() => AS_UPLOADED) })) {
+      assert.deepEqual(deck.slides.map((s) => s.item?.slide ?? 0), [0, 2, 3, 4, 5], `${deck.direction.id}/${density}: every slide, in order`);
+      assert.deepEqual(deck.overflow, [], `${deck.direction.id}/${density}`);
+    }
+  }
+  assert.match(analysePrompt(), /One piece per slide/);
 });

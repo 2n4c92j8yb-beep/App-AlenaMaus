@@ -169,7 +169,7 @@ export const SCHEMAS = {
   ] },
   timeline: { name: 'Timeline', fields: [
     { k: 'title', label: 'Headline', type: 'text', max: 110 },
-    { k: 'events', label: 'Events', type: 'list', min: 3, max: 6, row: [{ k: 'date', label: 'Date', type: 'line', max: 14 }, { k: 'label', label: 'Event', type: 'line', max: 80 }], blank: { date: '', label: '' } },
+    { k: 'events', label: 'Events', type: 'list', min: 3, max: 8, row: [{ k: 'date', label: 'Date', type: 'line', max: 14 }, { k: 'label', label: 'Event', type: 'line', max: 80 }], blank: { date: '', label: '' } },
   ] },
   steps: { name: 'Process', fields: [
     { k: 'title', label: 'Headline', type: 'text', max: 110 },
@@ -177,8 +177,8 @@ export const SCHEMAS = {
   ] },
   comparison: { name: 'Comparison', fields: [
     { k: 'title', label: 'Headline', type: 'text', max: 110 },
-    { k: 'left.heading', label: 'Left side', type: 'line', max: 40 }, { k: 'left.points', label: 'Left points', type: 'strings', min: 1, max: 3, itemMax: 90 },
-    { k: 'right.heading', label: 'Right side', type: 'line', max: 40 }, { k: 'right.points', label: 'Right points', type: 'strings', min: 1, max: 3, itemMax: 90 },
+    { k: 'left.heading', label: 'Left side', type: 'line', max: 40 }, { k: 'left.points', label: 'Left points', type: 'strings', min: 1, max: 6, itemMax: 90 },
+    { k: 'right.heading', label: 'Right side', type: 'line', max: 40 }, { k: 'right.points', label: 'Right points', type: 'strings', min: 1, max: 6, itemMax: 90 },
     { k: 'verdict', label: 'Conclusion', type: 'text', max: 150, optional: true },
   ] },
   quote: { name: 'Quote', fields: [
@@ -188,7 +188,7 @@ export const SCHEMAS = {
   question: { name: 'Question', fields: [{ k: 'text', label: 'Question', type: 'text', max: 160 }, { k: 'hint', label: 'Hint', type: 'line', max: 120, optional: true }] },
   points: { name: 'Points', fields: [
     { k: 'title', label: 'Headline', type: 'text', max: 110 },
-    { k: 'points', label: 'Points', type: 'list', min: 2, max: 4, row: [{ k: 'head', label: 'Point', type: 'line', max: 70 }, { k: 'text', label: 'Detail', type: 'text', max: 110, optional: true }], blank: { head: '', text: '' } },
+    { k: 'points', label: 'Points', type: 'list', min: 1, max: 8, row: [{ k: 'head', label: 'Point', type: 'line', max: 70 }, { k: 'text', label: 'Detail', type: 'text', max: 110, optional: true }], blank: { head: '', text: '' } },
   ] },
   sources: { name: 'Works cited', fields: [{ k: 'title', label: 'Heading', type: 'line', max: 40 }, { k: 'entries', label: 'Sources (MLA)', type: 'strings', min: 1, max: 12, itemMax: 300, multiline: true }] },
   image: { name: 'Picture', picture: true, fields: [{ k: 'title', label: 'Headline', type: 'text', max: 110 }, { k: 'caption', label: 'Caption', type: 'text', max: 200, optional: true }] },

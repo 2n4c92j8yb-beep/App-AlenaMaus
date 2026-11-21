@@ -74,13 +74,15 @@ const list = (v) => (Array.isArray(v) ? v : []);
 const fromSlide = (x) => (Number.isInteger(Number(x?.slide)) && Number(x.slide) > 0 && Number(x.slide) < 500 ? { slide: Number(x.slide) } : {});
 
 /** Shorten at a word boundary if a piece is longer than a slide can hold. */
-export function clip(text, max) {
+export function clipText(text, max) {
   const t = str(text);
   if (t.length <= max) return t;
   const cut = t.slice(0, max - 1);
   const at = cut.lastIndexOf(' ');
   return `${(at >= max * 0.5 ? cut.slice(0, at) : cut).replace(/[,;:\s]+$/, '')}…`;
 }
+
+export const clip = clipText;
 
 /** Keep a number and its unit together: "40,5 %" must not break before the "%". */
 const keepNumber = (t) => t.replace(/(\d)\s+(%|‰|°|€|\$|£|km|kg|m|cm|mm|h|min|s|bpm)(?=$|[^\p{L}])/gu, '$1\u202F$2');
@@ -96,8 +98,13 @@ const weighted = (arr, i) => (i === 0 ? 3 : 2);
  * Anything missing or empty is dropped; anything too long is shortened.
  * Throws if the answer has too little to make a deck.
  */
-export function toPool(answer) {
+export function toPool(answer, { verbatim = false } = {}) {
   const a = answer && typeof answer === 'object' ? answer : {};
+  // Redesign of an uploaded deck: the slide text is kept word for word. Nothing is shortened
+  // (the layout shrinks the type and says when something no longer fits), lists may be longer,
+  // and nothing is added that the deck did not have (no topic photos, no empty Works Cited).
+  const clip = verbatim ? (text, max) => clipText(text, Math.max(max * 4, 600)) : clipText;
+  const many = (normal, more) => (verbatim ? more : normal);
   const d = a.deck ?? {};
   const title = clip(d.title, L.deckTitle) || clip(d.shortTitle, L.deckTitle);
   if (!title) throw new Error('The answer has no title.');
@@ -140,19 +147,19 @@ export function toPool(answer) {
     });
   });
   list(a.timelines).forEach((x, i) => {
-    const raw = list(x?.events).filter((e) => str(e?.date) && str(e?.label)).slice(0, 6);
+    const raw = list(x?.events).filter((e) => str(e?.date) && str(e?.label)).slice(0, many(6, 8));
     // more events means narrower columns, so shorter labels
     const events = raw.map((e) => ({ date: clip(e.date, 14), label: clip(e.label, raw.length > 4 ? 50 : 80) }));
     if (events.length < 3) return;
     items.push({ ...fromSlide(x), kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || 'Timeline', events });
   });
   list(a.processes).forEach((x, i) => {
-    const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, 5);
+    const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, many(5, 6));
     if (steps.length < 2) return;
     items.push({ ...fromSlide(x), kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || 'Step by step', steps });
   });
   list(a.comparisons).forEach((x, i) => {
-    const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, 3) });
+    const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, many(3, 6)) });
     const left = side(x?.left);
     const right = side(x?.right);
     if (!left.heading || !right.heading || !left.points.length || !right.points.length) return;
@@ -172,17 +179,19 @@ export function toPool(answer) {
     items.push({ ...fromSlide(x), kind: 'question', tags: role === 'discussion' ? ['discussion', 'counter'] : [role], weight: role === 'hook' ? 3 : 2, text, ...(str(x?.hint) ? { hint: clip(x.hint, 120) } : {}) });
   });
   list(a.pointLists).forEach((x, i) => {
-    const rawPoints = list(x?.points).filter((p) => str(p?.head)).slice(0, 4);
+    const rawPoints = list(x?.points).filter((p) => str(p?.head)).slice(0, many(4, 8));
     const tight = rawPoints.length > 3; // four rows leave less room per point
     const points = rawPoints.map((p) => ({ head: clip(p.head, tight ? 55 : 70), text: clip(p?.text, tight ? 75 : 110) }));
-    if (points.length < 2) return;
+    // an uploaded slide with a headline and one block of text is a list of one
+    if (points.length < many(2, 1)) return;
     items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || shortTitle, points: points.map((p) => (p.text ? p : { head: p.head })) });
   });
-  const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, 10);
-  // Works Cited is always there; with no sources in the notes it says so instead of inventing any
-  items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || t(d.language, 'Works Cited'), entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
+  const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, many(10, 20));
+  // Works Cited is always there; with no sources in the notes it says so instead of inventing any.
+  // A redesigned deck only gets one when the uploaded deck listed sources.
+  if (!verbatim || entries.length) items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || t(d.language, 'Works Cited'), entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
 
-  if (items.filter((it) => it.kind !== 'sources').length < 3) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
+  if (items.filter((it) => it.kind !== 'sources').length < (verbatim ? 1 : 3)) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
   if (!thesisSeen) {
     // the strongest claim becomes the thesis, so thesis-first structures still have one
     const first = items.find((it) => it.kind === 'claim' && !(it.tags ?? []).length);
@@ -209,9 +218,10 @@ export function toPool(answer) {
     pictureSearches: list(a.pictures).map((p) => ({
       search: clip(p?.search, 60).replace(/…$/, ''), kind: PICTURE_KINDS.has(str(p?.kind)) ? str(p.kind) : 'landscape',
       title: clip(p?.title, L.title), caption: clip(p?.caption, L.caption),
-    })).filter((p) => p.search && p.title).slice(0, 5),
+    })).filter((p) => p.search && p.title).slice(0, verbatim ? 0 : 5),
     items,
     generated: true,
+    ...(verbatim ? { verbatim: true } : {}),
   };
 }
 

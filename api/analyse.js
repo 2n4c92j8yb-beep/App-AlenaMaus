@@ -77,7 +77,7 @@ export async function analyseDeck(input, occasionId, client = new Anthropic({ ap
   try { answer = parseAnswer(text); } catch {
     throw Object.assign(new Error('The answer could not be read. Please try again.'), { status: 502 });
   }
-  return { pool: toPool(answer.content ?? answer), style: cleanStyle(answer.style) };
+  return { pool: toPool(answer.content ?? answer, { verbatim: true }), style: cleanStyle(answer.style) };
 }
 
 const hits = new Map();

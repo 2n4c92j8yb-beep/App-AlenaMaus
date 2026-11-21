@@ -111,7 +111,10 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    headline (a slide without one gets none, and its text takes the whole slide), body text
    is never promoted or split into heading and detail unless the slide sets a lead-in apart,
    and the app adds none of its own labels ("Thesis", "Question", "Key figure": `autoLabel()`
-   in `src/library/labels.js` returns nothing for `deck.verbatim`). Key-figure layouts show
+   in `src/library/labels.js` returns nothing for `deck.verbatim`). Where a slide shows no
+   hierarchy at all, the redesign creates none: no headline, no heading/detail split, no big
+   number. Lists keep their own marker (`marker`: numbers only if the slide numbered its
+   items, bullets if it had bullets, nothing for plain lines). Key-figure layouts show
    the slide's headline as a headline, never as a small label. The style profile covers light/dark/tint, serif/sans, tone,
    background, text and accent colours, surface (flat, gradient, glass, texture, photo),
    imagery, headline size, alignment, density, and the AI tells it can see (purple

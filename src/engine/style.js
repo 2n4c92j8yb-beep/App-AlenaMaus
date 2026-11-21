@@ -26,6 +26,8 @@ Job 1, the content. The person wants a new design for the same slides, not new s
 - One piece per slide. Each uploaded slide (after the title slide) becomes exactly one piece, in the order of the deck, and keeps all of its text. Never leave a slide out, never leave a line out, and never spread one slide over several pieces. Nothing is too long: the design engine makes the type smaller where needed.
 - Leave out only what is not content: credits of the AI tool ("Made with Gamma"), page numbers, footers or logos repeated on every slide, placeholder text ("Click to add text") and emoji.
 - The title slide fills deck: title, subtitle, author, course and date exactly as written on it (empty strings for what it doesn't show). shortTitle is the title or its first words; worksCitedTitle is the heading of the deck's sources slide, or empty; posterWords are three single words taken from the slides; posterLines are up to five short lines taken from the slides; placeShort is a place the slides name, or empty.
+- Where a slide shows no hierarchy (all its text the same size and weight), create none: no headline (title ""), no head/text split, no big number, no term set apart; use pointLists with one point per line (head only) or, for a single block of text, one point.
+- marker (pointLists): "number" only if the slide numbers its items, "bullet" if it shows bullet points, "none" if the lines stand without any marker.
 - Keep each slide's hierarchy as it is. Only the slide's own headline goes into a title field; if a slide has no headline, leave title "". Never promote a line of body text to a headline, never demote a headline, and never add a heading or label the slide doesn't show ("Overview", "Key facts", "Thesis" …). Text that is the same size and weight on the slide stays at one level.
 - Pick the piece that matches how the slide is already built, and put the slide's headline in its title field unchanged:
   - a headline with bullet points or a list: pointLists, one point per bullet, in order, however many there are. Split a bullet into head and text only where the slide itself sets a lead-in apart (bold or coloured, or on its own line above its explanation); then head is the lead-in and text is the rest. Otherwise, even when the bullet contains a colon, head is the whole bullet and text is "". Sub-bullets go into the text of their bullet.
@@ -33,7 +35,7 @@ Job 1, the content. The person wants a new design for the same slides, not new s
   - two columns set side by side (pros and cons, then and now): comparisons, the column headings as heading and their lines as points.
   - numbered steps or a sequence of stages (2 to 6): processes. Three to eight dated events: timelines. Longer sequences: pointLists.
   - one big number as the point of the slide (written in 9 characters or fewer, e.g. "40 %"): figures, the number as value, the words printed with it as label, a separate sentence on the slide (if there is one) as caption, and the slide's headline (or "") as title.
-  - a quotation with its author: quotes. A slide that is just a question: questions (role "hook" near the start, "discussion" near the end). A term with its definition: definitions. A slide that is one short sentence set large on its own: claims.
+  - a quotation with its author: quotes. A slide that is just a question: questions (role "hook" near the start, "discussion" near the end). A term set apart from its definition (bold, larger or on its own line): definitions. A slide that is one short sentence set large on its own: claims.
   - two forms of one thing shown as before and after: pairs.
   - anything else: pointLists with its lines as points.
 - sources: the entries of the deck's sources or references slide, each exactly as written. Leave sources empty if the deck has none, and then do not make a piece of that slide.
@@ -59,7 +61,7 @@ If you only have text and no pictures, guess the style from the text and the the
 /** The full system prompt for the server, with the JSON shape to answer in. */
 // the writing step's shape, with the uploaded slide number on every piece that can have one
 const SLIDE_LISTS = ['claims', 'definitions', 'figures', 'pairs', 'timelines', 'processes', 'comparisons', 'quotes', 'questions', 'pointLists'];
-const CONTENT_SHAPE = Object.fromEntries(Object.entries(EXAMPLE_SHAPE).map(([k, v]) => [k, SLIDE_LISTS.includes(k) ? v.map((x) => ({ ...x, slide: 0 })) : v]));
+const CONTENT_SHAPE = Object.fromEntries(Object.entries(EXAMPLE_SHAPE).map(([k, v]) => [k, SLIDE_LISTS.includes(k) ? v.map((x) => ({ ...x, slide: 0, ...(k === 'pointLists' ? { marker: 'number | bullet | none' } : {}) })) : v]));
 
 export function analysePrompt() {
   return `${ANALYSE_PROMPT}

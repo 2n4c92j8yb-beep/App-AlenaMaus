@@ -604,7 +604,9 @@ function points(ctx, item, kick) {
   const list = item.points;
   const n = list.length;
   const rowH = b.h / n;
-  const nw = L.numbers === 'none' ? 0 : L.numbers === 'large' ? 1.0 : 0.7;
+  // a redesigned list keeps its own marker (item.marker): numbers only where the slide numbered its items
+  const marker = item.marker ?? (L.numbers === 'none' ? 'none' : 'number');
+  const nw = marker === 'number' ? (L.numbers === 'large' ? 1.0 : 0.7) : marker === 'bullet' && n > 1 ? 0.4 : 0;
   const centered = L.align === 'center' && nw === 0;
   // plain bullets (no detail lines, e.g. a redesigned deck's own list) get the whole row and regular weight
   const plain = list.every((p) => !p.text);
@@ -614,7 +616,7 @@ function points(ctx, item, kick) {
     const seq = 2 + i;
     const y = b.y + i * rowH;
     if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
-    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
+    if (!single && marker === 'number') numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
     const x = single ? b.x : b.x + nw;
     // a lone paragraph keeps a readable line length
     const lone = single && plain && !String(item.title ?? '').trim();
@@ -623,6 +625,7 @@ function points(ctx, item, kick) {
       // one block of text with no headline is the whole slide: it sits in the middle, not in a corner
       ...(lone ? { valign: 'middle' } : {}),
     });
+    if (marker === 'bullet' && !single) ellipse(ctx, b.x + 0.05, y + pad + (hd.size / 72) * 0.62 - 0.05, 0.1, 0.1, c.accentText, { seq });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
   footer(ctx);

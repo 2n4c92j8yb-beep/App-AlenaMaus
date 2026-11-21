@@ -399,3 +399,23 @@ test('a redesigned deck keeps the hierarchy of its slides: no made-up headlines 
     }
   }
 });
+
+test('a redesigned list keeps its own marker: numbers only where the slide numbered its items', async () => {
+  const { toPool } = await import('../src/engine/content.js');
+  const { AS_UPLOADED } = await import('../src/library/structures.js');
+  const list = (slide, marker) => ({ slide, title: 'Ablauf', marker, points: ['Aufwärmen', 'Drop Jumps', 'Auslaufen'].map((head) => ({ head, text: '' })) });
+  const pool = toPool({ deck: { title: 'Plyometrie' }, pointLists: [list(1, 'none'), list(2, 'bullet'), list(3, 'number'), { ...list(4), marker: undefined }] }, { verbatim: true });
+  assert.deepEqual(pool.items.filter((i) => i.kind === 'points').map((i) => i.marker), ['none', 'bullet', 'number', 'none'], 'unknown marker: none');
+  for (let k = 0; k < DIRECTIONS.length; k += 3) {
+    const dirs = DIRECTIONS.slice(k, k + 3);
+    for (const deck of buildFromDirections({ pool, occasionId: 'seminar', density: 'medium', seed: 1, directions: dirs, structures: dirs.map(() => AS_UPLOADED) })) {
+      const bySlide = (n) => deck.slides.find((s) => s.item?.slide === n);
+      const numbers = (s) => s.els.filter((e) => e.type === 'text' && /^0\d$/.test(String(e.text)) && e.y < 6.5).length; // not the page number in the footer
+      const dots = (s) => s.els.filter((e) => e.type === 'ellipse' && e.w === 0.1).length;
+      assert.equal(numbers(bySlide(1)) + dots(bySlide(1)), 0, `${deck.direction.id}: plain lines get no marker`);
+      assert.equal(numbers(bySlide(2)), 0, `${deck.direction.id}: bullets are not numbered`);
+      assert.equal(dots(bySlide(2)), 3, `${deck.direction.id}: bullets stay bullets`);
+      assert.deepEqual(deck.overflow, [], deck.direction.id);
+    }
+  }
+});

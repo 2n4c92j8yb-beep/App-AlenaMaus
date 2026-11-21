@@ -114,7 +114,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     if (!verbatim) return;
     const points = lines.map((l) => (typeof l === 'string' ? { head: str(l) } : { head: str(l.head), text: str(l.text) }))
       .map((p) => (p.head ? p : { head: p.text ?? '' })).filter((p) => p.head).map((p) => (p.text ? p : { head: p.head }));
-    if (points.length) items.push({ ...fromSlide(x), kind: 'points', weight: 2, title: str(title), points });
+    if (points.length) items.push({ ...fromSlide(x), kind: 'points', weight: 2, title: str(title), points, marker: 'none' });
   };
   const d = a.deck ?? {};
   const title = clip(d.title, L.deckTitle) || clip(d.shortTitle, L.deckTitle);
@@ -208,7 +208,9 @@ export function toPool(answer, { verbatim = false } = {}) {
     const points = rawPoints.map((p) => ({ head: clip(p.head, tight ? 55 : 70), text: clip(p?.text, tight ? 75 : 110) }));
     // an uploaded slide with a headline and one block of text is a list of one
     if (points.length < (verbatim ? 1 : 2)) return;
-    items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || orTitle(shortTitle), points: points.map((p) => (p.text ? p : { head: p.head })) });
+    // a redesigned list keeps its own marker; nothing is numbered that the slide didn't number
+    const marker = verbatim ? (['number', 'bullet', 'none'].includes(str(x?.marker)) ? str(x.marker) : 'none') : undefined;
+    items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || orTitle(shortTitle), points: points.map((p) => (p.text ? p : { head: p.head })), ...(marker ? { marker } : {}) });
   });
   const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, many(10));
   // Works Cited is always there; with no sources in the notes it says so instead of inventing any.

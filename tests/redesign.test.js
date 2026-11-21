@@ -235,7 +235,7 @@ test('Claude gets one picture per slide, then the text and theme', () => {
 test('the analysis returns a pool and a clean style profile, and handles refusals', async () => {
   let sent;
   const reply = (text, stop = 'end_turn') => ({ stop_reason: stop, content: [{ type: 'text', text }] });
-  const fake = (r) => ({ beta: { messages: { create: async (params) => { sent = params; return r; } } } });
+  const fake = (r) => ({ beta: { messages: { stream: (params) => { sent = params; return { finalMessage: async () => r }; } } } });
   const input = readBody({ images: [PIXEL], text: 'Slide 1\nSleep and memory', source: 'pdf' });
   const out = await analyseDeck(input, 'seminar', fake(reply('```json\n' + JSON.stringify(ANSWER) + '\n```')));
   assert.equal(sent.model, 'claude-opus-5-5');

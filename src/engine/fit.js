@@ -38,7 +38,14 @@ export function countLines(text, widthIn, sizePt, widthFactor) {
  * Find the largest font size between `max` and `min` (pt) at which the text
  * fits the box. Returns { size, lines, fits }.
  */
-export function fitText(text, w, h, { max, min, factor, lineHeight = 1.2, maxLines = Infinity, step = 1 }) {
+export function fitText(text, w, h, { max, min, factor, lineHeight = 1.2, maxLines = Infinity, step = 1, lineEm }) {
+  // one line with a known real width (lineEm, in em): shrink until it fits the box exactly
+  if (lineEm != null && maxLines === 1) {
+    for (let size = max; size >= min; size -= step) {
+      if (lineEm * (size / 72) <= w * 0.97 && (size / 72) * lineHeight <= h + 1e-9) return { size, lines: 1, fits: true };
+    }
+    return { size: min, lines: 1, fits: false };
+  }
   for (let size = max; size >= min; size -= step) {
     const { lines, wordTooLong } = countLines(text, w, size, factor);
     const height = lines * (size / 72) * lineHeight;

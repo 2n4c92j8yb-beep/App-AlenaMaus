@@ -52,7 +52,8 @@ function micro(ctx, str, box, o = {}) {
 /** One giant word in the poster face, sized to fill its box. */
 function bigWord(ctx, word, box, o = {}) {
   return text(ctx, 'display', word, box, {
-    font: ctx.dir.fonts.poster, max: o.max ?? 600, min: o.min ?? 60, caps: true, maxLines: 1,
+    // the word or figure stays whole on one line: the size gives way, not the letters
+    font: ctx.dir.fonts.poster, max: o.max ?? 600, min: o.min ?? 24, caps: true, maxLines: 1,
     lineHeight: o.lineHeight ?? 0.92, tracking: o.tracking ?? 0, align: o.align ?? 'center', valign: o.valign ?? 'top',
     color: o.color ?? ctx.c.ink, italic: false, bold: false, seq: o.seq ?? 1, bleed: true,
     rotate: o.rotate, alpha: o.alpha, fillImage: o.fillImage,

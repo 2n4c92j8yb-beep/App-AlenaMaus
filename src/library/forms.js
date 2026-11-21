@@ -20,6 +20,7 @@
 
 import { FONTS } from './fonts.js';
 import { t as label_, autoLabel } from './labels.js';
+import { widthEm } from './glyphs.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
@@ -77,7 +78,11 @@ export function text(ctx, role, str, box, o = {}) {
   // Unbounded's figures are much wider than its letters: numbers like "40.5%" need more room
   const digitHeavy = key === 'unbounded' && /^[\d\s.,%+\-–/:]+$/.test(content);
   // letter spacing widens every character; rotated text runs along the box's height
+  // a single line in a font whose real glyph widths are known is fitted exactly
+  const em = o.maxLines === 1 && !String(content).includes('\n') ? widthEm(key, content) : null;
+  const lineEm = em == null ? undefined : (em + tracking * [...content].length) * (bold ? 1.06 : 1);
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
+    lineEm,
     max: o.max, min: o.min ?? Math.round(o.max * 0.6),
     factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
     lineHeight, maxLines: o.maxLines ?? Infinity,
@@ -89,6 +94,7 @@ export function text(ctx, role, str, box, o = {}) {
     align: o.align ?? 'left', valign: o.valign ?? 'top',
     lineHeight, caps, tracking,
     hanging: !!o.hanging, fits: r.fits, role,
+    ...(o.maxLines === 1 ? { nowrap: true } : {}),
     seq: o.seq ?? (isDisplay ? 1 : 2), bleed: !!o.bleed,
     ...(o.rotate ? { rotate: o.rotate } : {}),
     ...(o.alpha != null ? { alpha: o.alpha } : {}),

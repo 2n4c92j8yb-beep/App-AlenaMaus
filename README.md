@@ -55,6 +55,11 @@ panel for key figures. A planner places them per deck:
   use the regular forms in the same type and colours.
 - **Editorial:** the 15 directions below.
 
+Text that must stay on one line (poster words, key figures, labels) is fitted with the real
+glyph widths of the bundled fonts (`src/library/glyphs.js`, read from `fonts/` with fontTools)
+instead of an average letter width, and never wraps in the preview: a long word like
+"PLYOMETRIE" or a figure like "+12 %" gets a smaller size rather than being cut or broken.
+
 Poster fonts (Anton, Bebas Neue, Six Caps) are in `fonts/` under the SIL Open
 Font License. Sample photos are from Wikimedia Commons (see
 `src/sample/photos/credits.json`); every photo shown is cited on the Works Cited slide.

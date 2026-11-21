@@ -293,3 +293,24 @@ test('cover text never runs into the author line, even with a long title', () =>
     }
   }
 });
+
+test('one-line words and figures fit their box by real glyph width: "PLYOMETRIE" and "+12 %" stay whole', async () => {
+  const { widthEm } = await import('../src/library/glyphs.js');
+  const { toPool } = await import('../src/engine/content.js');
+  const pool = { ...SAMPLE_POOL, posterWords: ['PLYOMETRIE', 'SPRUNGKRAFT', 'HANDBALLSPIELERN'], items: [...SAMPLE_POOL.items, ...toPool({ deck: { title: 'x' }, figures: [{ title: 'Sprunghöhe', value: '+12 %', label: 'mehr' }, { title: 'Quote', value: '40,5 %', label: 'mehr' }], claims: [{ text: 'a' }, { text: 'b' }] }).items.filter((i) => i.kind === 'figure')] };
+  let checked = 0;
+  for (const family of ['poster', 'glass', 'texture', 'editorial']) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool, occasionId: 'seminar', density: 'dense', seed: s, family })) {
+      for (const sl of deck.slides) for (const e of sl.els) {
+        if (e.type !== 'text' || !e.nowrap) continue;
+        const em = widthEm(e.font, e.caps ? e.text.toUpperCase() : e.text);
+        if (em == null) continue;
+        const run = e.rotate === 90 || e.rotate === -90 ? e.h : e.w;
+        const width = (em + (e.tracking ?? 0) * [...e.text].length) * (e.bold ? 1.06 : 1) * (e.size / 72);
+        assert.ok(width <= run + 1e-6, `${deck.direction.id} ${sl.form}: "${e.text}" is ${width.toFixed(2)}in wide in a ${run.toFixed(2)}in box`);
+        checked++;
+      }
+    }
+  }
+  assert.ok(checked > 50, `checked ${checked} one-line texts`);
+});

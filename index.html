@@ -137,6 +137,7 @@
           </div>
         </details>
         <button type="button" class="btn btn-secondary" id="reroll">New directions</button>
+        <button type="button" class="btn btn-primary" id="choose-start">Help me choose</button>
       </div>
     </div>
     <p class="sr-only" aria-live="polite" id="status"></p>
@@ -149,6 +150,22 @@
       <ul class="original-strip" id="original-strip" aria-label="Slides you uploaded"></ul>
     </section>
     <div class="cards" id="cards"></div>
+  </section>
+
+  <section id="choose" class="wrap view" aria-labelledby="choose-title" hidden>
+    <div class="choose-head">
+      <button type="button" class="btn btn-ghost" id="choose-cancel"><span class="arrow" aria-hidden="true">←</span> All directions</button>
+      <p class="choose-progress" id="choose-progress" aria-live="polite"></p>
+    </div>
+    <h2 id="choose-title" tabindex="-1"></h2>
+    <p class="field-help choose-help" id="choose-help"></p>
+    <div class="choose-options" id="choose-options"></div>
+    <div class="choose-foot">
+      <button type="button" class="btn btn-secondary" id="choose-back">Back</button>
+      <button type="button" class="btn btn-link" id="choose-skip">No preference</button>
+      <button type="button" class="btn btn-secondary" id="choose-restart" hidden>Start again</button>
+      <button type="button" class="btn btn-primary" id="choose-use" hidden>Use this design <span class="arrow" aria-hidden="true">→</span></button>
+    </div>
   </section>
 
   <section id="detail" class="wrap view" aria-labelledby="detail-title" hidden>

@@ -2,6 +2,9 @@
 
 import { OCCASIONS } from './library/occasions.js';
 import { buildDirections, buildFromDirections } from './engine/build.js';
+import { createChooser, nextRound, choose, back as chooserBack } from './engine/chooser.js';
+import { DIRECTIONS } from './library/directions.js';
+import { STRUCTURES } from './library/structures.js';
 import { hasSlideOrder } from './engine/assemble.js';
 import { AS_UPLOADED } from './library/structures.js';
 import { renderSlide } from './render/html.js';
@@ -13,7 +16,7 @@ import { attachPictures } from './engine/pictures.js';
 import { occasionById } from './library/occasions.js';
 import { exportPptx, bundledFontsOf, exportsAsPicture } from './export/pptx.js';
 import { readDeck, kindOf } from './engine/import.js';
-import { matchDirections, familyName } from './engine/match.js';
+import { matchDirections, familyName, scoreDirection, adaptDirection } from './engine/match.js';
 import { emptyEdits, withIds, applyEdits, applyPlans, deckKey, isEdited, setItem, setCover, setSection, moveSlide, deleteSlide, duplicateSlide, addSlide, unusedItems } from './engine/edits.js';
 import { openSlideEditor, openAddPicker, close as closeEditor } from './editor.js';
 
@@ -44,6 +47,8 @@ const state = {
   match: null,      // the best direction and two alternatives for it (src/engine/match.js)
   order: 'original', // matched decks: keep the uploaded slide order, or re-tell it in our story structures
   edits: emptyEdits(), // the person's changes to the slides (src/engine/edits.js), saved on this device
+  chooser: null,    // "Help me choose": the rounds so far (src/engine/chooser.js)
+  picked: null,     // id of the direction the person chose there; shown first among the three
   history: [],      // earlier edits, for Undo
   future: [],       // undone edits, for Redo
 };
@@ -78,8 +83,14 @@ function init() {
   document.querySelectorAll('[data-order]').forEach((b) => b.addEventListener('click', () => { state.order = b.dataset.order; generate(); }));
   document.querySelectorAll('[data-formality]').forEach((b) => b.addEventListener('click', () => { state.formality = b.dataset.formality; if (state.match) rematch(state.formality); generate(); }));
   // picking a look leaves the matched directions and shows that look's own three
-  document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; state.match = null; generate(); }));
+  document.querySelectorAll('[data-family]').forEach((b) => b.addEventListener('click', () => { state.family = b.dataset.family; state.match = null; state.picked = null; generate(); }));
   $('reroll').addEventListener('click', () => { state.round += 1; generate(); });
+  $('choose-start').addEventListener('click', startChoosing);
+  $('choose-cancel').addEventListener('click', () => showView('results', () => $('choose-start').focus()));
+  $('choose-back').addEventListener('click', () => { state.chooser = chooserBack(state.chooser); renderChoose(); });
+  $('choose-skip').addEventListener('click', () => answerChoose(null));
+  $('choose-restart').addEventListener('click', startChoosing);
+  $('choose-use').addEventListener('click', usePicked);
   $('back').addEventListener('click', closeDetail);
   $('edit-notes').addEventListener('click', () => showView('start', () => { window.scrollTo(0, 0); $('notes').focus(); }));
   $('pictures').addEventListener('change', (e) => addPictures([...e.target.files]));
@@ -440,6 +451,7 @@ function showView(name, after) {
     $('view-start').hidden = name !== 'start';
     $('results').hidden = name !== 'results';
     $('detail').hidden = name !== 'detail';
+    $('choose').hidden = name !== 'choose';
     after?.();
   };
   if (document.startViewTransition && !reduced()) {
@@ -645,6 +657,124 @@ function syncToggles() {
   document.querySelector('.looks').style.setProperty('--i', String(looks.findIndex((b) => b.dataset.family === state.family)));
 }
 
+// ---------- help me choose ----------
+
+/** The candidates: every direction that suits the occasion, in the uploaded deck's colours if there is one. */
+function chooserCandidates() {
+  const fits = DIRECTIONS.filter((d) => (d.suits[state.occasionId] ?? 0) > 0);
+  return state.style ? fits.map((d) => adaptDirection(d, state.style)) : fits;
+}
+
+function startChoosing() {
+  // which direction shows a side first: the closest to an uploaded deck, or the best fit for the occasion
+  const prior = state.style
+    ? (d) => scoreDirection(DIRECTIONS.find((x) => x.id === d.id), state.style, state.occasionId).score
+    : (d) => d.suits[state.occasionId] ?? 0;
+  state.chooser = createChooser(chooserCandidates(), (d) => { const v = prior(d); return Number.isFinite(v) ? v : -99; });
+  showView('choose', () => { window.scrollTo(0, 0); renderChoose(); });
+}
+
+/** One deck in a direction, with the same content and order as the decks on the results page. */
+function deckIn(direction, seed = `${state.baseSeed}:${state.round}`) {
+  const pool = currentPool();
+  const structure = keepsOrder(pool) ? AS_UPLOADED : state.decks[0]?.structure ?? STRUCTURES[0];
+  return buildFromDirections({ pool, occasionId: state.occasionId, density: state.density, seed, directions: [direction], structures: [structure] })[0];
+}
+
+// the content slide to compare: the same piece of content in both directions
+function sampleSlide(deck, itemId) {
+  const content = deck.slides.filter((s) => s.item && !['cover', 'references', 'photo', 'photoSplit'].includes(s.form));
+  return (itemId && content.find((s) => s.item.id === itemId))
+    ?? content.find((s) => ['points', 'comparison', 'process', 'definition'].includes(s.form))
+    ?? content[0] ?? deck.slides[1] ?? deck.slides[0];
+}
+
+function renderChoose() {
+  const r = nextRound(state.chooser);
+  const done = r.kind === 'done';
+  const box = $('choose-options');
+  box.replaceChildren();
+  box.classList.toggle('is-done', done);
+  $('choose-title').textContent = done ? `Your design: ${r.direction.name}` : r.question;
+  $('choose-progress').textContent = done
+    ? `Chosen in ${r.round} round${r.round === 1 ? '' : 's'}`
+    : `Round ${r.round} · ${r.left} designs still in`;
+  $('choose-help').textContent = done
+    ? `${familyName(r.direction.family)} look. ${r.direction.blurb ?? ''}`
+    : r.kind === 'duel'
+      ? 'Only a few designs are left. Pick the one you would rather present with.'
+      : 'Both show your own slides. Look at the difference the question names and click the one you prefer.';
+  $('choose-back').hidden = !state.chooser.previous;
+  $('choose-skip').hidden = done;
+  $('choose-restart').hidden = !done;
+  $('choose-use').hidden = !done;
+  if (done) {
+    const deck = deckIn(r.direction);
+    const fig = document.createElement('div');
+    fig.className = 'choose-final';
+    fig.append(renderSlide(deck.slides[0].els, { label: `Cover slide in ${r.direction.name}` }));
+    const strip = document.createElement('div');
+    strip.className = 'choose-final-strip';
+    strip.append(...pickPreview(deck.slides).slice(0, 3).map((sl) => renderSlide(sl.els, { label: `${FORM_LABELS[sl.form] ?? sl.form} slide in ${r.direction.name}` })));
+    fig.append(strip);
+    box.append(fig);
+    $('choose-use').focus({ preventScroll: true });
+    return;
+  }
+  const decks = r.options.map((o) => deckIn(o.direction));
+  const itemId = sampleSlide(decks[0]).item?.id;
+  r.options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'choose-option';
+    b.style.setProperty('--n', String(i));
+    const name = r.kind === 'duel' ? o.direction.name : o.label;
+    b.setAttribute('aria-label', `${i === 0 ? 'A' : 'B'}: ${name}`);
+    const head = document.createElement('span');
+    head.className = 'choose-label';
+    head.innerHTML = '<span class="choose-letter" aria-hidden="true"></span><span class="choose-name"></span>';
+    head.querySelector('.choose-letter').textContent = i === 0 ? 'A' : 'B';
+    head.querySelector('.choose-name').textContent = name;
+    const slides = document.createElement('span');
+    slides.className = 'choose-slides';
+    slides.append(renderSlide(decks[i].slides[0].els), renderSlide(sampleSlide(decks[i], itemId).els));
+    b.append(head, slides);
+    b.addEventListener('click', () => answerChoose(i));
+    box.append(b);
+  });
+  $('choose-title').focus({ preventScroll: true });
+}
+
+function answerChoose(side) {
+  state.chooser = choose(state.chooser, side);
+  renderChoose();
+  $('choose').scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
+}
+
+function usePicked() {
+  const r = nextRound(state.chooser);
+  if (r.kind !== 'done') return;
+  state.picked = r.direction.id;
+  state.openIndex = null;
+  generate();
+  openDetail(state.decks.findIndex((d) => d.picked), true);
+}
+
+/** The picked direction leads the three decks (the two others stay as alternatives). */
+function withPicked(seed) {
+  const base = DIRECTIONS.find((d) => d.id === state.picked);
+  if (!base) { state.picked = null; return; }
+  let i = state.decks.findIndex((d) => d.direction.id === base.id);
+  if (i < 0) {
+    const direction = state.style ? adaptDirection(base, state.style) : base;
+    const [deck] = applyPlans([deckIn(direction, seed)], currentPool(), state.edits);
+    const match = state.match ? { direction, role: 'pick', reason: 'You chose it in “Help me choose”.', changes: [] } : undefined;
+    state.decks = [{ ...deck, ...(match ? { match } : {}) }, ...state.decks.slice(0, 2)];
+    i = 0;
+  } else if (i > 0) state.decks = [state.decks[i], ...state.decks.filter((_, k) => k !== i)];
+  state.decks[0] = { ...state.decks[0], picked: true };
+}
+
 // ---------- results ----------
 
 function generate(fromStart = false) {
@@ -668,12 +798,16 @@ function generate(fromStart = false) {
     });
     state.decks = applyPlans(state.decks, currentPool(), state.edits);
   }
+  if (state.picked) withPicked(seed);
   saveProject();
-  $('results-title').textContent = state.match ? 'The closest look, and two others' : 'Pick a direction';
+  const picked = state.decks[0]?.picked;
+  $('results-title').textContent = picked ? 'Your pick, and two others' : state.match ? 'The closest look, and two others' : 'Pick a direction';
   renderOriginal();
   renderCards();
   if (state.openIndex !== null) openDetail(state.openIndex, false);
-  $('status').textContent = state.match
+  $('status').textContent = picked
+    ? `Your pick: ${state.decks[0].direction.name}. Also: ${state.decks.slice(1).map((d) => d.direction.name).join(', ')}.`
+    : state.match
     ? `Closest to your deck: ${state.decks[0].direction.name}. Also: ${state.decks.slice(1).map((d) => d.direction.name).join(', ')}.`
     : `Three directions ready: ${state.decks.map((d) => d.direction.name).join(', ')}.`;
   if (fromStart) showView('results', () => { window.scrollTo(0, 0); $('results-title').setAttribute('tabindex', '-1'); $('results-title').focus({ preventScroll: true }); });
@@ -721,7 +855,8 @@ function renderCards() {
     body.querySelector('h3').textContent = deck.match ? `${familyName(d.family)} · ${d.name}` : d.name;
     body.querySelector('.card-meta').textContent = s.name;
     if (isEdited(deck, state.edits)) body.querySelector('h3').append(Object.assign(document.createElement('span'), { className: 'edited-badge', textContent: 'Edited' }));
-    if (deck.match) {
+    if (deck.picked) body.prepend(Object.assign(document.createElement('p'), { className: 'match-badge is-best', textContent: 'Your pick' }));
+    else if (deck.match) {
       const badge = Object.assign(document.createElement('p'), { className: `match-badge${deck.match.role === 'best' ? ' is-best' : ''}`, textContent: deck.match.role === 'best' ? 'Closest to your deck' : 'Another option' });
       const why = Object.assign(document.createElement('p'), { className: 'match-reason', textContent: deck.match.reason });
       body.prepend(badge);
@@ -923,7 +1058,7 @@ function saveProject() {
   if (!state.pool && !hasEdits() && !state.uploads.length) { try { localStorage.removeItem(STORE); } catch { /* storage blocked */ } return; }
   const data = {
     v: 1, notes: $('notes').value, occasionId: state.occasionId, density: state.density, formality: state.formality, family: state.family,
-    baseSeed: state.baseSeed, round: state.round, order: state.order, pool: state.pool, style: state.style, edits: state.edits,
+    baseSeed: state.baseSeed, round: state.round, order: state.order, picked: state.picked, pool: state.pool, style: state.style, edits: state.edits,
     uploads: state.uploads, open: state.openIndex !== null && state.decks[state.openIndex] ? deckKey(state.decks[state.openIndex]) : null,
     title: currentPool().title,
   };
@@ -946,7 +1081,7 @@ function offerResume() {
   $('resume-go').onclick = () => {
     Object.assign(state, {
       occasionId: saved.occasionId ?? state.occasionId, density: saved.density ?? 'medium', formality: saved.formality ?? 'neutral',
-      family: saved.family ?? 'glass', baseSeed: saved.baseSeed ?? state.baseSeed, round: saved.round ?? 0, order: saved.order ?? 'original',
+      family: saved.family ?? 'glass', baseSeed: saved.baseSeed ?? state.baseSeed, round: saved.round ?? 0, order: saved.order ?? 'original', picked: saved.picked ?? null,
       pool: saved.pool ?? null, style: saved.style ?? null, edits: saved.edits ?? emptyEdits(), uploads: saved.uploads ?? [], history: [], future: [],
     });
     $('notes').value = saved.notes ?? '';

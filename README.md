@@ -126,6 +126,25 @@ Adjust → Tone re-runs the match; picking a look shows that look's own three di
 and "Show the best match again" comes back. Same limits as the writing step (six an hour
 per visitor); pictures of the slides go to Claude, as the privacy note says.
 
+## Help me choose
+
+Besides the automatic match, people can pick a design themselves. "Help me choose" on the
+results page runs a few either/or rounds (usually 3 to 7) until one direction is left:
+
+- Each round asks one question about a visible trait: light or dark background, flat or
+  with depth (glass, texture), serif or sans-serif type, formal or relaxed, headline above
+  or beside the content, left-aligned or centred (`TRAITS` in `src/engine/chooser.js`).
+- It shows two directions side by side (stacked on phones), each with the person's own
+  cover and the same content slide. The pair differs in the asked trait and as little as
+  possible otherwise (same look where it can), so the comparison is about the question.
+- Clicking one keeps that side; "No preference" skips the question; Back undoes an answer.
+  When no question splits the rest any more, the last few meet head to head.
+- Candidates are all directions that suit the occasion (in the uploaded deck's colours after
+  a redesign); closeness to the upload or fit for the occasion only decides which direction
+  represents a side, never the outcome.
+- "Use this design" puts the pick first on the results page ("Your pick") and opens it;
+  the pick is saved with the project.
+
 ## Editing slides
 
 On the detail page every slide has **Edit**, move up/down, add after, duplicate and delete

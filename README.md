@@ -55,6 +55,10 @@ panel for key figures. A planner places them per deck:
   use the regular forms in the same type and colours.
 - **Editorial:** the 15 directions below.
 
+Text that must stay on one line (poster words, key figures, labels) is fitted with real
+glyph widths (see Layout audit below) and never wraps in the preview: a long word like
+"PLYOMETRIE" or a figure like "+12 %" gets a smaller size rather than being cut or broken.
+
 Poster fonts (Anton, Bebas Neue, Six Caps) are in `fonts/` under the SIL Open
 Font License. Sample photos are from Wikimedia Commons (see
 `src/sample/photos/credits.json`); every photo shown is cited on the Works Cited slide.
@@ -107,7 +111,15 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    dropped. A deck with more than 40,000 characters of slide text is refused with a message
    instead of being cut (speaker notes are left out first). It adds no
    topic photos and no Works Cited slide the deck didn't have, and "Lighter" keeps every
-   slide. The style profile covers light/dark/tint, serif/sans, tone,
+   slide. The deck also keeps its **hierarchy**: only a slide's own headline becomes a
+   headline (a slide without one gets none, and its text takes the whole slide), body text
+   is never promoted or split into heading and detail unless the slide sets a lead-in apart,
+   and the app adds none of its own labels ("Thesis", "Question", "Key figure": `autoLabel()`
+   in `src/library/labels.js` returns nothing for `deck.verbatim`). Where a slide shows no
+   hierarchy at all, the redesign creates none: no headline, no heading/detail split, no big
+   number. Lists keep their own marker (`marker`: numbers only if the slide numbered its
+   items, bullets if it had bullets, nothing for plain lines). Key-figure layouts show
+   the slide's headline as a headline, never as a small label. The style profile covers light/dark/tint, serif/sans, tone,
    background, text and accent colours, surface (flat, gradient, glass, texture, photo),
    imagery, headline size, alignment, density, and the AI tells it can see (purple
    gradients, card grids, emoji bullets, stock icons, everything centred, generic stock
@@ -172,6 +184,26 @@ direction doesn't use, or an empty slide of six kinds.
   pictures, choices, edits, the open deck) is saved in the browser's localStorage after every
   change; the start screen offers "Continue your deck". New notes or a new upload start
   without the old edits. Present mode and the PowerPoint download use the edited slides.
+
+## Layout audit
+
+`npm run audit` (`tools/audit.mjs`) builds the test decks in `tools/audit/decks.js` (the
+example deck in three story structures, a German seminar deck with long compound words, and
+an extremes deck with twelve bullets and a very long paragraph) in every direction and
+density, renders them in headless Chromium at full size and measures what the browser drew:
+text that overflows its box or the slide, words broken mid-word (breaks after hyphens and in
+web addresses are fine), text overlapping text, and text the engine itself flags. It writes
+`audit-report/index.html` with a screenshot of every slide with a problem and exits with 1 if
+there is one. `npm run audit -- glass` checks only matching directions or looks.
+
+Run it after every layout change. When a real deck shows a new kind of problem, add content
+like it to `tools/audit/decks.js` so it stays fixed.
+
+Text sizes come from real glyph widths where they are known (`src/library/glyphs.js`,
+written by `tools/glyphs.py`): the bundled fonts, and Arial, Courier New, Calibri and Cambria
+through fonts with identical widths. Franklin Gothic, which only Windows has, is sized with
+Arial's wider glyphs (`metrics: 'arial'`). A headline too long for a side column moves above
+the content instead of breaking.
 
 ## PowerPoint export
 

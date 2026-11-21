@@ -1,4 +1,6 @@
 import { test } from 'node:test';
+import { widthEm } from '../src/library/glyphs.js';
+import { countLinesMeasured } from '../src/engine/fit.js';
 import assert from 'node:assert/strict';
 import { buildDirections, buildDeck } from '../src/engine/build.js';
 import { distance, sampleDirections } from '../src/engine/sampler.js';
@@ -280,7 +282,10 @@ test('cover text never runs into the author line, even with a long title', () =>
     const span = (e) => {
       const f = FONTS[e.font] ?? { factor: 0.55 };
       const factor = ((e.caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + (e.tracking ?? 0)) * (e.bold ? 1.06 : 1) * (/\d.*\d/.test(e.text) && e.text.replace(/\D/g, '').length / e.text.length > 0.5 ? 1.3 : 1);
-      const { lines } = countLines(e.text, e.w, e.size, factor);
+      const content = e.caps ? e.text.toUpperCase() : e.text;
+      const mk = FONTS[e.font]?.metrics ?? e.font;
+      const measure = widthEm(mk, 'a') != null ? (str) => widthEm(mk, str, e.bold) + (e.tracking ?? 0) * [...str].length : null;
+      const { lines } = measure ? countLinesMeasured(content, e.w, e.size, measure) : countLines(e.text, e.w, e.size, factor);
       const hh = lines * (e.size / 72) * (e.lineHeight ?? 1.2);
       const top = e.valign === 'bottom' ? e.y + e.h - hh : e.valign === 'middle' ? e.y + (e.h - hh) / 2 : e.y;
       return { top, bottom: top + hh };
@@ -292,4 +297,25 @@ test('cover text never runs into the author line, even with a long title', () =>
       if (sameColumn) assert.ok(a.bottom <= b.top + 0.02, `${direction.id} cover: "${a.e.text.slice(0, 24)}" runs into "${b.e.text.slice(0, 24)}"`);
     }
   }
+});
+
+test('one-line words and figures fit their box by real glyph width: "PLYOMETRIE" and "+12 %" stay whole', async () => {
+  const { widthEm } = await import('../src/library/glyphs.js');
+  const { toPool } = await import('../src/engine/content.js');
+  const pool = { ...SAMPLE_POOL, posterWords: ['PLYOMETRIE', 'SPRUNGKRAFT', 'HANDBALLSPIELERN'], items: [...SAMPLE_POOL.items, ...toPool({ deck: { title: 'x' }, figures: [{ title: 'Sprunghöhe', value: '+12 %', label: 'mehr' }, { title: 'Quote', value: '40,5 %', label: 'mehr' }], claims: [{ text: 'a' }, { text: 'b' }] }).items.filter((i) => i.kind === 'figure')] };
+  let checked = 0;
+  for (const family of ['poster', 'glass', 'texture', 'editorial']) for (let s = 0; s < 4; s++) {
+    for (const deck of buildDirections({ pool, occasionId: 'seminar', density: 'dense', seed: s, family })) {
+      for (const sl of deck.slides) for (const e of sl.els) {
+        if (e.type !== 'text' || !e.nowrap) continue;
+        const em = widthEm(FONTS[e.font]?.metrics ?? e.font, e.caps ? e.text.toUpperCase() : e.text, e.bold);
+        if (em == null) continue;
+        const run = e.rotate === 90 || e.rotate === -90 ? e.h : e.w;
+        const width = (em + (e.tracking ?? 0) * [...e.text].length) * (e.size / 72);
+        assert.ok(width <= run + 1e-6, `${deck.direction.id} ${sl.form}: "${e.text}" is ${width.toFixed(2)}in wide in a ${run.toFixed(2)}in box`);
+        checked++;
+      }
+    }
+  }
+  assert.ok(checked > 50, `checked ${checked} one-line texts`);
 });

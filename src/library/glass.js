@@ -13,7 +13,7 @@
 //   one hero effect per slide; text never sits on chrome or on a holo fill;
 //   a single glowing card per slide; light blobs are quieter on content slides.
 
-import { t as label_ } from './labels.js';
+import { t as label_, autoLabel } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
 import { text, label, rect, background } from './forms.js';
 
@@ -87,7 +87,7 @@ const prism = {
     ground(ctx);
     // two small glass cards carry the deck's key facts
     const lines = deck.posterLines ?? [];
-    [[W - 6.1, 3.45, 3.6], [W - 4.9, 4.75, 3.9]].forEach(([x, y, w], i) => {
+    [[W - 4.5, 3.45, 3.6], [W - 4.2, 4.75, 3.4]].forEach(([x, y, w], i) => {
       if (!lines[i]) return;
       glassPanel(ctx, x, y, w, 0.95, { radius: 0.22, float: true, seq: 3 + i });
       text(ctx, 'body', lines[i], { x: x + 0.3, y: y + 0.24, w: w - 0.6, h: 0.48 }, { max: 19, min: 11, bold: true, maxLines: 1, seq: 3 + i });
@@ -114,7 +114,7 @@ const prism = {
     const x = m + 0.3;
     const w = W - 2 * m - 1.6;
     glassPanel(ctx, m, 1.2, W - 2 * m - 1.0, H - 2.6, { radius: 0.4 });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x, y: 1.6, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x, y: 1.6, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x, y: 2.05, w, h: H - 4.3 }, { max: 36, min: 20, valign: 'middle', maxLines: 5, lineHeight: 1.15, seq: 1 });
     if (item.note) text(ctx, 'body', item.note, { x, y: H - 2.2, w, h: 0.55 }, { max: 16, min: 12, color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -123,7 +123,7 @@ const prism = {
     const { c, m } = ctx;
     ground(ctx);
     const w = W - 2 * m - 1.5;
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: m, y: 1.95, w, h: 3.3 }, { max: 40, min: 22, valign: 'middle', maxLines: 5, lineHeight: 1.1, seq: 1 });
     holoRule(ctx, m, 5.45, 1.4, 2);
     if (item.hint) text(ctx, 'body', item.hint, { x: m, y: 5.7, w, h: 0.7 }, { max: 17, min: 12, color: c.muted, maxLines: 2, seq: 3 });
@@ -133,7 +133,7 @@ const prism = {
     const { c, m } = ctx;
     ground(ctx, 0.7);
     const cw = 5.6;
-    micro(ctx, kick ?? item.title, { x: m, y: m, w: W - 2 * m, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? '', { x: m, y: m, w: W - 2 * m, h: 0.3 }, { color: c.accentText, seq: 1 });
     glowCard(ctx, m, 1.45, cw, H - 2.75);
     text(ctx, 'display', item.value, { x: m + 0.4, y: 1.75, w: cw - 0.8, h: 2.6 }, titleOpts(ctx, { max: 110, min: 50, valign: 'middle', maxLines: 1, caps: false, seq: 1 }));
     text(ctx, 'body', item.label, { x: m + 0.4, y: 4.45, w: cw - 0.8, h: 1.1 }, { max: 18, min: 12, color: c.muted, maxLines: 3, seq: 2 });
@@ -175,7 +175,7 @@ const pearl = {
     ground(ctx);
     const [px, py, pw, ph] = [1.4, 1.1, W - 2.8, H - 2.5];
     glassPanel(ctx, px, py, pw, ph, { radius: 0.5 });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: px + 0.8, y: py + 0.55, w: pw - 1.6, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x: px + 0.8, y: py + 0.55, w: pw - 1.6, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: px + 0.9, y: py + 1.0, w: pw - 1.8, h: ph - 2.0 }, { max: 32, min: 18, align: 'center', valign: 'middle', maxLines: 5, lineHeight: 1.18, seq: 1 });
     if (item.note) text(ctx, 'body', item.note, { x: px + 1.2, y: py + ph - 0.95, w: pw - 2.4, h: 0.55 }, { max: 15, min: 11, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -183,7 +183,7 @@ const pearl = {
   question(ctx, item, kick) {
     const { c } = ctx;
     ground(ctx);
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 1, y: 2.0, w: W - 2, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: 1, y: 2.0, w: W - 2, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: 1.6, y: 2.45, w: W - 3.2, h: 2.9 }, { max: 38, min: 20, align: 'center', valign: 'middle', maxLines: 4, lineHeight: 1.12, seq: 1 });
     if (item.hint) text(ctx, 'body', item.hint, { x: 2.2, y: 5.6, w: W - 4.4, h: 0.7 }, { max: 17, min: 12, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -191,13 +191,17 @@ const pearl = {
   bigNumber(ctx, item, kick) {
     const { c, m } = ctx;
     ground(ctx, 0.7);
-    micro(ctx, kick ?? item.title, { x: m, y: m, w: W - 2 * m, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
-    const [gx, gy, gw, gh] = [W / 2 - 3.3, 1.45, 6.6, 3.0];
+    // the headline stays a headline: above the key figure, not a small label
+    const top = kick ? m + 0.4 : m;
+    micro(ctx, kick ?? '', { x: m, y: m, w: W - 2 * m, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    text(ctx, 'display', item.title ?? '', { x: 1.4, y: top, w: W - 2.8, h: 1.0 }, { max: 28, min: 16, align: 'center', valign: 'middle', maxLines: 2, seq: 1 });
+    const [gx, gy, gw, gh] = [W / 2 - 3.3, top + 1.15, 6.6, 2.9];
     glowCard(ctx, gx, gy, gw, gh);
     text(ctx, 'display', item.value, { x: gx + 0.4, y: gy + 0.2, w: gw - 0.8, h: 1.9 }, { max: 96, min: 46, align: 'center', valign: 'middle', maxLines: 1, caps: false, color: c.accentText, seq: 1 });
     text(ctx, 'body', item.label, { x: gx + 0.5, y: gy + 2.05, w: gw - 1.0, h: 0.8 }, { max: 17, min: 12, align: 'center', color: c.muted, maxLines: 2, seq: 2 });
-    const cap = text(ctx, 'body', item.caption ?? '', { x: 1.8, y: 4.85, w: W - 3.6, h: 1.1 }, { max: 18, min: 12, align: 'center', color: c.ink, maxLines: 3, seq: 3 });
-    if (item.source) micro(ctx, item.source, { x: 1.8, y: 4.95 + cap.height, w: W - 3.6, h: 0.3 }, { align: 'center', seq: 3 });
+    const cy = gy + gh + 0.3;
+    const cap = text(ctx, 'body', item.caption ?? '', { x: 1.8, y: cy, w: W - 3.6, h: H - cy - 1.0 }, { max: 18, min: 12, align: 'center', color: c.ink, maxLines: 3, seq: 3 });
+    if (item.source) micro(ctx, item.source, { x: 1.8, y: cy + 0.1 + cap.height, w: W - 3.6, h: 0.3 }, { align: 'center', seq: 3 });
     corner(ctx);
   },
 };
@@ -235,7 +239,7 @@ const halo = {
     background(ctx);
     const w = W - 2 * m - 2.4;
     const x = (W - w) / 2;
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x, y: 1.55, w, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x, y: 1.55, w, h: 0.3 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x, y: 2.0, w, h: 3.4 }, { max: 38, min: 20, align: 'center', valign: 'middle', maxLines: 5, lineHeight: 1.15, seq: 1 });
     holoRule(ctx, W / 2 - 0.6, 5.65, 1.2, 2);
     if (item.note) text(ctx, 'body', item.note, { x, y: 5.9, w, h: 0.6 }, { max: 15, min: 11, align: 'center', color: c.muted, maxLines: 2, seq: 3 });
@@ -245,7 +249,7 @@ const halo = {
     const { c, m } = ctx;
     background(ctx);
     const w = W - 2 * m - 1.5;
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: m, y: 1.5, w, h: 0.3 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: m, y: 1.95, w, h: 3.4 }, { max: 40, min: 22, valign: 'middle', maxLines: 5, lineHeight: 1.12, seq: 1 });
     if (item.hint) text(ctx, 'body', item.hint, { x: m, y: 5.65, w, h: 0.7 }, { max: 17, min: 12, color: c.muted, maxLines: 2, seq: 3 });
     corner(ctx);
@@ -253,7 +257,7 @@ const halo = {
   bigNumber(ctx, item, kick) {
     const { c, m } = ctx;
     background(ctx);
-    micro(ctx, kick ?? item.title, { x: m, y: m, w: W - 2 * m, h: 0.3 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? '', { x: m, y: m, w: W - 2 * m, h: 0.3 }, { color: c.accentText, seq: 1 });
     const cw = 5.4;
     glowCard(ctx, m, 1.45, cw, H - 2.75);
     text(ctx, 'display', item.value, { x: m + 0.4, y: 1.75, w: cw - 0.8, h: 2.6 }, { font: ctx.dir.fonts.poster, bold: false, max: 110, min: 50, valign: 'middle', maxLines: 1, caps: false, gradient: holo(ctx, 160), seq: 1 });

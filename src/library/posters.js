@@ -9,7 +9,7 @@
 //   cutout    the photo shows through the letters of a giant vertical word
 //   monolith  an ultra-condensed word spans the width above a symmetrical photo
 
-import { t as label_ } from './labels.js';
+import { t as label_, autoLabel } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
 import { text, label, rect, background } from './forms.js';
 
@@ -52,7 +52,8 @@ function micro(ctx, str, box, o = {}) {
 /** One giant word in the poster face, sized to fill its box. */
 function bigWord(ctx, word, box, o = {}) {
   return text(ctx, 'display', word, box, {
-    font: ctx.dir.fonts.poster, max: o.max ?? 600, min: o.min ?? 60, caps: true, maxLines: 1,
+    // the word or figure stays whole on one line: the size gives way, not the letters
+    font: ctx.dir.fonts.poster, max: o.max ?? 600, min: o.min ?? 24, caps: true, maxLines: 1,
     lineHeight: o.lineHeight ?? 0.92, tracking: o.tracking ?? 0, align: o.align ?? 'center', valign: o.valign ?? 'top',
     color: o.color ?? ctx.c.ink, italic: false, bold: false, seq: o.seq ?? 1, bleed: true,
     rotate: o.rotate, alpha: o.alpha, fillImage: o.fillImage,
@@ -101,7 +102,7 @@ const summit = {
     const { c } = ctx;
     background(ctx);
     if (slide.mood) { photo(ctx, slide.mood); scrim(ctx, 0.66); }
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: 0.8, y: 1.15, w: 6, h: 0.25 }, { color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x: 0.8, y: 1.15, w: 6, h: 0.25 }, { color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: 0.8, y: 1.6, w: W * 0.66, h: H - 3 }, { max: 66, min: 30, caps: true, lineHeight: 1.0, valign: 'middle', maxLines: 5, color: c.ink });
     micro(ctx, ctx.deck.shortTitle, { x: 0.8, y: H - 0.6, w: 5, h: 0.22 });
     micro(ctx, pageNo(ctx), { x: W - 3.2, y: H - 0.6, w: 2.4, h: 0.22 }, { align: 'right' });
@@ -111,7 +112,7 @@ const summit = {
     const { c } = ctx;
     background(ctx);
     if (slide.mood) { photo(ctx, slide.mood); scrim(ctx, 0.58); }
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 1, y: 1.3, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: 1, y: 1.3, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1 });
     text(ctx, 'display', item.text, { x: 1.4, y: 1.8, w: W - 2.8, h: 3.6 }, { max: 70, min: 32, caps: true, lineHeight: 1.0, align: 'center', valign: 'middle', maxLines: 4, color: c.ink });
     if (item.hint) text(ctx, 'body', item.hint, { x: 2, y: H - 1.7, w: W - 4, h: 0.5 }, { max: 18, min: 12, italic: true, align: 'center', color: c.muted, seq: 3 });
     micro(ctx, pageNo(ctx), { x: W - 3.2, y: H - 0.6, w: 2.4, h: 0.22 }, { align: 'right' });
@@ -121,10 +122,14 @@ const summit = {
     const { c } = ctx;
     background(ctx);
     bigWord(ctx, item.value, { x: 0.4, y: 0.35, w: 5.6, h: H - 0.7 }, { align: 'left', color: c.accent, max: 520 });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Key figure'), { x: 6.4, y: 1.4, w: 6, h: 0.25 }, { color: c.accentText, seq: 1 });
-    const t = text(ctx, 'display', item.label, { x: 6.4, y: 1.8, w: 6.2, h: 1.9 }, { max: 54, min: 26, caps: true, maxLines: 2, lineHeight: 1.0, seq: 2 });
-    text(ctx, 'body', item.caption ?? '', { x: 6.4, y: 1.8 + t.height + 0.35, w: 5.8, h: 2.6 }, { max: 20, min: 13, color: c.muted, seq: 3 });
-    micro(ctx, item.title, { x: 6.4, y: H - 0.9, w: 6.2, h: 0.4 }, { maxLines: 2, max: 8 });
+    const k = kick ?? autoLabel(ctx.deck, 'Key figure');
+    micro(ctx, k, { x: 6.4, y: 1.4, w: 6, h: 0.25 }, { color: c.accentText, seq: 1 });
+    // the slide's headline is the headline; the words with the number follow it
+    const ty = k ? 1.8 : 1.4;
+    const t = text(ctx, 'display', item.title || item.label, { x: 6.4, y: ty, w: 6.2, h: 1.9 }, { max: 48, min: 24, caps: true, maxLines: 3, lineHeight: 1.0, seq: 2 });
+    const l = item.title && item.label.trim() ? text(ctx, 'body', item.label, { x: 6.4, y: ty + t.height + 0.3, w: 5.8, h: 0.9 }, { max: 22, min: 14, bold: true, maxLines: 2, seq: 2 }) : { height: 0 };
+    const cy = ty + t.height + 0.3 + (l.height ? l.height + 0.2 : 0);
+    text(ctx, 'body', item.caption ?? '', { x: 6.4, y: cy, w: 5.8, h: H - cy - 0.8 }, { max: 20, min: 13, color: c.muted, seq: 3 });
     return true;
   },
 };
@@ -165,7 +170,7 @@ const cutout = {
     background(ctx);
     const imgW = 3.9;
     if (slide.mood) photo(ctx, slide.mood, { x: W - imgW, y: 0, w: imgW, h: H });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: 0.18, y: 0.55, w: 0.35, h: H - 1.1 }, { rotate: -90, color: c.ink, max: 9, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x: 0.18, y: 0.55, w: 0.35, h: H - 1.1 }, { rotate: -90, color: c.ink, max: 9, seq: 1 });
     text(ctx, 'display', item.text, { x: 0.9, y: 0.8, w: W - imgW - 1.6, h: H - 1.6 }, { max: 70, min: 30, caps: true, lineHeight: 1.0, valign: 'middle', maxLines: 6 });
     micro(ctx, pageNo(ctx), { x: 0.9, y: H - 0.55, w: 3, h: 0.22 });
     return true;
@@ -175,7 +180,7 @@ const cutout = {
     background(ctx);
     const imgW = W * 0.42;
     if (slide.mood) photo(ctx, slide.mood, { x: W - imgW, y: 0, w: imgW, h: H });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 0.9, y: 1.1, w: 6, h: 0.25 }, { color: c.ink, seq: 1 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: 0.9, y: 1.1, w: 6, h: 0.25 }, { color: c.ink, seq: 1 });
     text(ctx, 'display', item.text, { x: 0.9, y: 1.5, w: W - imgW - 1.6, h: 4.2 }, { max: 64, min: 28, caps: true, lineHeight: 1.0, valign: 'middle', maxLines: 6 });
     if (item.hint) text(ctx, 'body', item.hint, { x: 0.9, y: H - 1.3, w: W - imgW - 1.6, h: 0.6 }, { max: 15, min: 11, color: c.muted, seq: 3 });
     return true;
@@ -185,9 +190,14 @@ const cutout = {
     background(ctx);
     const fill = slide.mood ? moodSrc(slide.mood, ctx.dir.grade) : undefined;
     bigWord(ctx, item.value, { x: 0.5, y: 0.25, w: 5.8, h: H - 0.5 }, { align: 'left', fillImage: fill, color: c.ink, max: 600, lineHeight: 0.85 });
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Key figure'), { x: 6.6, y: 1.5, w: 6, h: 0.25 }, { color: c.ink, seq: 1 });
-    const t = text(ctx, 'display', item.label, { x: 6.6, y: 1.9, w: 6, h: 1.8 }, { max: 50, min: 24, caps: true, maxLines: 2, lineHeight: 1.0, seq: 2 });
-    text(ctx, 'body', item.caption ?? '', { x: 6.6, y: 1.9 + t.height + 0.35, w: 5.6, h: 2.6 }, { max: 18, min: 12, color: c.muted, seq: 3 });
+    const k = kick ?? autoLabel(ctx.deck, 'Key figure');
+    micro(ctx, k, { x: 6.6, y: 1.5, w: 6, h: 0.25 }, { color: c.ink, seq: 1 });
+    // the slide's headline is the headline; the words with the number follow it
+    const ty = k ? 1.9 : 1.5;
+    const t = text(ctx, 'display', item.title || item.label, { x: 6.6, y: ty, w: 6, h: 1.9 }, { max: 46, min: 22, caps: true, maxLines: 3, lineHeight: 1.0, seq: 2 });
+    const l = item.title && item.label.trim() ? text(ctx, 'body', item.label, { x: 6.6, y: ty + t.height + 0.3, w: 5.6, h: 0.9 }, { max: 20, min: 13, bold: true, maxLines: 2, seq: 2 }) : { height: 0 };
+    const cy = ty + t.height + 0.3 + (l.height ? l.height + 0.2 : 0);
+    text(ctx, 'body', item.caption ?? '', { x: 6.6, y: cy, w: 5.6, h: H - cy - 0.8 }, { max: 18, min: 12, color: c.muted, seq: 3 });
     return true;
   },
 };
@@ -228,7 +238,7 @@ const monolith = {
     const { c } = ctx;
     background(ctx);
     if (slide.mood) { photo(ctx, slide.mood); scrim(ctx, 0.7); }
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Thesis'), { x: 1, y: 1.35, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1, tracking: 0.5 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Thesis'), { x: 1, y: 1.35, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1, tracking: 0.5 });
     text(ctx, 'display', item.text, { x: 1.6, y: 1.8, w: W - 3.2, h: 3.6 }, { max: 44, min: 22, italic: true, align: 'center', valign: 'middle', lineHeight: 1.25, maxLines: 5, color: c.ink });
     micro(ctx, pageNo(ctx), { x: 1, y: H - 0.6, w: W - 2, h: 0.22 }, { align: 'center' });
     return true;
@@ -237,7 +247,7 @@ const monolith = {
     const { c } = ctx;
     background(ctx);
     if (slide.mood) { photo(ctx, slide.mood, undefined, { pos: 'center 70%' }); scrim(ctx, 0.5); }
-    micro(ctx, kick ?? label_(ctx.deck.language, 'Question'), { x: 1, y: 1.35, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1, tracking: 0.5 });
+    micro(ctx, kick ?? autoLabel(ctx.deck, 'Question'), { x: 1, y: 1.35, w: W - 2, h: 0.25 }, { align: 'center', color: c.accentText, seq: 1, tracking: 0.5 });
     text(ctx, 'display', item.text, { x: 1.4, y: 1.8, w: W - 2.8, h: 3.4 }, { max: 48, min: 24, align: 'center', valign: 'middle', lineHeight: 1.2, maxLines: 4, color: c.ink });
     if (item.hint) micro(ctx, item.hint, { x: 1, y: H - 1.5, w: W - 2, h: 0.5 }, { align: 'center', maxLines: 2, max: 9, seq: 3 });
     return true;
@@ -245,8 +255,9 @@ const monolith = {
   bigNumber(ctx, item, kick) {
     const { c } = ctx;
     background(ctx);
-    micro(ctx, kick ?? item.title, { x: 1, y: 0.4, w: W - 2, h: 0.4 }, { align: 'center', maxLines: 2, max: 9 });
-    bigWord(ctx, item.value, { x: 1, y: 0.8, w: W - 2, h: 4.3 }, { color: c.accent, max: 460, lineHeight: 0.86 });
+    // the slide's headline as a headline above the number, not a tiny label
+    text(ctx, 'display', item.title ?? '', { x: 1, y: 0.35, w: W - 2, h: 0.9 }, { max: 30, min: 16, align: 'center', valign: 'middle', maxLines: 2, color: c.ink, seq: 1 });
+    bigWord(ctx, item.value, { x: 1, y: 1.3, w: W - 2, h: 3.8 }, { color: c.accent, max: 400, lineHeight: 0.86 });
     micro(ctx, item.label, { x: 1, y: 5.3, w: W - 2, h: 0.3 }, { align: 'center', color: c.ink, max: 14, tracking: 0.5, seq: 2 });
     text(ctx, 'body', item.caption ?? '', { x: 2.6, y: 5.8, w: W - 5.2, h: 1.1 }, { max: 17, min: 12, italic: true, align: 'center', color: c.muted, seq: 3 });
     return true;

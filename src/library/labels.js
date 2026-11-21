@@ -32,3 +32,9 @@ export function t(lang, s) {
 }
 
 export const LABEL_KEYS = Object.keys(DE);
+
+/**
+ * A label the app adds on its own ("Thesis", "Question", "Key figure"). A redesigned deck
+ * (deck.verbatim) keeps the hierarchy of the original slides, so it gets none.
+ */
+export const autoLabel = (deck, name) => (deck?.verbatim ? '' : t(deck?.language, name));

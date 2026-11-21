@@ -106,13 +106,15 @@ export function toPool(answer, { verbatim = false } = {}) {
   // nothing is added that the deck did not have (no topic photos, no empty Works Cited).
   const clip = verbatim ? (text) => str(text) : clipText;
   const many = (normal) => (verbatim ? Infinity : normal);
+  // a headline the original slide didn't have is not made up (redesign)
+  const orTitle = (made) => (verbatim ? '' : made);
   const items = [];
   // a piece that doesn't fit its slide form keeps its text as a list (redesign only)
   const rescue = (x, title, lines) => {
     if (!verbatim) return;
     const points = lines.map((l) => (typeof l === 'string' ? { head: str(l) } : { head: str(l.head), text: str(l.text) }))
       .map((p) => (p.head ? p : { head: p.text ?? '' })).filter((p) => p.head).map((p) => (p.text ? p : { head: p.head }));
-    if (points.length) items.push({ ...fromSlide(x), kind: 'points', weight: 2, title: str(title) || shortTitle, points });
+    if (points.length) items.push({ ...fromSlide(x), kind: 'points', weight: 2, title: str(title), points, marker: 'none' });
   };
   const d = a.deck ?? {};
   const title = clip(d.title, L.deckTitle) || clip(d.shortTitle, L.deckTitle);
@@ -141,7 +143,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     if (!value || value.length > L.value || !/\d/.test(value)) { rescue(x, x?.title, [[x?.value, x?.label].map(str).filter(Boolean).join(' '), x?.caption, x?.source].filter(Boolean)); return; } // a key figure is a number from the notes
     items.push({
       ...fromSlide(x), kind: 'figure', tags: ['evidence'], weight: weighted(a.figures, i), year: yearOf(x?.year),
-      title: clip(x?.title, L.title) || clip(x?.label, L.title), value, label: clip(x?.label, L.label) || ' ',
+      title: clip(x?.title, L.title) || orTitle(clip(x?.label, L.title)), value, label: clip(x?.label, L.label) || ' ',
       ...(str(x?.caption) ? { caption: clip(x.caption, L.caption) } : {}), ...(str(x?.source) ? { source: clip(x.source, L.item) } : {}),
     });
   });
@@ -153,7 +155,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     }
     items.push({
       ...fromSlide(x), kind: 'pair', tags: ['evidence'], weight: weighted(a.pairs, i), year: yearOf(x?.year),
-      title: clip(x?.title, L.title) || `${before} → ${after}`, ...(str(x?.word) ? { word: clip(x.word, 30) } : {}),
+      title: clip(x?.title, L.title) || orTitle(`${before} → ${after}`), ...(str(x?.word) ? { word: clip(x.word, 30) } : {}),
       left: { text: before, label: clip(x?.before?.label, 30) }, right: { text: after, label: clip(x?.after?.label, 30) },
       ...(str(x?.caption) ? { caption: clip(x.caption, L.caption) } : {}),
     });
@@ -166,7 +168,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     // more events means narrower columns, so shorter labels
     const events = raw.map((e) => ({ date: clip(e.date, 14), label: clip(e.label, raw.length > 4 ? 50 : 80) }));
     if (events.length < 3) return;
-    items.push({ ...fromSlide(x), kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || 'Timeline', events });
+    items.push({ ...fromSlide(x), kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || orTitle('Timeline'), events });
   });
   list(a.processes).forEach((x, i) => {
     if (verbatim && (list(x?.steps).length < 2 || list(x?.steps).length > 6 || list(x?.steps).some((st) => !str(st?.title)))) {
@@ -174,7 +176,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     }
     const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, many(5));
     if (steps.length < 2) return;
-    items.push({ ...fromSlide(x), kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || 'Step by step', steps });
+    items.push({ ...fromSlide(x), kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || orTitle('Step by step'), steps });
   });
   list(a.comparisons).forEach((x, i) => {
     const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, many(3)) });
@@ -183,7 +185,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     if (!left.heading || !right.heading || !left.points.length || !right.points.length) {
       rescue(x, x?.title, [...[x?.left, x?.right].flatMap((sd) => [sd?.heading, ...list(sd?.points)]), x?.verdict].filter((l) => str(l))); return;
     }
-    items.push({ ...fromSlide(x), kind: 'comparison', tags: ['counter'], weight: weighted(a.comparisons, i), title: clip(x?.title, L.title) || `${left.heading} or ${right.heading}`, left, right, ...(str(x?.verdict) ? { verdict: clip(x.verdict, 150) } : {}) });
+    items.push({ ...fromSlide(x), kind: 'comparison', tags: ['counter'], weight: weighted(a.comparisons, i), title: clip(x?.title, L.title) || orTitle(`${left.heading} or ${right.heading}`), left, right, ...(str(x?.verdict) ? { verdict: clip(x.verdict, 150) } : {}) });
   });
   list(a.quotes).forEach((x, i) => {
     const text = clip(x?.text, L.quote);
@@ -206,7 +208,9 @@ export function toPool(answer, { verbatim = false } = {}) {
     const points = rawPoints.map((p) => ({ head: clip(p.head, tight ? 55 : 70), text: clip(p?.text, tight ? 75 : 110) }));
     // an uploaded slide with a headline and one block of text is a list of one
     if (points.length < (verbatim ? 1 : 2)) return;
-    items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || shortTitle, points: points.map((p) => (p.text ? p : { head: p.head })) });
+    // a redesigned list keeps its own marker; nothing is numbered that the slide didn't number
+    const marker = verbatim ? (['number', 'bullet', 'none'].includes(str(x?.marker)) ? str(x.marker) : 'none') : undefined;
+    items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || orTitle(shortTitle), points: points.map((p) => (p.text ? p : { head: p.head })), ...(marker ? { marker } : {}) });
   });
   const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, many(10));
   // Works Cited is always there; with no sources in the notes it says so instead of inventing any.
@@ -226,7 +230,7 @@ export function toPool(answer, { verbatim = false } = {}) {
     language,
     title,
     shortTitle,
-    subtitle: clip(d.subtitle, 90) || shortTitle,
+    subtitle: clip(d.subtitle, 90) || orTitle(shortTitle),
     author: clip(d.author, 60), // left empty when the notes don't name one, rather than an English placeholder
     course: clip(d.course, 80),
     date: clip(d.date, 40),

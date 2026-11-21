@@ -25,6 +25,9 @@ export function renderSlide(els, { label, present = false } = {}) {
       if (el.soft) node.dataset.soft = '1';
       if (el.mood) node.dataset.mood = '1';
       if (el.type === 'text') node.dataset.size = String(el.size);
+      // for the layout audit (tools/audit.mjs): text meant to run off the slide, and one-line text
+      if (el.bleed) node.dataset.bleed = '1';
+      if (el.nowrap) node.dataset.nowrap = '1';
       if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.holo) node.dataset.holo = '1'; }
     }
     slide.append(node);
@@ -200,6 +203,8 @@ function drawText(el) {
     letterSpacing: el.tracking ? `${el.tracking}em` : 'normal',
     textTransform: el.caps ? 'uppercase' : 'none',
     overflowWrap: 'break-word',
+    // a one-line text never wraps: it was fitted to its box
+    ...(el.nowrap ? { whiteSpace: 'nowrap' } : {}),
   });
   if (!el.fits && !el.bleed) d.dataset.overflow = 'true';
   if (el.alpha != null) d.style.opacity = String(el.alpha);

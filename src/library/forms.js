@@ -19,7 +19,8 @@
 // (0 = with the slide, 1 = headline, 2+ = content, one step per item).
 
 import { FONTS } from './fonts.js';
-import { t as label_ } from './labels.js';
+import { t as label_, autoLabel } from './labels.js';
+import { widthEm } from './glyphs.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
@@ -77,7 +78,16 @@ export function text(ctx, role, str, box, o = {}) {
   // Unbounded's figures are much wider than its letters: numbers like "40.5%" need more room
   const digitHeavy = key === 'unbounded' && /^[\d\s.,%+\-–/:]+$/.test(content);
   // letter spacing widens every character; rotated text runs along the box's height
+  // a single line in a font whose real glyph widths are known is fitted exactly
+  // fonts that often render as a stand-in are measured with the stand-in's glyphs (FONTS[…].metrics)
+  const mk = f.metrics ?? key;
+  const em = o.maxLines === 1 && !String(content).includes('\n') ? widthEm(mk, content, bold) : null;
+  const lineEm = em == null ? undefined : em + tracking * [...content].length;
+  // any text in a bundled font wraps by its real glyph widths (with tracking and bold)
+  const known = widthEm(mk, 'a') != null;
+  const measure = known ? (str) => widthEm(mk, str, bold) + tracking * [...str].length : undefined;
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
+    lineEm, measure,
     max: o.max, min: o.min ?? Math.round(o.max * 0.6),
     factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
     lineHeight, maxLines: o.maxLines ?? Infinity,
@@ -89,6 +99,7 @@ export function text(ctx, role, str, box, o = {}) {
     align: o.align ?? 'left', valign: o.valign ?? 'top',
     lineHeight, caps, tracking,
     hanging: !!o.hanging, fits: r.fits, role,
+    ...(o.maxLines === 1 ? { nowrap: true } : {}),
     seq: o.seq ?? (isDisplay ? 1 : 2), bleed: !!o.bleed,
     ...(o.rotate ? { rotate: o.rotate } : {}),
     ...(o.alpha != null ? { alpha: o.alpha } : {}),
@@ -237,14 +248,24 @@ const footerSpace = (ctx) => (ctx.L.footer ? 0.45 : 0);
 function frame(ctx, title, kick) {
   const { L, c, m, scale } = ctx;
   const center = L.align === 'center';
+  // a slide without a headline (as in the original deck) gives its content the whole slide
+  if (!String(title ?? '').trim()) {
+    const y = m + kicker(ctx, kick, m, m, W - 2 * m, { align: center ? 'center' : 'left' });
+    return { x: m, y, w: W - 2 * m - (sig(ctx) === 'tabs' ? 0.35 : 0), h: H - y - m - footerSpace(ctx) };
+  }
   if (L.titlePos === 'side') {
     const colW = 3.55;
+    const start = ctx.els.length;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
     let y = m;
     y += kicker(ctx, kick, m, y, colW);
-    text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
-    const bx = m + colW + 0.85;
-    return { x: bx, y: m + 0.05, w: W - bx - m - (sig(ctx) === 'tabs' ? 0.3 : 0), h: H - 2 * m - footerSpace(ctx) - 0.05 };
+    const t = text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
+    if (t.el.fits) {
+      const bx = m + colW + 0.85;
+      return { x: bx, y: m + 0.05, w: W - bx - m - (sig(ctx) === 'tabs' ? 0.3 : 0), h: H - 2 * m - footerSpace(ctx) - 0.05 };
+    }
+    // a headline too long for the narrow column (a long compound word) goes above the content instead
+    ctx.els.length = start;
   }
   let y = m;
   y += kicker(ctx, kick, m, y, W - 2 * m, { align: center ? 'center' : 'left' });
@@ -599,7 +620,9 @@ function points(ctx, item, kick) {
   const list = item.points;
   const n = list.length;
   const rowH = b.h / n;
-  const nw = L.numbers === 'none' ? 0 : L.numbers === 'large' ? 1.0 : 0.7;
+  // a redesigned list keeps its own marker (item.marker): numbers only where the slide numbered its items
+  const marker = item.marker ?? (L.numbers === 'none' ? 'none' : 'number');
+  const nw = marker === 'number' ? (L.numbers === 'large' ? 1.0 : 0.7) : marker === 'bullet' && n > 1 ? 0.4 : 0;
   const centered = L.align === 'center' && nw === 0;
   // plain bullets (no detail lines, e.g. a redesigned deck's own list) get the whole row and regular weight
   const plain = list.every((p) => !p.text);
@@ -609,11 +632,16 @@ function points(ctx, item, kick) {
     const seq = 2 + i;
     const y = b.y + i * rowH;
     if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
-    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
+    if (!single && marker === 'number') numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
     const x = single ? b.x : b.x + nw;
-    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
+    // a lone paragraph keeps a readable line length
+    const lone = single && plain && !String(item.title ?? '').trim();
+    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: lone ? Math.min(b.w, 9.6) : b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
       max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+      // one block of text with no headline is the whole slide: it sits in the middle, not in a corner
+      ...(lone ? { valign: 'middle' } : {}),
     });
+    if (marker === 'bullet' && !single) ellipse(ctx, b.x + 0.05, y + pad + (hd.size / 72) * 0.62 - 0.05, 0.1, 0.1, c.accentText, { seq });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
   footer(ctx);
@@ -656,7 +684,7 @@ function question(ctx, item, kick) {
   const w = center ? W - 2 * m - 1.5 : W * 0.72;
   const x = center ? (W - w) / 2 : m;
   note(ctx, x, H * 0.2, w, H * 0.62);
-  kicker(ctx, kick ?? label_(ctx.deck.language, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
+  kicker(ctx, kick ?? autoLabel(ctx.deck, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
   text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.42 }, { max: Math.round(44 * scale), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5 });
   if (item.hint) text(ctx, 'body', item.hint, { x, y: H * 0.74, w, h: 0.8 }, { max: 20, min: 13, color: full ? ink : c.muted, align: center ? 'center' : 'left', seq: 3 });
   footer(ctx, full ? ink : undefined);

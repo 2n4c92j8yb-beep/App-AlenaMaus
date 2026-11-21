@@ -105,7 +105,8 @@ test('a style profile is cleaned whatever the model sends', () => {
 
 test('the analysis prompt asks for content and style and names every AI tell', () => {
   const p = analysePrompt();
-  assert.match(p, /Never invent a statistic/);
+  assert.match(p, /Word for word/);
+  assert.match(p, /Never add a word/);
   assert.match(p, /"style"/);
   assert.match(p, /"content"/);
   for (const t of TELLS) assert.ok(p.includes(t), t);
@@ -131,15 +132,14 @@ test('deck text loses footers, tool credits and page numbers; emoji bullets beco
   assert.match(text, /- Fixed bedtime/);
 });
 
-test('long decks drop speaker notes first, then stay within the notes limit', () => {
+test('long decks drop speaker notes first; the slide text is never cut', () => {
   const slides = Array.from({ length: 30 }, (_, i) => `Point ${i} ${'word '.repeat(80)}`);
-  const notes = slides.map(() => 'note '.repeat(200));
+  const notes = slides.map(() => 'note '.repeat(300));
   const r = cleanDeckText(slides, notes);
   assert.equal(r.trimmed, true);
   assert.doesNotMatch(r.text, /Speaker notes/);
-  assert.ok(r.text.length <= MAX_TEXT);
-  const huge = cleanDeckText(Array.from({ length: 60 }, (_, i) => `Slide topic ${i} ${'word '.repeat(80)}`));
-  assert.ok(huge.trimmed && huge.text.length <= MAX_TEXT);
+  for (let i = 0; i < 30; i++) assert.ok(r.text.includes(slides[i].trim()), `slide ${i + 1} complete`);
+  assert.throws(() => cleanDeckText(Array.from({ length: 150 }, (_, i) => `Slide topic ${i} ${'word '.repeat(80)}`)), /more text than the app can redesign/);
 });
 
 const SLIDE_XML = `<p:sld><p:cSld><p:bg><p:bgPr><a:gradFill><a:gsLst/></a:gradFill></p:bgPr></p:bg><p:spTree>
@@ -218,7 +218,7 @@ test('the server checks what the browser sends', () => {
   assert.throws(() => readBody({ images: ['javascript:alert(1)'] }), /could not be read/);
   assert.throws(() => readBody({ images: Array(MAX_IMAGES + 1).fill(PIXEL) }), /at most/);
   assert.throws(() => readBody({ images: [`data:image/jpeg;base64,${'A'.repeat(4_100_000)}`] }), /too large/);
-  assert.throws(() => readBody({ text: 'x'.repeat(15001) }), /limited/);
+  assert.throws(() => readBody({ text: 'x'.repeat(MAX_TEXT + 1) }), /limited/);
   const ok = readBody({ images: [PIXEL], theme: { colors: ['#7C3AED', 'red'], fonts: ['Poppins'] }, source: 'pdf' });
   assert.equal(ok.images[0].media_type, 'image/jpeg');
   assert.deepEqual(ok.theme.colors, ['#7C3AED']);
@@ -318,4 +318,52 @@ test('every look can lay out a deck in the uploaded order', () => {
       assert.deepEqual(deck.overflow, [], `${deck.direction.id} ${density}: ${JSON.stringify(deck.overflow)}`);
     }
   }
+});
+
+// ---------------------------------------------------------------- the slide text stays as it was
+
+test('a redesigned deck keeps every slide and its text word for word, and adds nothing', async () => {
+  const { toPool } = await import('../src/engine/content.js');
+  const { AS_UPLOADED } = await import('../src/library/structures.js');
+  const long = 'During the night, the brain replays what was learned during the day, strengthening the connections between neurons. This process, known as memory consolidation, is why students who sleep well after studying tend to remember more than those who stay up late cramming for an exam.';
+  const bullets = ['Memory consolidation happens mainly during deep sleep stages', 'Emotional regulation improves after a full night of rest', 'Attention and focus drop sharply after only one short night', 'Teenagers need between eight and ten hours of sleep per night', 'Screen use before bed delays the release of melatonin', 'Regular sleep schedules support better academic performance'];
+  const answer = {
+    deck: { language: 'en', title: 'The Role of Sleep in Learning', shortTitle: 'Sleep and Learning', subtitle: 'How rest shapes memory', author: 'A. Student', course: '', date: '', worksCitedTitle: '', posterWords: ['Sleep'], posterLines: [] },
+    pointLists: [
+      { slide: 2, title: 'Why Sleep Matters', points: bullets.map((head) => ({ head, text: '' })) },
+      { slide: 3, title: 'What Happens at Night', points: [{ head: long, text: '' }] },
+    ],
+    figures: [{ slide: 4, title: 'Most Teens Are Sleep-Deprived', value: '73 %', label: 'of high school students sleep less than 8 hours', caption: '', source: '', year: 0 }],
+    questions: [{ slide: 5, text: 'How could our school help students sleep better?', role: 'discussion', hint: '' }],
+    sources: [],
+    pictures: [{ search: 'sleeping student', kind: 'detail', title: 'x', caption: 'y' }],
+  };
+  // pieces that would have been cut or dropped before
+  const twelve = Array.from({ length: 12 }, (_, i) => `Bullet number ${i + 1} stays on the slide`);
+  const essay = `${long} ${long} ${long}`;
+  const extra = structuredClone(answer);
+  extra.pointLists.push({ slide: 6, title: 'Twelve bullets', points: twelve.map((head) => ({ head, text: '' })) });
+  extra.pointLists.push({ slide: 7, title: 'A long paragraph', points: [{ head: essay, text: '' }] });
+  extra.figures.push({ slide: 8, title: 'Not a short number', value: 'about two thirds', label: 'of all students', caption: '', source: '', year: 0 });
+  extra.quotes = [{ slide: 9, text: 'Sleep is the best meditation.', author: '', work: '', note: '', year: 0 }];
+  const full = toPool(extra, { verbatim: true });
+  assert.deepEqual(full.items.find((i) => i.slide === 6).points.map((p) => p.head), twelve, 'twelve bullets, none dropped');
+  assert.equal(full.items.find((i) => i.slide === 7).points[0].head, essay, 'no length limit');
+  assert.equal(full.items.find((i) => i.slide === 8).points[0].head, 'about two thirds of all students', 'a figure that is not a short number becomes a list');
+  assert.equal(full.items.find((i) => i.slide === 9).points[0].head, 'Sleep is the best meditation.', 'a quote without an author is kept');
+  assert.ok(!JSON.stringify(full.items).includes('…'), 'nothing shortened');
+  const pool = toPool(answer, { verbatim: true });
+  assert.equal(pool.verbatim, true);
+  assert.deepEqual(pool.pictureSearches, [], 'no topic photos the deck did not have');
+  assert.ok(!pool.items.some((i) => i.kind === 'sources'), 'no Works Cited the deck did not have');
+  assert.deepEqual(pool.items.find((i) => i.slide === 2).points.map((p) => p.head), bullets, 'six bullets, unchanged');
+  assert.equal(pool.items.find((i) => i.slide === 3).points[0].head, long, 'running text is not shortened');
+  for (const density of ['light', 'medium', 'dense']) for (let k = 0; k < DIRECTIONS.length; k += 3) {
+    const dirs = DIRECTIONS.slice(k, k + 3);
+    for (const deck of buildFromDirections({ pool, occasionId: 'seminar', density, seed: 1, directions: dirs, structures: dirs.map(() => AS_UPLOADED) })) {
+      assert.deepEqual(deck.slides.map((s) => s.item?.slide ?? 0), [0, 2, 3, 4, 5], `${deck.direction.id}/${density}: every slide, in order`);
+      assert.deepEqual(deck.overflow, [], `${deck.direction.id}/${density}`);
+    }
+  }
+  assert.match(analysePrompt(), /One piece per slide/);
 });

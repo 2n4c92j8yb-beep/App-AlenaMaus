@@ -88,6 +88,8 @@ export function assignAccents(plan, deck, dir, structure) {
     if (!eligible(s, i)) return;
     for (const a of kit) {
       if (!a.on.includes(s.form)) continue;
+      // a texture is decoration: only the cover, which has no content to compete with, may carry one
+      if (a.kind === 'texture' && s.form !== 'cover') continue;
       if (a.clearBottom && (s.item?.note || s.item?.hint)) continue; // a landscape needs the bottom of the slide free
       const bonus = (s.form === 'cover' ? 4 : 0) + (i === lastIdx && a.preferLast ? 3 : 0);
       cands.push({ i, a, score: a.priority + bonus + rng.next() * 1.5 });
@@ -105,13 +107,8 @@ export function assignAccents(plan, deck, dir, structure) {
     chosen.set(i, a);
     uses.set(a.id, (uses.get(a.id) ?? 0) + 1);
   }
-  // no slide matched the kit's places: the quietest texture goes on one eligible slide instead
-  if (!chosen.size) {
-    const quiet = kit.find((a) => a.kind === 'texture' && !a.strong) ?? kit.find((a) => a.kind === 'texture');
-    const i = plan.findIndex((s, k) => k > 0 && eligible(s, k));
-    if (quiet && i > 0) chosen.set(i, quiet);
-  }
-  return plan.map((s, i) => (chosen.has(i) ? { ...s, accent: chosen.get(i) } : s));
+  // a second background tone stays plain: no texture laid over the content
+  return plan.map((s, i) => (chosen.has(i) ? { ...s, accent: chosen.get(i).kind === 'invert' ? { ...chosen.get(i), texture: undefined } : chosen.get(i) } : s));
 }
 
 // ---------------------------------------------------------------- colour helpers

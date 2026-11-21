@@ -24,7 +24,8 @@ export function buildFromDirections({ pool, occasionId, density = 'medium', seed
 
 /** One deck. `plan` (slides chosen and ordered by the person, src/engine/edits.js) replaces the story structure's order. */
 export function buildDeck({ deck, direction, structure, density = 'medium', plan: own }) {
-  const base = own ? own.map((s) => ({ form: s.form, item: s.item, kicker: s.kicker, sectionNo: s.sectionNo ?? 0 })) : localize(assembleDeck(deck, structure, density), deck.language);
+  // chapter divider slides are no longer made; saved orders from before drop theirs
+  const base = own ? own.filter((s) => s.form !== 'section').map((s) => ({ form: s.form, item: s.item, kicker: s.kicker, sectionNo: s.sectionNo ?? 0 })) : localize(assembleDeck(deck, structure, density), deck.language);
   const plan = assignAccents(assignMood(base, deck, direction), deck, direction, structure);
   const lay = (s, i) => ({ ...s, els: layoutSlide(direction, deck, s, i, plan.length, density) });
   // pictures are cited once they are known to be on a slide, so Works Cited lists exactly what the deck shows

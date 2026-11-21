@@ -74,13 +74,15 @@ const list = (v) => (Array.isArray(v) ? v : []);
 const fromSlide = (x) => (Number.isInteger(Number(x?.slide)) && Number(x.slide) > 0 && Number(x.slide) < 500 ? { slide: Number(x.slide) } : {});
 
 /** Shorten at a word boundary if a piece is longer than a slide can hold. */
-export function clip(text, max) {
+export function clipText(text, max) {
   const t = str(text);
   if (t.length <= max) return t;
   const cut = t.slice(0, max - 1);
   const at = cut.lastIndexOf(' ');
   return `${(at >= max * 0.5 ? cut.slice(0, at) : cut).replace(/[,;:\s]+$/, '')}…`;
 }
+
+export const clip = clipText;
 
 /** Keep a number and its unit together: "40,5 %" must not break before the "%". */
 const keepNumber = (t) => t.replace(/(\d)\s+(%|‰|°|€|\$|£|km|kg|m|cm|mm|h|min|s|bpm)(?=$|[^\p{L}])/gu, '$1\u202F$2');
@@ -96,13 +98,27 @@ const weighted = (arr, i) => (i === 0 ? 3 : 2);
  * Anything missing or empty is dropped; anything too long is shortened.
  * Throws if the answer has too little to make a deck.
  */
-export function toPool(answer) {
+export function toPool(answer, { verbatim = false } = {}) {
   const a = answer && typeof answer === 'object' ? answer : {};
+  // Redesign of an uploaded deck: the slide text is kept word for word. Nothing is shortened
+  // and no list loses an item (the layout shrinks the type and says when something no longer
+  // fits); a piece that doesn't fit its form becomes a list instead of being dropped; and
+  // nothing is added that the deck did not have (no topic photos, no empty Works Cited).
+  const clip = verbatim ? (text) => str(text) : clipText;
+  const many = (normal) => (verbatim ? Infinity : normal);
+  const items = [];
+  // a piece that doesn't fit its slide form keeps its text as a list (redesign only)
+  const rescue = (x, title, lines) => {
+    if (!verbatim) return;
+    const points = lines.map((l) => (typeof l === 'string' ? { head: str(l) } : { head: str(l.head), text: str(l.text) }))
+      .map((p) => (p.head ? p : { head: p.text ?? '' })).filter((p) => p.head).map((p) => (p.text ? p : { head: p.head }));
+    if (points.length) items.push({ ...fromSlide(x), kind: 'points', weight: 2, title: str(title) || shortTitle, points });
+  };
   const d = a.deck ?? {};
   const title = clip(d.title, L.deckTitle) || clip(d.shortTitle, L.deckTitle);
   if (!title) throw new Error('The answer has no title.');
-  const shortTitle = clip(d.shortTitle, L.short) || clip(title, L.short);
-  const items = [];
+  // the short title is the footer label, not slide text
+  const shortTitle = clipText(d.shortTitle, L.short) || clipText(title, L.short);
 
   const ROLES = new Set(['thesis', 'context', 'counter', 'takeaway']);
   let thesisSeen = false;
@@ -117,11 +133,12 @@ export function toPool(answer) {
   list(a.definitions).forEach((x, i) => {
     const term = clip(x?.term, L.term);
     const text = clip(x?.text, L.defText);
-    if (term && text) items.push({ ...fromSlide(x), kind: 'definition', weight: weighted(a.definitions, i), term, text, ...(str(x?.gloss) ? { gloss: clip(x.gloss, L.gloss) } : {}) });
+    if (!term || !text) { rescue(x, x?.term, [x?.gloss, x?.text].filter(Boolean)); return; }
+    items.push({ ...fromSlide(x), kind: 'definition', weight: weighted(a.definitions, i), term, text, ...(str(x?.gloss) ? { gloss: clip(x.gloss, L.gloss) } : {}) });
   });
   list(a.figures).forEach((x, i) => {
     const value = keepNumber(str(x?.value));
-    if (!value || value.length > L.value || !/\d/.test(value)) return; // a key figure is a number from the notes
+    if (!value || value.length > L.value || !/\d/.test(value)) { rescue(x, x?.title, [[x?.value, x?.label].map(str).filter(Boolean).join(' '), x?.caption, x?.source].filter(Boolean)); return; } // a key figure is a number from the notes
     items.push({
       ...fromSlide(x), kind: 'figure', tags: ['evidence'], weight: weighted(a.figures, i), year: yearOf(x?.year),
       title: clip(x?.title, L.title) || clip(x?.label, L.title), value, label: clip(x?.label, L.label) || ' ',
@@ -131,7 +148,9 @@ export function toPool(answer) {
   list(a.pairs).forEach((x, i) => {
     const before = keepNumber(clip(x?.before?.text, 24));
     const after = keepNumber(clip(x?.after?.text, 24));
-    if (!before || !after) return;
+    if (!before || !after || (verbatim && (before.length > 24 || after.length > 24))) {
+      rescue(x, x?.title, [x?.word, { head: x?.before?.label, text: x?.before?.text }, { head: x?.after?.label, text: x?.after?.text }, x?.caption].filter(Boolean)); return;
+    }
     items.push({
       ...fromSlide(x), kind: 'pair', tags: ['evidence'], weight: weighted(a.pairs, i), year: yearOf(x?.year),
       title: clip(x?.title, L.title) || `${before} → ${after}`, ...(str(x?.word) ? { word: clip(x.word, 30) } : {}),
@@ -140,28 +159,36 @@ export function toPool(answer) {
     });
   });
   list(a.timelines).forEach((x, i) => {
-    const raw = list(x?.events).filter((e) => str(e?.date) && str(e?.label)).slice(0, 6);
+    if (verbatim && (list(x?.events).length < 3 || list(x?.events).length > 8 || list(x?.events).some((e) => !str(e?.date) || !str(e?.label)))) {
+      rescue(x, x?.title, list(x?.events).map((e) => ({ head: e?.date, text: e?.label }))); return;
+    }
+    const raw = list(x?.events).filter((e) => str(e?.date) && str(e?.label)).slice(0, many(6));
     // more events means narrower columns, so shorter labels
     const events = raw.map((e) => ({ date: clip(e.date, 14), label: clip(e.label, raw.length > 4 ? 50 : 80) }));
     if (events.length < 3) return;
     items.push({ ...fromSlide(x), kind: 'timeline', tags: ['evidence'], weight: 3 - Math.min(1, i), year: yearOf(x?.year), title: clip(x?.title, L.title) || 'Timeline', events });
   });
   list(a.processes).forEach((x, i) => {
-    const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, 5);
+    if (verbatim && (list(x?.steps).length < 2 || list(x?.steps).length > 6 || list(x?.steps).some((st) => !str(st?.title)))) {
+      rescue(x, x?.title, list(x?.steps).map((st) => ({ head: st?.title, text: st?.text }))); return;
+    }
+    const steps = list(x?.steps).map((s) => ({ title: clip(s?.title, L.head), text: clip(s?.text, 150) })).filter((s) => s.title).slice(0, many(5));
     if (steps.length < 2) return;
     items.push({ ...fromSlide(x), kind: 'steps', weight: weighted(a.processes, i), title: clip(x?.title, L.title) || 'Step by step', steps });
   });
   list(a.comparisons).forEach((x, i) => {
-    const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, 3) });
+    const side = (s) => ({ heading: clip(s?.heading, 40), points: list(s?.points).map((p) => clip(p, L.item)).filter(Boolean).slice(0, many(3)) });
     const left = side(x?.left);
     const right = side(x?.right);
-    if (!left.heading || !right.heading || !left.points.length || !right.points.length) return;
+    if (!left.heading || !right.heading || !left.points.length || !right.points.length) {
+      rescue(x, x?.title, [...[x?.left, x?.right].flatMap((sd) => [sd?.heading, ...list(sd?.points)]), x?.verdict].filter((l) => str(l))); return;
+    }
     items.push({ ...fromSlide(x), kind: 'comparison', tags: ['counter'], weight: weighted(a.comparisons, i), title: clip(x?.title, L.title) || `${left.heading} or ${right.heading}`, left, right, ...(str(x?.verdict) ? { verdict: clip(x.verdict, 150) } : {}) });
   });
   list(a.quotes).forEach((x, i) => {
     const text = clip(x?.text, L.quote);
     const author = clip(x?.author, 60);
-    if (!text || !author) return;
+    if (!text || !author) { rescue(x, '', [x?.text, x?.author, x?.work, x?.note].filter((l) => str(l))); return; }
     items.push({ ...fromSlide(x), kind: 'quote', tags: ['evidence'], weight: weighted(a.quotes, i), year: yearOf(x?.year), text, author, ...(str(x?.work) ? { work: clip(x.work, 80) } : {}), ...(str(x?.note) ? { note: clip(x.note, L.note) } : {}) });
   });
   const QROLES = new Set(['hook', 'discussion', 'task']);
@@ -172,24 +199,28 @@ export function toPool(answer) {
     items.push({ ...fromSlide(x), kind: 'question', tags: role === 'discussion' ? ['discussion', 'counter'] : [role], weight: role === 'hook' ? 3 : 2, text, ...(str(x?.hint) ? { hint: clip(x.hint, 120) } : {}) });
   });
   list(a.pointLists).forEach((x, i) => {
-    const rawPoints = list(x?.points).filter((p) => str(p?.head)).slice(0, 4);
+    // a point with only detail text keeps that text as its line (redesign)
+    const given = verbatim ? list(x?.points).map((p) => (str(p?.head) ? p : { head: p?.text, text: '' })) : list(x?.points);
+    const rawPoints = given.filter((p) => str(p?.head)).slice(0, many(4));
     const tight = rawPoints.length > 3; // four rows leave less room per point
     const points = rawPoints.map((p) => ({ head: clip(p.head, tight ? 55 : 70), text: clip(p?.text, tight ? 75 : 110) }));
-    if (points.length < 2) return;
+    // an uploaded slide with a headline and one block of text is a list of one
+    if (points.length < (verbatim ? 1 : 2)) return;
     items.push({ ...fromSlide(x), kind: 'points', weight: weighted(a.pointLists, i), title: clip(x?.title, L.title) || shortTitle, points: points.map((p) => (p.text ? p : { head: p.head })) });
   });
-  const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, 10);
-  // Works Cited is always there; with no sources in the notes it says so instead of inventing any
-  items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || t(d.language, 'Works Cited'), entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
+  const entries = list(a.sources).map((s) => clip(s, L.source)).filter(Boolean).slice(0, many(10));
+  // Works Cited is always there; with no sources in the notes it says so instead of inventing any.
+  // A redesigned deck only gets one when the uploaded deck listed sources.
+  if (!verbatim || entries.length) items.push({ kind: 'sources', weight: 3, title: clip(d.worksCitedTitle, 40) || t(d.language, 'Works Cited'), entries: entries.length ? entries : ['No sources were named in the notes. Add your sources here.'] });
 
-  if (items.filter((it) => it.kind !== 'sources').length < 3) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
+  if (items.filter((it) => it.kind !== 'sources').length < (verbatim ? 1 : 3)) throw new Error('The notes were too short to make a deck. Add a few more points and try again.');
   if (!thesisSeen) {
     // the strongest claim becomes the thesis, so thesis-first structures still have one
     const first = items.find((it) => it.kind === 'claim' && !(it.tags ?? []).length);
     if (first) { first.tags = ['thesis']; first.weight = 3; }
   }
 
-  const words = list(d.posterWords).map((w) => clip(w, 16).split(' ')[0]).filter(Boolean).slice(0, 3);
+  const words = list(d.posterWords).map((w) => clipText(w, 16).split(' ')[0]).filter(Boolean).slice(0, 3);
   const language = /^[a-z]{2}$/i.test(str(d.language)) ? str(d.language).toLowerCase() : 'en';
   return {
     language,
@@ -200,18 +231,19 @@ export function toPool(answer) {
     course: clip(d.course, 80),
     date: clip(d.date, 40),
     posterWords: words.length ? words : shortTitle.split(' ').slice(0, 3),
-    posterLines: list(d.posterLines).map((l) => clip(l, 40)).filter(Boolean).slice(0, 5),
-    place: clip(d.placeShort, 40),
-    placeShort: clip(d.placeShort, 24),
+    posterLines: list(d.posterLines).map((l) => clipText(l, 40)).filter(Boolean).slice(0, 5),
+    place: clipText(d.placeShort, 40),
+    placeShort: clipText(d.placeShort, 24),
     mood: [],
     pictureCaptions: list(a.pictureCaptions).map((p) => ({ title: clip(p?.title, L.title), caption: clip(p?.caption, L.caption) })).filter((p) => p.title).slice(0, 3),
     // what to look up on Wikimedia Commons (src/engine/pictures.js)
     pictureSearches: list(a.pictures).map((p) => ({
       search: clip(p?.search, 60).replace(/…$/, ''), kind: PICTURE_KINDS.has(str(p?.kind)) ? str(p.kind) : 'landscape',
       title: clip(p?.title, L.title), caption: clip(p?.caption, L.caption),
-    })).filter((p) => p.search && p.title).slice(0, 5),
+    })).filter((p) => p.search && p.title).slice(0, verbatim ? 0 : 5),
     items,
     generated: true,
+    ...(verbatim ? { verbatim: true } : {}),
   };
 }
 

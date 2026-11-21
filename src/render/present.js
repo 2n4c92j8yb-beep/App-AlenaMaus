@@ -10,7 +10,7 @@
 //   - exits are simultaneous and shorter than entrances
 //   - forward enters from the right, back from the left
 //   - a click mid-animation finishes it instead of stacking a second one
-//   - one ambient motion per slide at most (chrome floats, or the light drifts)
+//   - no ambient motion: once a slide has appeared, nothing on it keeps moving
 //   - reduce motion: no movement and no delays, opacity only
 // Without GSAP the slides still appear: the CSS build in styles.css takes over.
 
@@ -142,18 +142,8 @@ export function playSlide(frame, slide, { complete = false } = {}) {
     }, 0.15);
   }
 
-  /** One gentle ambient motion: the largest chrome object floats, otherwise the light drifts. */
-  function startAmbient() {
-    if (still) return;
-    const chrome = nodes.filter((n) => n.dataset.type === 'chrome');
-    const light = nodes.filter((n) => n.dataset.soft);
-    if (chrome.length) {
-      const big = chrome.reduce((a, b) => (a.offsetWidth * a.offsetHeight >= b.offsetWidth * b.offsetHeight ? a : b));
-      ambient = g.to(big, { y: -8, duration: 3.6, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-    } else if (light.length) {
-      ambient = g.to(light, { x: 'random(-24, 24)', y: 'random(-16, 16)', duration: 9, ease: 'sine.inOut', yoyo: true, repeat: -1, stagger: 0.6 });
-    }
-  }
+  /** No ambient motion: nothing floats, drifts or turns while the audience reads. */
+  function startAmbient() {}
 
   function controller() {
     return {

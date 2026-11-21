@@ -118,11 +118,8 @@ export async function upgradeChrome(frame) {
     let raf = 0;
     const start = performance.now();
     const draw = (t) => {
-      const s = (t - start) / 1000;
-      if (scene.environmentRotation) scene.environmentRotation.y = s * 0.18; // reflections drift slowly
-      if (node.dataset.kind !== 'sphere') mesh.rotation.y = Math.sin(s * 0.35) * 0.35;
+      // drawn once and held still: no turning, no drifting reflections
       renderer.render(scene, camera);
-      if (!reduced() && !handle.stopped) raf = requestAnimationFrame(draw);
     };
     draw(start);
     requestAnimationFrame(() => {

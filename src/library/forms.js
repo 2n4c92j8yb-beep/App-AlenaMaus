@@ -50,7 +50,8 @@ function makeCtx(dir, deck, slide, index, total, density) {
   const c = slide?.accent?.kind === 'invert' ? invertPalette({ ...dir.colors }, contrast) : { ...dir.colors };
   c.accentText = c.accentText ?? (contrast(c.accent, c.bg) >= 3 ? c.accent : c.ink);
   return {
-    dir, L: dir.layout, c, deck, slide, slideIndex: index, total, density,
+    // list and step numbers stay small: the content is the main character, not the numbering
+    dir, L: dir.layout.numbers === 'large' ? { ...dir.layout, numbers: 'small' } : dir.layout, c, deck, slide, slideIndex: index, total, density,
     m: dir.layout.margin,
     scale: dir.layout.scale ?? 1,
     dz: density === 'dense' ? 0.88 : density === 'light' ? 1.1 : 1,
@@ -179,54 +180,22 @@ function signature(ctx, kind) {
   const { c, slideIndex: i, slide } = ctx;
   const v = i % 3;
   switch (sig(ctx)) {
-    case 'spots': {
-      const big = kind === 'content' || kind === 'quiet' ? 0.6 : 1;
-      if (kind === 'quiet') return;
-      const spots = [
-        [W - 3.4 * big, -2.2 * big, 5.6 * big],
-        [-1.6 * big, H - 2.4 * big, 4.2 * big],
-        [W - 2.6 * big, H - 2.2 * big, 4 * big],
-      ];
-      ellipse(ctx, ...spots[v].slice(0, 2), spots[v][2], spots[v][2], c.accent, { alpha: kind === 'content' ? 0.08 : 0.14 });
-      if (kind !== 'content') ellipse(ctx, ...spots[(v + 1) % 3].slice(0, 2), spots[(v + 1) % 3][2] * 0.7, spots[(v + 1) % 3][2] * 0.7, c.ink, { alpha: 0.05 });
+    // spots, circles, blocks and glows were decoration without information: left out
+    case 'spots':
+    case 'circles':
+    case 'blocks':
+    case 'glow':
       return;
-    }
-    case 'circles': {
-      if (kind === 'quiet') return;
-      if (kind === 'content') { ellipse(ctx, W - 2.1, -1.4, 3.6, 3.6, c.soft); return; }
-      ellipse(ctx, -2.2 + v * 0.6, H - 4.2, 6.2, 6.2, c.soft);
-      ellipse(ctx, W - 3.2, -1.5 + v * 0.4, 4, 4, c.accent, { alpha: 0.16 });
-      return;
-    }
-    case 'blocks': {
-      if (kind === 'quiet') return;
-      const s = kind === 'content' ? 0.7 : 1;
-      rect(ctx, W - 4.2 * s, -0.5, 4.8 * s, 3.6 * s, c.accent, { alpha: 0.1 });
-      rect(ctx, W - 2.8 * s, 1.8 * s, 3.4 * s, 4.2 * s, c.accent, { alpha: 0.07 });
-      return;
-    }
-    case 'glow': {
-      if (kind === 'quiet') return;
-      if (kind === 'content') { ellipse(ctx, W - 3.5, H - 3.2, 5.5, 5.5, c.accent, { alpha: 0.07 }); return; }
-      ellipse(ctx, W * 0.5, -2.2, 8.5, 8.5, c.accent, { alpha: 0.13 });
-      return;
-    }
     case 'tabs': {
       // an index tab on the right edge, lower for each section
       const n = slide?.sectionNo ?? 0;
       if (kind !== 'quiet') rect(ctx, W - 0.32, 0.7 + (n % 4) * 1.35, 0.32, 1.15, c.accent);
       return;
     }
-    case 'plate': {
-      if (kind === 'section') rect(ctx, 0, 0, W * 0.4, H, c.soft);
-      if (kind === 'statement') rect(ctx, W * 0.74, 0, W * 0.26, H, c.soft);
+    // empty colour panels and corner squares hold nothing: left out
+    case 'plate':
+    case 'offset':
       return;
-    }
-    case 'offset': {
-      if (kind === 'statement') rect(ctx, W - 1.6, 0, 1.6, 1.6, c.accent);
-      if (kind === 'content') rect(ctx, W - 0.7, 0, 0.7, 0.7, c.accent);
-      return;
-    }
     case 'masthead': {
       if (kind === 'statement') rect(ctx, 0, 0, W, 0.5, c.ink);
       return;
@@ -271,7 +240,6 @@ function frame(ctx, title, kick) {
   if (L.titlePos === 'side') {
     const colW = 3.55;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
-    if (sig(ctx) === 'bleed') bleedNumber(ctx, ctx.slideIndex + 1, { side: 'left', size: 230 });
     let y = m;
     y += kicker(ctx, kick, m, y, colW);
     text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
@@ -485,7 +453,7 @@ function comparison(ctx, item, kick) {
 function numberEl(ctx, n, box, o = {}) {
   const { L, c } = ctx;
   const s = String(n).padStart(2, '0');
-  if (L.numbers === 'large') return text(ctx, 'display', s, box, { max: o.large ?? 40, min: 22, color: c.accentText, italic: false, caps: false, maxLines: 1, seq: o.seq });
+  if (L.numbers === 'large') return text(ctx, 'display', s, box, { max: o.large ?? 40, min: o.min ?? 22, color: c.accentText, italic: false, caps: false, maxLines: 1, seq: o.seq });
   if (L.numbers === 'small') return label(ctx, s, box, { max: 13, min: 10, color: c.accentText, maxLines: 1, seq: o.seq });
   return { height: 0 };
 }
@@ -521,7 +489,7 @@ function processForm(ctx, item, kick) {
     const first = ctx.els.length;
     const xs = steps.map((_, i) => b.x + i * (colW + gap));
     // numbers and headings first, so every column's text starts on the same line
-    const nbs = steps.map((_, i) => text(ctx, 'display', String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.6 }, { max: 28, min: 18, color: c.accentText, italic: false, caps: false, maxLines: 1, align, seq: 2 + i }));
+    const nbs = steps.map((_, i) => label(ctx, String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.3 }, { max: 13, min: 10, color: c.accentText, maxLines: 1, align, seq: 2 + i }));
     const ty = b.y + Math.max(...nbs.map((r) => r.height)) + 0.2;
     const hds = steps.map((s, i) => text(ctx, 'display', s.title, { x: xs[i], y: ty, w: colW, h: 1.0 }, { max: 22, min: 15, italic: false, maxLines: 3, align, seq: 2 + i }));
     const by = ty + Math.max(...hds.map((r) => r.height)) + 0.15;
@@ -633,12 +601,19 @@ function points(ctx, item, kick) {
   const rowH = b.h / n;
   const nw = L.numbers === 'none' ? 0 : L.numbers === 'large' ? 1.0 : 0.7;
   const centered = L.align === 'center' && nw === 0;
+  // plain bullets (no detail lines, e.g. a redesigned deck's own list) get the whole row and regular weight
+  const plain = list.every((p) => !p.text);
+  const single = n === 1;
+  const pad = plain && n > 6 ? 0.03 : 0.14; // long plain lists use their rows to the edge
   list.forEach((p, i) => {
     const seq = 2 + i;
     const y = b.y + i * rowH;
-    if (isLedger(ctx)) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
-    numberEl(ctx, i + 1, { x: b.x, y: y + 0.12, w: nw, h: Math.min(rowH - 0.2, 0.75) }, { large: 34, seq });
-    const hd = text(ctx, 'body', p.head, { x: b.x + nw, y: y + 0.14, w: b.w - nw, h: rowH * 0.45 }, { max: Math.round(25 * dz), min: 15, bold: true, maxLines: 2, align: centered ? 'center' : 'left', seq });
+    if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
+    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
+    const x = single ? b.x : b.x + nw;
+    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
+      max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+    });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
   footer(ctx);

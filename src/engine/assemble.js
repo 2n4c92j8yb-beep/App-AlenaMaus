@@ -23,9 +23,9 @@ export function assembleDeck(pool, structure, density = 'medium') {
     const items = pick(pool.items, role, n, used, density);
     if (!items.length) continue;
     if (structure.chronological) items.sort((a, b) => (a.year ?? 0) - (b.year ?? 0));
-    if (role.section && density !== 'light') {
-      slides.push({ form: 'section', item: { number: ++sectionCount, label: role.section }, sectionNo: sectionCount });
-    }
+    // no chapter divider slides (a big "01" and a label add load, not information);
+    // the section number only steers quiet cues such as an index tab
+    if (role.section && density !== 'light') sectionCount++;
     items.forEach((item, i) => {
       used.add(item);
       let form = FORM_FOR_KIND[item.kind];
@@ -35,9 +35,7 @@ export function assembleDeck(pool, structure, density = 'medium') {
     });
   }
 
-  // A single section divider adds nothing; drop it.
-  const sections = slides.filter((s) => s.form === 'section');
-  return sections.length < 2 ? slides.filter((s) => s.form !== 'section') : slides;
+  return slides;
 }
 
 function pick(items, role, n, used, density) {
@@ -74,6 +72,7 @@ const KEEP = new Set(['thesis', 'takeaway', 'hook']);
 export function hasSlideOrder(pool) {
   const pieces = (pool?.items ?? []).filter((it) => it.kind !== 'sources' && it.kind !== 'image');
   const placed = pieces.filter((it) => it.slide > 0);
+  if (pool?.verbatim) return placed.length > 0 && placed.length >= pieces.length * 0.6;
   return placed.length >= 3 && placed.length >= pieces.length * 0.6;
 }
 
@@ -89,7 +88,8 @@ export function assembleInOrder(pool, density = 'medium') {
     .map((it, i) => ({ it, i, at: it.slide > 0 ? it.slide : Infinity }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
     .map((x) => x.it);
-  if (density === 'light' && pieces.length > 3) {
+  // a redesigned deck keeps every slide of the original (pool.verbatim): density only changes the type
+  if (density === 'light' && pieces.length > 3 && !pool.verbatim) {
     // about three in five pieces: those with a fixed job first, then the stronger ones, back in order
     const rank = (it) => ((it.tags ?? []).some((t) => KEEP.has(t)) ? 10 : 0) + (it.weight ?? 1);
     const keep = new Set([...pieces].sort((a, b) => rank(b) - rank(a)).slice(0, Math.max(3, Math.ceil(pieces.length * 0.6))));

@@ -61,7 +61,9 @@ export function userContent({ images, text, theme, source, pages = [] }, occasio
 
 /** Ask Claude for content and style. `client` is injectable for tests. */
 export async function analyseDeck(input, occasionId, client = new Anthropic({ apiKey: apiKey() })) {
-  const response = await client.beta.messages.create({
+  // streamed: copying a long deck word for word needs a high max_tokens, and the SDK refuses
+  // a non-streaming request that could run longer than ten minutes
+  const response = await client.beta.messages.stream({
     model: MODEL,
     max_tokens: 32000, // the whole deck comes back word for word
     betas: ['server-side-fallback-2026-07-01'],
@@ -69,7 +71,7 @@ export async function analyseDeck(input, occasionId, client = new Anthropic({ ap
     system: analysePrompt(),
     messages: [{ role: 'user', content: userContent(input, occasionById(occasionId).name) }],
     output_config: { effort: 'medium' }, // judging a look needs a little more care than writing from notes
-  });
+  }).finalMessage();
   if (response.stop_reason === 'refusal') throw Object.assign(new Error('Claude declined to read this deck.'), { status: 422 });
   if (response.stop_reason === 'max_tokens') throw Object.assign(new Error('The deck has too much text to copy in one go. Split it into two parts and upload them one at a time.'), { status: 502 });
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');

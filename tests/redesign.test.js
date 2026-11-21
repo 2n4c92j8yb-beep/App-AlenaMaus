@@ -419,3 +419,36 @@ test('a redesigned list keeps its own marker: numbers only where the slide numbe
     }
   }
 });
+
+// ---------------------------------------------------------------- the deck's own pictures
+
+test('PowerPoint: each slide\'s pictures are found with their size; icons and vector pictures are left out', async () => {
+  const { slidePictures } = await import('../src/engine/import.js');
+  const pic = (id, cx, cy) => `<p:pic><p:blipFill><a:blip r:embed="${id}"/></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm></p:spPr></p:pic>`;
+  const slide = `<p:sld><p:cSld><p:spTree>${pic('rId2', 4572000, 3429000)}${pic('rId3', 457200, 457200)}${pic('rId4', 5486400, 3657600)}${pic('rId5', 9144000, 5143500)}</p:spTree></p:cSld></p:sld>`;
+  const rels = '<Relationships><Relationship Id="rId2" Type="image" Target="../media/image1.jpeg"/><Relationship Id="rId3" Type="image" Target="../media/icon.png"/><Relationship Id="rId4" Type="image" Target="../media/image2.png"/><Relationship Id="rId5" Type="image" Target="../media/chart.emf"/></Relationships>';
+  const found = slidePictures(slide, rels);
+  assert.deepEqual(found.map((p) => p.target), ['ppt/media/image2.png', 'ppt/media/image1.jpeg'], 'largest first; the half-inch icon and the EMF are left out');
+  assert.equal(found[1].w, 5);
+});
+
+test('PDF: pictures are located through transforms and form XObjects; logos and backgrounds are dropped', async () => {
+  const { pictureBoxes, keepPictures } = await import('../src/engine/import.js');
+  const OPS = { save: 1, restore: 2, transform: 3, paintImageXObject: 4, paintInlineImageXObject: 5, paintFormXObjectBegin: 6, paintFormXObjectEnd: 7 };
+  // a 960 x 540 pt page; the viewport flips y (top-left origin)
+  const vt = [1, 0, 0, -1, 0, 540];
+  const ops = {
+    fnArray: [1, 3, 4, 2, 6, 3, 4, 7],
+    argsArray: [null, [400, 0, 0, 300, 500, 100], ['img1'], null, [[1, 0, 0, 1, 10, 10], null], [50, 0, 0, 50, 0, 0], ['img2'], null],
+  };
+  const boxes = pictureBoxes(ops, OPS, vt);
+  assert.deepEqual(boxes[0], { x: 500, y: 140, w: 400, h: 300 });
+  assert.deepEqual(boxes[1], { x: 10, y: 480, w: 50, h: 50 });
+  const found = [
+    ...[1, 2, 3, 4].map((slide) => ({ slide, key: 'logo', area: 0.04 })),
+    { slide: 2, key: 'photo', area: 0.25 }, { slide: 3, key: 'bg', area: 0.98 }, { slide: 3, key: 'icon', area: 0.005 },
+    { slide: 4, key: 'a', area: 0.1 }, { slide: 4, key: 'b', area: 0.2 }, { slide: 4, key: 'c', area: 0.05 },
+  ];
+  const kept = keepPictures(found, 4);
+  assert.deepEqual(kept.map((p) => p.key), ['photo', 'b', 'a'], 'no logo, background or icon; two per slide, largest first');
+});

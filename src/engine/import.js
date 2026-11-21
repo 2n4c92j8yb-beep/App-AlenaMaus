@@ -13,6 +13,7 @@
 export const MAX_SLIDES = 10;       // pictures sent to Claude
 export const MAX_TEXT = 40000;      // slide text of an uploaded deck (api/analyse.js accepts the same); never cut
 const SHOT_WIDTH = 1000;            // px; enough to read a slide, small enough to send
+const PICTURE_WIDTH = 1600;         // px; the deck's own pictures, kept on the device for the redesign
 const BUDGET = 3_800_000;           // base64 characters for all pictures together
 
 // ---------------------------------------------------------------- text clean-up
@@ -96,6 +97,81 @@ export function backgroundOf(xml) {
 
 const num = (name) => Number(/(\d+)\.xml$/.exec(name)?.[1] ?? 0);
 
+// ---------------------------------------------------------------- the deck's own pictures
+
+const EMU_PER_INCH = 914400;
+
+/**
+ * The pictures a PowerPoint slide shows: `{ target, w, h }` per picture (target resolved to
+ * a path in the file, w/h the size on the slide in inches), largest first. Pictures smaller
+ * than about an inch and a half are icons or bullets and are left out.
+ */
+export function slidePictures(slideXml, relsXml) {
+  const rels = new Map([...String(relsXml ?? '').matchAll(/<Relationship\b[^>]*>/g)].map(([tag]) => [
+    /\bId="([^"]+)"/.exec(tag)?.[1], /\bTarget="([^"]+)"/.exec(tag)?.[1],
+  ]).filter(([id, t]) => id && t));
+  const out = [];
+  for (const [pic] of String(slideXml ?? '').matchAll(/<p:pic\b[\s\S]*?<\/p:pic>/g)) {
+    const id = /r:embed="([^"]+)"/.exec(pic)?.[1];
+    const ext = /<a:ext\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/.exec(pic);
+    const target = rels.get(id);
+    if (!target || !ext) continue;
+    const w = Number(ext[1]) / EMU_PER_INCH;
+    const h = Number(ext[2]) / EMU_PER_INCH;
+    if (Math.max(w, h) < 1.5) continue;
+    const path = target.startsWith('/') ? target.slice(1) : `ppt/${target.replace(/^\.\.\//, '')}`;
+    if (!/\.(png|jpe?g|gif|webp)$/i.test(path)) continue; // vector pictures (EMF/SVG) can't be shown as they are
+    out.push({ target: path, w, h });
+  }
+  return out.sort((a, b) => b.w * b.h - a.w * a.h);
+}
+
+/**
+ * Where a PDF page paints its pictures, from pdf.js's operator list: boxes in the page's
+ * viewport coordinates (top-left origin), following save/restore, transforms and form
+ * XObjects. `vt` is the viewport transform at the scale the page is rendered.
+ */
+export function pictureBoxes({ fnArray, argsArray }, OPS, vt) {
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const boxes = [];
+  fnArray.forEach((fn, i) => {
+    const args = argsArray[i];
+    if (fn === OPS.save) stack.push(ctm);
+    else if (fn === OPS.restore) ctm = stack.pop() ?? ctm;
+    else if (fn === OPS.transform) ctm = mul(ctm, args);
+    else if (fn === OPS.paintFormXObjectBegin) { stack.push(ctm); if (Array.isArray(args?.[0]) && args[0].length === 6) ctm = mul(ctm, args[0]); }
+    else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() ?? ctm;
+    else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject) {
+      // an image fills the unit square of the current transform
+      const m = mul(vt, ctm);
+      const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]);
+      const xs = pts.map((p) => p[0]);
+      const ys = pts.map((p) => p[1]);
+      boxes.push({ x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) });
+    }
+  });
+  return boxes;
+}
+
+/**
+ * Which pictures to keep: big enough to be content (not an icon), not a background that
+ * fills the slide, and not a logo repeated on most slides. `found` is [{ slide, key, area }]
+ * (area as a share of the slide); returns the kept entries, at most two per slide, largest first.
+ */
+export function keepPictures(found, slideCount) {
+  const seen = new Map();
+  found.forEach((p) => seen.set(p.key, (seen.get(p.key) ?? 0) + 1));
+  const logo = (p) => slideCount >= 3 && seen.get(p.key) > slideCount / 2;
+  const bySlide = new Map();
+  for (const p of found) {
+    if (p.area < 0.03 || p.area > 0.9 || logo(p)) continue;
+    bySlide.set(p.slide, [...(bySlide.get(p.slide) ?? []), p]);
+  }
+  return [...bySlide.values()].flatMap((list) => list.sort((a, b) => b.area - a.area).slice(0, 2));
+}
+
 /**
  * Read a .pptx. `zip` is anything with `names` (all paths in the file) and
  * `text(path)` / `blob(path)` that resolve to the file's content.
@@ -119,7 +195,19 @@ export async function readPptxParts(zip) {
     notes,
     theme: { colors: theme.colors.map((c) => c.hex), fonts: theme.fonts, backgrounds },
     media: zip.names.filter((n) => /^ppt\/media\/[^/]+\.(png|jpe?g)$/i.test(n)),
+    // the pictures each slide shows, for the redesign (slide numbers count from 1)
+    pictures: await Promise.all(slidesNames.map(async (n, i) => {
+      const rels = `ppt/slides/_rels/${n.split('/').pop()}.rels`;
+      return slidePictures(slideXml[i], zip.names.includes(rels) ? await zip.text(rels) : '').map((p) => ({ ...p, slide: i + 1 }));
+    })).then((all) => all.flat()),
+    size: sizeOf(zip.names.includes('ppt/presentation.xml') ? await zip.text('ppt/presentation.xml') : ''),
   };
+}
+
+/** The slide size in inches from presentation.xml (16:9 at 13.333 x 7.5 if unknown). */
+function sizeOf(xml) {
+  const m = /<p:sldSz\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/.exec(String(xml));
+  return m ? { w: Number(m[1]) / EMU_PER_INCH, h: Number(m[2]) / EMU_PER_INCH } : { w: 13.333, h: 7.5 };
 }
 
 // ---------------------------------------------------------------- browser parts
@@ -186,7 +274,44 @@ async function readPdf(file) {
   }
   const { text, trimmed } = cleanDeckText(pages);
   if (!text.trim() && !images.length) throw new Error('No slides could be read from this PDF.');
-  return { source: 'pdf', name: file.name, count: doc.numPages, images: fitBudget(images), pages: shown, text, trimmed, theme: null };
+  const pictures = await pdfPictures(doc, pdfjs.OPS);
+  return { source: 'pdf', name: file.name, count: doc.numPages, images: fitBudget(images), pages: shown, text, trimmed, theme: null, pictures };
+}
+
+/** The pictures on each PDF page, cut out of the rendered page as they appear (cropping included). */
+async function pdfPictures(doc, OPS) {
+  const found = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const page = await doc.getPage(n);
+    const base = page.getViewport({ scale: 1 });
+    const boxes = pictureBoxes(await page.getOperatorList(), OPS, base.transform);
+    boxes.forEach((b) => {
+      const area = (b.w * b.h) / (base.width * base.height);
+      // the same picture at the same place on many pages is a logo
+      const key = [b.x, b.y, b.w, b.h].map((v) => Math.round(v / 4)).join(',');
+      found.push({ slide: n, key, area, box: b, base });
+    });
+  }
+  const kept = keepPictures(found, doc.numPages);
+  const out = [];
+  for (const n of [...new Set(kept.map((p) => p.slide))]) {
+    const page = await doc.getPage(n);
+    const scale = Math.min(3, PICTURE_WIDTH / Math.max(...kept.filter((p) => p.slide === n).map((p) => p.box.w)));
+    const viewport = page.getViewport({ scale });
+    const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(viewport.width), height: Math.round(viewport.height) });
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    for (const p of kept.filter((k) => k.slide === n)) {
+      const x = Math.max(0, Math.round(p.box.x * scale));
+      const y = Math.max(0, Math.round(p.box.y * scale));
+      const w = Math.min(canvas.width - x, Math.round(p.box.w * scale));
+      const h = Math.min(canvas.height - y, Math.round(p.box.h * scale));
+      if (w < 40 || h < 40) continue;
+      const crop = Object.assign(document.createElement('canvas'), { width: w, height: h });
+      crop.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+      out.push({ slide: n, src: crop.toDataURL('image/jpeg', 0.85), w, h });
+    }
+  }
+  return out;
 }
 
 async function readShots(files) {
@@ -227,7 +352,18 @@ async function readPptx(file) {
   }));
   const { text, trimmed } = cleanDeckText(parts.slides, parts.notes);
   if (!text.trim()) throw new Error('No text could be read from this PowerPoint file.');
-  return { source: 'pptx', name: file.name, count: parts.slides.length, images: fitBudget(canvases), text, trimmed, theme: parts.theme };
+  // the deck's own pictures go back onto their slides in the redesign; they stay on the device
+  const slideArea = parts.size.w * parts.size.h;
+  const kept = keepPictures(parts.pictures.map((p) => ({ ...p, key: p.target, area: (p.w * p.h) / slideArea })), parts.slides.length);
+  const pictures = (await Promise.all(kept.map(async (p) => {
+    try {
+      const file = zip.file(p.target);
+      if (!file) return null;
+      const c = toCanvas(await loadImage(await file.async('blob')), PICTURE_WIDTH);
+      return { slide: p.slide, src: c.toDataURL('image/jpeg', 0.85), w: c.width, h: c.height };
+    } catch { return null; }
+  }))).filter(Boolean);
+  return { source: 'pptx', name: file.name, count: parts.slides.length, images: fitBudget(canvases), text, trimmed, theme: parts.theme, pictures };
 }
 
 function loadImage(blob) {

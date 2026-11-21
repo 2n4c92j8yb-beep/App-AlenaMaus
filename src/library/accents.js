@@ -22,7 +22,7 @@ import { SLIDE_W as W, SLIDE_H as H } from '../engine/fit.js';
 import { textureSvg } from './textures.js';
 import { createRng } from '../engine/rng.js';
 
-const PLAIN = new Set(['points', 'comparison', 'references', 'photo', 'photoSplit']);
+const PLAIN = new Set(['points', 'comparison', 'references', 'photo', 'photoSplit', 'pictureText']);
 // slides that already carry their own composition in a look
 const OWN = {
   glass: new Set(['cover', 'section', 'statement', 'question', 'bigNumber']),

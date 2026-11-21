@@ -44,6 +44,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 p, li, dd, .field-help { text-wrap: pretty; }
+/* slide text wraps exactly where the layout engine planned it ("pretty" would move breaks) */
+.slide p { text-wrap: wrap; }
 ::selection { background: var(--tint); color: var(--night); }
 html { -webkit-text-size-adjust: 100%; background: var(--snow); }
 body {

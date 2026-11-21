@@ -82,14 +82,16 @@ export function text(ctx, role, str, box, o = {}) {
   // fonts that often render as a stand-in are measured with the stand-in's glyphs (FONTS[…].metrics)
   const mk = f.metrics ?? key;
   const em = o.maxLines === 1 && !String(content).includes('\n') ? widthEm(mk, content, bold) : null;
+  // fonts without known widths render in whatever the device has; one-line text keeps a margin for that
   const lineEm = em == null ? undefined : em + tracking * [...content].length;
+  const oneLineSafety = em == null && o.maxLines === 1 ? 1.12 : 1;
   // any text in a bundled font wraps by its real glyph widths (with tracking and bold)
   const known = widthEm(mk, 'a') != null;
   const measure = known ? (str) => widthEm(mk, str, bold) + tracking * [...str].length : undefined;
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
     lineEm, measure,
     max: o.max, min: o.min ?? Math.round(o.max * 0.6),
-    factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
+    factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1) * oneLineSafety,
     lineHeight, maxLines: o.maxLines ?? Infinity,
   });
   const el = {
@@ -613,10 +615,15 @@ function definition(ctx, item, kick) {
 }
 
 function points(ctx, item, kick) {
-  const { L, c, dz } = ctx;
   background(ctx);
   signature(ctx, 'content');
-  const b = frame(ctx, item.title, kick);
+  listIn(ctx, item, frame(ctx, item.title, kick));
+  footer(ctx);
+}
+
+/** A list's points laid out in the box `b` (the points form, and text beside a picture). */
+function listIn(ctx, item, b) {
+  const { L, c, dz } = ctx;
   const list = item.points;
   const n = list.length;
   const rowH = b.h / n;
@@ -644,6 +651,47 @@ function points(ctx, item, kick) {
     if (marker === 'bullet' && !single) ellipse(ctx, b.x + 0.05, y + pad + (hd.size / 72) * 0.62 - 0.05, 0.1, 0.1, c.accentText, { seq });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
+}
+
+/**
+ * A redesigned slide with its own picture(s): the slide's text on one side, its pictures on
+ * the other, in the direction's photo style. Used for lists, statements, questions,
+ * definitions and quotes (src/engine/assemble.js → PICTURE_TEXT).
+ */
+function pictureText(ctx, item, kick) {
+  const { L, c, m, dz, scale } = ctx;
+  background(ctx);
+  const pics = item.pictures ?? [];
+  const bleed = L.photo === 'bleed';
+  const split = W * 0.54;
+  // the pictures: full height at the right edge (bleed looks) or framed in the right column
+  const col = bleed ? { x: split, y: 0, w: W - split, h: H } : { x: split + 0.2, y: m * 0.7, w: W - split - 0.2 - m * 0.7, h: H - m * 1.4 };
+  const gap = bleed ? 0 : 0.25;
+  const each = (col.h - gap * (pics.length - 1)) / pics.length;
+  pics.forEach((pic, i) => image(ctx, pic, { x: col.x, y: col.y + i * (each + gap), w: col.w, h: each }, { style: bleed ? 'bleed' : L.photo, seq: 0 }));
+  // the text: the same frame the slide would have, in the left column
+  const x = m;
+  const w = split - m - 0.6;
+  let y = m;
+  if (kick) y += kicker(ctx, kick, x, y, w);
+  if (String(item.title ?? '').trim()) {
+    const t = text(ctx, 'display', item.title, { x, y, w, h: 2.0 }, { max: Math.round(30 * scale), min: 18, maxLines: 4, seq: 1 });
+    y += t.height + 0.45;
+  }
+  const box = { x, y, w, h: H - y - m - footerSpace(ctx) };
+  if (item.kind === 'points') listIn(ctx, item, box);
+  else if (item.kind === 'definition') {
+    const t = text(ctx, 'display', item.term, { x, y: box.y, w, h: 1.4 }, { max: Math.round(40 * scale), min: 22, maxLines: 2, seq: 2 });
+    text(ctx, 'body', item.text, { x, y: box.y + t.height + 0.3, w, h: box.h - t.height - 0.3 }, { max: Math.round(24 * dz), min: 13, lineHeight: 1.35, seq: 3 });
+  } else if (item.kind === 'quote') {
+    const t = text(ctx, 'display', item.text, { x, y: box.y, w, h: box.h - 0.8 }, { max: Math.round(34 * scale), min: 16, valign: 'middle', seq: 2 });
+    label(ctx, `— ${item.author}${item.work ? `, ${item.work}` : ''}`, { x, y: box.y + Math.min(box.h - 0.6, t.height + 0.3 + (box.h - 0.8 - t.height) / 2), w, h: 0.5 }, { max: 14, maxLines: 2, seq: 3 });
+  } else {
+    // a statement or a question: the slide's one sentence, large, in the middle of its column
+    text(ctx, 'display', item.text, { x, y: box.y, w, h: box.h - (item.hint || item.note ? 0.9 : 0) }, { max: Math.round(40 * scale), min: 18, valign: 'middle', seq: 2 });
+    const extra = item.hint ?? item.note;
+    if (extra) text(ctx, 'body', extra, { x, y: box.y + box.h - 0.8, w, h: 0.8 }, { max: 18, min: 12, color: c.muted, seq: 3 });
+  }
   footer(ctx);
 }
 
@@ -693,6 +741,16 @@ function question(ctx, item, kick) {
 function photo(ctx, item, kick) {
   const { L, c, m, dz } = ctx;
   background(ctx);
+  // a picture with no words (a redesigned deck's own picture slide): the whole picture, as large as fits, uncropped
+  if (![item.title, item.caption, item.credit, kick].some((t) => String(t ?? '').trim())) {
+    const ar = (item.w ?? 4) / (item.h ?? 3);
+    const room = { w: W - 2 * m * 0.8, h: H - 2 * m * 0.8 - footerSpace(ctx) };
+    const w = Math.min(room.w, room.h * ar);
+    const h = w / ar;
+    ctx.els.push({ type: 'image', x: (W - w) / 2, y: (H - footerSpace(ctx) - h) / 2, w, h, src: item.src, alt: item.alt ?? '', ...(L.photoFilter ? { filter: L.photoFilter } : {}), fit: 'cover', natW: item.w, natH: item.h, seq: 0 });
+    footer(ctx);
+    return;
+  }
   const portrait = (item.w ?? 4) / (item.h ?? 3) < 1.2;
   if (L.photo === 'bleed' && portrait) {
     // an upright picture fills the full height of one side instead of being cropped to 16:9
@@ -765,7 +823,7 @@ function references(ctx, item) {
 }
 
 const FORMS = {
-  cover, section, statement, bigNumber, comparison, process: processForm, timeline, quote, definition, points, pair, question, photo, photoSplit, references,
+  cover, section, statement, bigNumber, comparison, process: processForm, timeline, quote, definition, points, pair, question, photo, photoSplit, references, pictureText,
 };
 
 export const FORM_NAMES = Object.keys(FORMS);

@@ -19,7 +19,7 @@
 // (0 = with the slide, 1 = headline, 2+ = content, one step per item).
 
 import { FONTS } from './fonts.js';
-import { t as label_ } from './labels.js';
+import { t as label_, autoLabel } from './labels.js';
 import { SLIDE_W as W, SLIDE_H as H, fitText, textHeight } from '../engine/fit.js';
 import { posterForm } from './posters.js';
 import { glassForm, glassify } from './glass.js';
@@ -237,6 +237,11 @@ const footerSpace = (ctx) => (ctx.L.footer ? 0.45 : 0);
 function frame(ctx, title, kick) {
   const { L, c, m, scale } = ctx;
   const center = L.align === 'center';
+  // a slide without a headline (as in the original deck) gives its content the whole slide
+  if (!String(title ?? '').trim()) {
+    const y = m + kicker(ctx, kick, m, m, W - 2 * m, { align: center ? 'center' : 'left' });
+    return { x: m, y, w: W - 2 * m - (sig(ctx) === 'tabs' ? 0.35 : 0), h: H - y - m - footerSpace(ctx) };
+  }
   if (L.titlePos === 'side') {
     const colW = 3.55;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
@@ -611,8 +616,12 @@ function points(ctx, item, kick) {
     if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
     if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
     const x = single ? b.x : b.x + nw;
-    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
+    // a lone paragraph keeps a readable line length
+    const lone = single && plain && !String(item.title ?? '').trim();
+    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: lone ? Math.min(b.w, 9.6) : b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
       max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+      // one block of text with no headline is the whole slide: it sits in the middle, not in a corner
+      ...(lone ? { valign: 'middle' } : {}),
     });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });
@@ -656,7 +665,7 @@ function question(ctx, item, kick) {
   const w = center ? W - 2 * m - 1.5 : W * 0.72;
   const x = center ? (W - w) / 2 : m;
   note(ctx, x, H * 0.2, w, H * 0.62);
-  kicker(ctx, kick ?? label_(ctx.deck.language, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
+  kicker(ctx, kick ?? autoLabel(ctx.deck, 'Question'), x, H * 0.22, w, { align: center ? 'center' : 'left', color: full ? ink : undefined, fill: full ? c.ink : undefined });
   text(ctx, 'display', item.text, { x, y: H * 0.3, w, h: H * 0.42 }, { max: Math.round(44 * scale), min: 24, color: ink, align: center ? 'center' : 'left', valign: 'middle', maxLines: 5 });
   if (item.hint) text(ctx, 'body', item.hint, { x, y: H * 0.74, w, h: 0.8 }, { max: 20, min: 13, color: full ? ink : c.muted, align: center ? 'center' : 'left', seq: 3 });
   footer(ctx, full ? ink : undefined);

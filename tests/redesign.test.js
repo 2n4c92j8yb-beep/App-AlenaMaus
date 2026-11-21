@@ -367,3 +367,35 @@ test('a redesigned deck keeps every slide and its text word for word, and adds n
   }
   assert.match(analysePrompt(), /One piece per slide/);
 });
+
+test('a redesigned deck keeps the hierarchy of its slides: no made-up headlines or labels, headlines stay headlines', async () => {
+  const { toPool } = await import('../src/engine/content.js');
+  const { AS_UPLOADED } = await import('../src/library/structures.js');
+  const answer = {
+    deck: { language: 'de', title: 'Plyometrie im Handball', shortTitle: 'Plyometrie', subtitle: '', author: '', course: '', date: '', worksCitedTitle: '', posterWords: ['Sprung'], posterLines: [] },
+    pointLists: [{ slide: 2, title: '', points: [{ head: 'Im 8-wöchigen Programm wurden Drop Jumps aus 40cm Höhe ausgeführt.', text: '' }] }],
+    figures: [{ slide: 3, title: 'Sprunghöhe nach dem Training', value: '+12 %', label: 'mehr Sprunghöhe', caption: '', source: '', year: 0 }],
+    claims: [{ slide: 4, text: 'Drop Jumps gelten als besonders wirksame Übung.', role: 'claim', note: '' }],
+    questions: [{ slide: 5, text: 'Wie oft pro Woche?', role: 'discussion', hint: '' }],
+  };
+  const pool = toPool(answer, { verbatim: true });
+  assert.equal(pool.items.find((i) => i.slide === 2).title, '', 'no headline invented');
+  assert.equal(pool.subtitle, '', 'no subtitle invented');
+  const invented = /^(these|thesis|frage|question|kennzahl|key figure|timeline|step by step)$/i;
+  for (const density of ['light', 'medium', 'dense']) for (let k = 0; k < DIRECTIONS.length; k += 3) {
+    const dirs = DIRECTIONS.slice(k, k + 3);
+    for (const deck of buildFromDirections({ pool, occasionId: 'seminar', density, seed: 1, directions: dirs, structures: dirs.map(() => AS_UPLOADED) })) {
+      const name = `${deck.direction.id}/${density}`;
+      assert.deepEqual(deck.overflow, [], name);
+      for (const s of deck.slides.slice(1)) {
+        const texts = s.els.filter((e) => e.type === 'text').map((e) => String(e.text).trim());
+        assert.ok(!texts.some((t) => invented.test(t)), `${name} ${s.form}: a label the slide didn't have (${texts.join(' | ')})`);
+        if (s.item?.slide === 2) assert.ok(!texts.includes('Plyometrie') || s.els.find((e) => e.text === 'Plyometrie').size <= 11, `${name}: deck title used as a headline`);
+        if (s.item?.slide === 3) {
+          const title = s.els.find((e) => e.type === 'text' && e.text === 'Sprunghöhe nach dem Training');
+          assert.ok(title && title.size >= 16, `${name}: the key figure's headline is shown as a headline (${title?.size}pt)`);
+        }
+      }
+    }
+  }
+});

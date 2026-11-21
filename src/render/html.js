@@ -25,6 +25,9 @@ export function renderSlide(els, { label, present = false } = {}) {
       if (el.soft) node.dataset.soft = '1';
       if (el.mood) node.dataset.mood = '1';
       if (el.type === 'text') node.dataset.size = String(el.size);
+      // for the layout audit (tools/audit.mjs): text meant to run off the slide, and one-line text
+      if (el.bleed) node.dataset.bleed = '1';
+      if (el.nowrap) node.dataset.nowrap = '1';
       if (el.type === 'chrome') { node.dataset.kind = el.kind; node.dataset.tint = el.tint ?? 'silver'; if (el.holo) node.dataset.holo = '1'; }
     }
     slide.append(node);

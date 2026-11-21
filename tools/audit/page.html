@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Layout audit</title>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<link rel="stylesheet" href="../../styles.css">
+<style>body { margin: 0; background: #888; } #stage { width: 1280px; }</style>
+</head>
+<body>
+<div id="stage"></div>
+<script type="module">
+// Renders one deck in one direction at full size (1280 x 720) and measures what the browser
+// actually drew. The checks run on the real layout, not on the engine's estimates.
+import { buildFromDirections, buildDirections } from '../../src/engine/build.js';
+import { DIRECTIONS } from '../../src/library/directions.js';
+import { STRUCTURES, AS_UPLOADED } from '../../src/library/structures.js';
+import { renderSlide } from '../../src/render/html.js';
+import { FONTS } from '../../src/library/fonts.js';
+import { DECKS } from './decks.js';
+
+const TOL = 3; // px of slack for anti-aliasing and rounding
+
+const rectOf = (node) => { const r = document.createRange(); r.selectNodeContents(node); return r; };
+const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+
+/** Words the browser broke across two lines. */
+function brokenWords(node) {
+  const out = [];
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+    // a break after a hyphen is correct ("Dehnungs-|Verkürzungs-|Zyklus"): each part counts as a word
+    const re = /[^\s\-–]+[\-–]?/g;
+    for (let m = re.exec(t.data); m; m = re.exec(t.data)) {
+      const r = document.createRange();
+      r.setStart(t, m.index); r.setEnd(t, m.index + m[0].length);
+      const tops = new Set([...r.getClientRects()].filter((x) => x.width > 0.5).map((x) => Math.round(x.top)));
+      if (tops.size > 1 && !/[/@]|www\./.test(m[0])) out.push(m[0]); // web addresses may break anywhere
+    }
+  }
+  return out;
+}
+
+function check(frame, slide) {
+  const issues = [];
+  const box = frame.querySelector('.slide').getBoundingClientRect();
+  const texts = [...frame.querySelectorAll('[data-type="text"]')].filter((n) => n.textContent.trim());
+  const placed = [];
+  for (const n of texts) {
+    // a lone quotation mark or similar ornament is meant to sit behind the text
+    if (!/[\p{L}\p{N}]/u.test(n.textContent)) continue;
+    const bleed = n.dataset.bleed === '1';
+    const size = parseFloat(getComputedStyle(n).fontSize);
+    const own = n.getBoundingClientRect();
+    const ink = rectOf(n).getBoundingClientRect();
+    const label = n.textContent.trim().slice(0, 60);
+    for (const w of brokenWords(n)) issues.push({ kind: 'broken word', text: label, detail: w });
+    if (!bleed) {
+      // sideways the box is strict; up and down a font's line box is taller than its letters (about a quarter em)
+      const side = Math.max(ink.right - own.right, own.left - ink.left);
+      const vert = Math.max(ink.bottom - own.bottom, own.top - ink.top);
+      if (side > TOL) issues.push({ kind: 'overflows its box', text: label, detail: `${Math.round(side)}px sideways` });
+      else if (vert > Math.max(TOL, size * 0.3)) issues.push({ kind: 'overflows its box', text: label, detail: `${Math.round(vert)}px down` });
+      const out = Math.max(ink.right - box.right, box.left - ink.left, ink.bottom - box.bottom, box.top - ink.top);
+      if (out > TOL) issues.push({ kind: 'off the slide', text: label, detail: `${Math.round(out)}px` });
+      // compare the letters, not the line boxes: shrink each by the slack above and below
+      const pad = size * 0.18;
+      placed.push({ label, ink: { left: ink.left, right: ink.right, top: ink.top + pad, bottom: ink.bottom - pad } });
+    }
+  }
+  for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
+    const a = area(placed[i].ink, placed[j].ink);
+    if (a > 60) issues.push({ kind: 'text overlaps text', text: placed[i].label, detail: placed[j].label });
+  }
+  return issues;
+}
+
+async function run() {
+  const q = new URLSearchParams(location.search);
+  const deckName = q.get('deck');
+  const pool = DECKS[deckName];
+  const dir = DIRECTIONS.find((d) => d.id === q.get('dir'));
+  const density = q.get('density') ?? 'medium';
+  const structure = pool.verbatim ? AS_UPLOADED : STRUCTURES[Number(q.get('structure') ?? 0)];
+  // load every font face first, so measurements use the real fonts
+  await Promise.all(Object.values(FONTS).filter((f) => f.file).flatMap((f) => [400, 700].map((w) => document.fonts.load(`${w} 40px ${f.css}`, 'AÄg%1'))));
+  await document.fonts.ready;
+  const [deck] = buildFromDirections({ pool, occasionId: 'seminar', density, seed: 1, directions: [dir], structures: [structure] });
+  const stage = document.getElementById('stage');
+  const results = [];
+  const frames = deck.slides.map((s, i) => {
+    const frame = renderSlide(s.els);
+    frame.dataset.index = String(i);
+    stage.append(frame);
+    return frame;
+  });
+  // slides scale to their frame once attached; measure after that
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  deck.slides.forEach((s, i) => {
+    for (const issue of check(frames[i], s)) results.push({ deck: deckName, direction: dir.id, density, structure: structure.id, slide: i + 1, form: s.form, ...issue });
+  });
+  // the engine's own estimate said a text would not fit
+  for (const o of deck.overflow) results.push({ deck: deckName, direction: dir.id, density, structure: structure.id, slide: o.slide, form: o.form, kind: 'engine: text too long for its box', text: o.text });
+  window.AUDIT = results;
+  document.body.dataset.ready = '1';
+}
+run().catch((e) => { window.AUDIT_ERROR = String(e?.stack ?? e); document.body.dataset.ready = '1'; });
+</script>
+</body>
+</html>

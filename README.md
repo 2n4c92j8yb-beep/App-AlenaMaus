@@ -55,9 +55,8 @@ panel for key figures. A planner places them per deck:
   use the regular forms in the same type and colours.
 - **Editorial:** the 15 directions below.
 
-Text that must stay on one line (poster words, key figures, labels) is fitted with the real
-glyph widths of the bundled fonts (`src/library/glyphs.js`, read from `fonts/` with fontTools)
-instead of an average letter width, and never wraps in the preview: a long word like
+Text that must stay on one line (poster words, key figures, labels) is fitted with real
+glyph widths (see Layout audit below) and never wraps in the preview: a long word like
 "PLYOMETRIE" or a figure like "+12 %" gets a smaller size rather than being cut or broken.
 
 Poster fonts (Anton, Bebas Neue, Six Caps) are in `fonts/` under the SIL Open
@@ -185,6 +184,26 @@ direction doesn't use, or an empty slide of six kinds.
   pictures, choices, edits, the open deck) is saved in the browser's localStorage after every
   change; the start screen offers "Continue your deck". New notes or a new upload start
   without the old edits. Present mode and the PowerPoint download use the edited slides.
+
+## Layout audit
+
+`npm run audit` (`tools/audit.mjs`) builds the test decks in `tools/audit/decks.js` (the
+example deck in three story structures, a German seminar deck with long compound words, and
+an extremes deck with twelve bullets and a very long paragraph) in every direction and
+density, renders them in headless Chromium at full size and measures what the browser drew:
+text that overflows its box or the slide, words broken mid-word (breaks after hyphens and in
+web addresses are fine), text overlapping text, and text the engine itself flags. It writes
+`audit-report/index.html` with a screenshot of every slide with a problem and exits with 1 if
+there is one. `npm run audit -- glass` checks only matching directions or looks.
+
+Run it after every layout change. When a real deck shows a new kind of problem, add content
+like it to `tools/audit/decks.js` so it stays fixed.
+
+Text sizes come from real glyph widths where they are known (`src/library/glyphs.js`,
+written by `tools/glyphs.py`): the bundled fonts, and Arial, Courier New, Calibri and Cambria
+through fonts with identical widths. Franklin Gothic, which only Windows has, is sized with
+Arial's wider glyphs (`metrics: 'arial'`). A headline too long for a side column moves above
+the content instead of breaking.
 
 ## PowerPoint export
 

@@ -19,7 +19,7 @@ export const FONTS = {
   arialBlack:   { office: 'Arial Black',        css: '"Arial Black", "Helvetica Neue", Arial, sans-serif',    factor: 0.67, weight: 900 },
   verdana:      { office: 'Verdana',            css: 'Verdana, Geneva, sans-serif',                           factor: 0.58 },
   trebuchet:    { office: 'Trebuchet MS',       css: '"Trebuchet MS", "Lucida Grande", sans-serif',           factor: 0.50 },
-  franklin:     { office: 'Franklin Gothic Medium', css: '"Franklin Gothic Medium", "Avenir Next Condensed", "Arial Narrow", Arial, sans-serif', factor: 0.47 },
+  franklin:     { office: 'Franklin Gothic Medium', css: '"Franklin Gothic Medium", "Avenir Next Condensed", "Arial Narrow", Arial, sans-serif', factor: 0.51, capsFactor: 0.6, metrics: 'arial' },  // only on Windows: elsewhere Arial stands in, so the text is sized with Arial's (wider) glyphs
   centuryGothic:{ office: 'Century Gothic',     css: '"Century Gothic", Futura, "Avenir Next", sans-serif',   factor: 0.56 },
   gillSans:     { office: 'Gill Sans MT',       css: '"Gill Sans MT", "Gill Sans", Calibri, sans-serif',      factor: 0.47 },
   calibri:      { office: 'Calibri',            css: 'Calibri, Carlito, "Helvetica Neue", Arial, sans-serif', factor: 0.47 },

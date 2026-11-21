@@ -87,7 +87,7 @@ const prism = {
     ground(ctx);
     // two small glass cards carry the deck's key facts
     const lines = deck.posterLines ?? [];
-    [[W - 6.1, 3.45, 3.6], [W - 4.9, 4.75, 3.9]].forEach(([x, y, w], i) => {
+    [[W - 4.5, 3.45, 3.6], [W - 4.2, 4.75, 3.4]].forEach(([x, y, w], i) => {
       if (!lines[i]) return;
       glassPanel(ctx, x, y, w, 0.95, { radius: 0.22, float: true, seq: 3 + i });
       text(ctx, 'body', lines[i], { x: x + 0.3, y: y + 0.24, w: w - 0.6, h: 0.48 }, { max: 19, min: 11, bold: true, maxLines: 1, seq: 3 + i });

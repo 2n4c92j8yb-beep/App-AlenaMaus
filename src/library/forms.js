@@ -79,10 +79,15 @@ export function text(ctx, role, str, box, o = {}) {
   const digitHeavy = key === 'unbounded' && /^[\d\s.,%+\-–/:]+$/.test(content);
   // letter spacing widens every character; rotated text runs along the box's height
   // a single line in a font whose real glyph widths are known is fitted exactly
-  const em = o.maxLines === 1 && !String(content).includes('\n') ? widthEm(key, content) : null;
-  const lineEm = em == null ? undefined : (em + tracking * [...content].length) * (bold ? 1.06 : 1);
+  // fonts that often render as a stand-in are measured with the stand-in's glyphs (FONTS[…].metrics)
+  const mk = f.metrics ?? key;
+  const em = o.maxLines === 1 && !String(content).includes('\n') ? widthEm(mk, content, bold) : null;
+  const lineEm = em == null ? undefined : em + tracking * [...content].length;
+  // any text in a bundled font wraps by its real glyph widths (with tracking and bold)
+  const known = widthEm(mk, 'a') != null;
+  const measure = known ? (str) => widthEm(mk, str, bold) + tracking * [...str].length : undefined;
   const r = fitText(content, rotated ? box.h : box.w, rotated ? box.w : box.h, {
-    lineEm,
+    lineEm, measure,
     max: o.max, min: o.min ?? Math.round(o.max * 0.6),
     factor: ((caps ? f.capsFactor ?? f.factor * 1.08 : f.factor) + tracking) * (bold ? 1.06 : 1) * (digitHeavy ? 1.3 : 1),
     lineHeight, maxLines: o.maxLines ?? Infinity,
@@ -250,12 +255,17 @@ function frame(ctx, title, kick) {
   }
   if (L.titlePos === 'side') {
     const colW = 3.55;
+    const start = ctx.els.length;
     if (sig(ctx) === 'panel' || sig(ctx) === 'margin') rect(ctx, 0, 0, m + colW + 0.35, H, c.soft);
     let y = m;
     y += kicker(ctx, kick, m, y, colW);
-    text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
-    const bx = m + colW + 0.85;
-    return { x: bx, y: m + 0.05, w: W - bx - m - (sig(ctx) === 'tabs' ? 0.3 : 0), h: H - 2 * m - footerSpace(ctx) - 0.05 };
+    const t = text(ctx, 'display', title, { x: m, y, w: colW, h: H - y - m - 0.6 }, { max: Math.round(30 * scale), min: 18, maxLines: 7 });
+    if (t.el.fits) {
+      const bx = m + colW + 0.85;
+      return { x: bx, y: m + 0.05, w: W - bx - m - (sig(ctx) === 'tabs' ? 0.3 : 0), h: H - 2 * m - footerSpace(ctx) - 0.05 };
+    }
+    // a headline too long for the narrow column (a long compound word) goes above the content instead
+    ctx.els.length = start;
   }
   let y = m;
   y += kicker(ctx, kick, m, y, W - 2 * m, { align: center ? 'center' : 'left' });

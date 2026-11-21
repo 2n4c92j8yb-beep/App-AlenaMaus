@@ -485,7 +485,7 @@ function comparison(ctx, item, kick) {
 function numberEl(ctx, n, box, o = {}) {
   const { L, c } = ctx;
   const s = String(n).padStart(2, '0');
-  if (L.numbers === 'large') return text(ctx, 'display', s, box, { max: o.large ?? 40, min: 22, color: c.accentText, italic: false, caps: false, maxLines: 1, seq: o.seq });
+  if (L.numbers === 'large') return text(ctx, 'display', s, box, { max: o.large ?? 40, min: o.min ?? 22, color: c.accentText, italic: false, caps: false, maxLines: 1, seq: o.seq });
   if (L.numbers === 'small') return label(ctx, s, box, { max: 13, min: 10, color: c.accentText, maxLines: 1, seq: o.seq });
   return { height: 0 };
 }
@@ -636,14 +636,15 @@ function points(ctx, item, kick) {
   // plain bullets (no detail lines, e.g. a redesigned deck's own list) get the whole row and regular weight
   const plain = list.every((p) => !p.text);
   const single = n === 1;
+  const pad = plain && n > 6 ? 0.03 : 0.14; // long plain lists use their rows to the edge
   list.forEach((p, i) => {
     const seq = 2 + i;
     const y = b.y + i * rowH;
     if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
-    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + 0.12, w: nw, h: Math.min(rowH - 0.2, 0.75) }, { large: 34, seq });
+    if (!single) numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
     const x = single ? b.x : b.x + nw;
-    const hd = text(ctx, 'body', p.head, { x, y: y + 0.14, w: b.x + b.w - x, h: plain ? rowH - 0.2 : rowH * 0.45 }, {
-      max: Math.round((single ? 28 : 25) * dz), min: n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+    const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
+      max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
     });
     if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
   });

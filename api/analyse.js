@@ -8,12 +8,12 @@ import { MODEL, apiKey } from './generate.js';
 import { toPool, parseAnswer } from '../src/engine/content.js';
 import { analysePrompt, cleanStyle } from '../src/engine/style.js';
 import { occasionById } from '../src/library/occasions.js';
+import { MAX_TEXT } from '../src/engine/import.js';
 
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 300 }; // copying a long deck word for word takes a while
 
 export const MAX_IMAGES = 10;
 const MAX_IMAGE_BYTES = 4_000_000; // all pictures together, as base64 (Vercel accepts 4.5 MB per request)
-const MAX_TEXT = 15000;
 const PER_HOUR = 6;
 const IMAGE = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 
@@ -63,7 +63,7 @@ export function userContent({ images, text, theme, source, pages = [] }, occasio
 export async function analyseDeck(input, occasionId, client = new Anthropic({ apiKey: apiKey() })) {
   const response = await client.beta.messages.create({
     model: MODEL,
-    max_tokens: 16000,
+    max_tokens: 32000, // the whole deck comes back word for word
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default', // on a policy decline the API retries on a fallback model in the same call
     system: analysePrompt(),
@@ -71,7 +71,7 @@ export async function analyseDeck(input, occasionId, client = new Anthropic({ ap
     output_config: { effort: 'medium' }, // judging a look needs a little more care than writing from notes
   });
   if (response.stop_reason === 'refusal') throw Object.assign(new Error('Claude declined to read this deck.'), { status: 422 });
-  if (response.stop_reason === 'max_tokens') throw Object.assign(new Error('The deck produced too much content. Try fewer slides.'), { status: 502 });
+  if (response.stop_reason === 'max_tokens') throw Object.assign(new Error('The deck has too much text to copy in one go. Split it into two parts and upload them one at a time.'), { status: 502 });
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
   let answer;
   try { answer = parseAnswer(text); } catch {

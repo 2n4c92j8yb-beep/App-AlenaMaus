@@ -85,8 +85,12 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    content is the deck's own text, **word for word**: one piece per uploaded slide, headlines
    and bullets unchanged (no rephrasing, shortening, merging or splitting), in the piece that
    matches how the slide is built (a bullet list stays a list of up to eight points, a block
-   of text stays one block). `toPool(answer, { verbatim: true })` does not shorten it (the
-   layout shrinks the type instead and the editor says if something doesn't fit), adds no
+   of text stays one block). `toPool(answer, { verbatim: true })` never shortens text or
+   drops a list item (the layout shrinks the type instead and the editor says if something
+   doesn't fit); a piece that doesn't suit its form (a "figure" that isn't a short number, a
+   quote without an author, a timeline of nine events) becomes a list rather than being
+   dropped. A deck with more than 40,000 characters of slide text is refused with a message
+   instead of being cut (speaker notes are left out first). It adds no
    topic photos and no Works Cited slide the deck didn't have, and "Lighter" keeps every
    slide. The style profile covers light/dark/tint, serif/sans, tone,
    background, text and accent colours, surface (flat, gradient, glass, texture, photo),

@@ -23,14 +23,14 @@ export const ANALYSE_PROMPT = `You get a presentation that someone made with an 
 
 Job 1, the content. The person wants a new design for the same slides, not new slides. Copy the text of the deck, slide by slide, into the JSON pieces below:
 - Word for word. Keep every headline, sentence, bullet, number, name and source exactly as it is written on the slide: the same words, spelling, capitalisation, punctuation and language. Do not rephrase, shorten, summarise, complete, correct, translate, merge or split anything, and do not turn a topic headline into a statement. Never add a word, fact, example, question, quote or source that is not on the slides.
-- One piece per slide. Each uploaded slide (after the title slide) becomes exactly one piece, in the order of the deck, and keeps all of its text. Never leave a slide out, and never spread one slide over several pieces.
+- One piece per slide. Each uploaded slide (after the title slide) becomes exactly one piece, in the order of the deck, and keeps all of its text. Never leave a slide out, never leave a line out, and never spread one slide over several pieces. Nothing is too long: the design engine makes the type smaller where needed.
 - Leave out only what is not content: credits of the AI tool ("Made with Gamma"), page numbers, footers or logos repeated on every slide, placeholder text ("Click to add text") and emoji.
 - The title slide fills deck: title, subtitle, author, course and date exactly as written on it (empty strings for what it doesn't show). shortTitle is the title or its first words; worksCitedTitle is the heading of the deck's sources slide, or empty; posterWords are three single words taken from the slides; posterLines are up to five short lines taken from the slides; placeShort is a place the slides name, or empty.
 - Pick the piece that matches how the slide is already built, and put the slide's headline in its title field unchanged:
-  - a headline with bullet points or a list (up to 8 items): pointLists, one point per bullet, in order. If a bullet starts with a short lead-in ("Lead-in: rest" or a bold first phrase), head is the lead-in and text is the rest; otherwise head is the whole bullet and text is "". Sub-bullets go into the text of their bullet.
+  - a headline with bullet points or a list: pointLists, one point per bullet, in order, however many there are. If a bullet starts with a short lead-in ("Lead-in: rest" or a bold first phrase), head is the lead-in and text is the rest; otherwise head is the whole bullet and text is "". Sub-bullets go into the text of their bullet.
   - a headline with one block of running text: pointLists with a single point whose head is that text, word for word, and text "".
   - two columns set side by side (pros and cons, then and now): comparisons, the column headings as heading and their lines as points.
-  - numbered steps or a sequence of stages (2 to 6): processes. Three or more dated events: timelines.
+  - numbered steps or a sequence of stages (2 to 6): processes. Three to eight dated events: timelines. Longer sequences: pointLists.
   - one big number as the point of the slide (written in 9 characters or fewer, e.g. "40 %"): figures, the number as value and the words with it as label and caption.
   - a quotation with its author: quotes. A slide that is just a question: questions (role "hook" near the start, "discussion" near the end). A term with its definition: definitions. A slide with one sentence and no headline: claims.
   - two forms of one thing shown as before and after: pairs.

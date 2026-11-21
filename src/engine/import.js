@@ -11,7 +11,7 @@
 // The parts that need no browser (text clean-up, PowerPoint XML) are exported for tests.
 
 export const MAX_SLIDES = 10;       // pictures sent to Claude
-export const MAX_TEXT = 15000;      // the same limit as typed notes
+export const MAX_TEXT = 40000;      // slide text of an uploaded deck (api/analyse.js accepts the same); never cut
 const SHOT_WIDTH = 1000;            // px; enough to read a slide, small enough to send
 const BUDGET = 3_800_000;           // base64 characters for all pictures together
 
@@ -32,7 +32,9 @@ const BOILERPLATE = [
 /**
  * Turn the text of a deck (one string per slide) into notes: boilerplate and footers
  * that repeat on most slides go, emoji go, and bullet characters become dashes.
- * Returns { text, trimmed } where trimmed says whether speaker notes or text had to be cut.
+ * Returns { text, trimmed } where trimmed says whether speaker notes had to be left out.
+ * The slide text itself is never cut: a deck with more than MAX_TEXT characters on its
+ * slides is refused with a message, so the redesign never loses words.
  */
 export function cleanDeckText(slides, notes = []) {
   const lines = slides.map((s) => String(s ?? '').split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean));
@@ -52,8 +54,7 @@ export function cleanDeckText(slides, notes = []) {
   if (full.length <= MAX_TEXT) return { text: full, trimmed: false };
   const slidesOnly = slideText.join('\n\n'); // speaker notes go first
   if (slidesOnly.length <= MAX_TEXT) return { text: slidesOnly, trimmed: true };
-  const cut = slidesOnly.slice(0, MAX_TEXT);
-  return { text: cut.slice(0, cut.lastIndexOf('\n') > MAX_TEXT * 0.8 ? cut.lastIndexOf('\n') : MAX_TEXT), trimmed: true };
+  throw new Error(`This deck has more text than the app can redesign at once (${slidesOnly.length.toLocaleString('en')} of ${MAX_TEXT.toLocaleString('en')} characters). Split it into two parts and upload them one at a time.`);
 }
 
 // ---------------------------------------------------------------- PowerPoint

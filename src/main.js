@@ -343,7 +343,7 @@ async function importDeck(files) {
     const notes = [`Read ${what}.`];
     if (deck.source === 'pptx') notes.push('Tip: a PDF export of the same deck lets the app see the slides exactly as they look.');
     if (deck.source === 'pdf' && deck.count > deck.images.length) notes.push(`Claude will look at ${deck.images.length} of them, spread across the deck, and read all the text.`);
-    if (deck.trimmed) notes.push(deck.source === 'images' ? 'Only the first 10 screenshots are used.' : 'The text was long, so speaker notes or the end were left out.');
+    if (deck.trimmed) notes.push(deck.source === 'images' ? 'Only the first 10 screenshots are used.' : 'The speaker notes were left out because the deck is long; all the slide text is kept.');
     notes.push('Press “Redesign my deck” to find the closest look.');
     $('import-text').textContent = notes.join(' ');
     $('import-undo').hidden = false;

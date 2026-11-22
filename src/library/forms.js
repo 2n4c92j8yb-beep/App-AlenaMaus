@@ -65,7 +65,10 @@ export const sig = (ctx) => ctx.L.signature;
 const isLedger = (ctx) => sig(ctx) === 'ledger';
 
 /** Add a fitted text element. Returns { el, height, size }. */
-export function text(ctx, role, str, box, o = {}) {
+export function text(ctx, role, str, box, opts = {}) {
+  // parallel texts share one size (layoutSlide): the group's size is this one's maximum
+  const cap = opts.group && ctx.caps?.[opts.group];
+  const o = cap ? { ...opts, max: Math.min(opts.max, cap), min: Math.min(opts.min ?? Math.round(opts.max * 0.6), cap) } : opts;
   const key = o.font ?? ctx.dir.fonts[role];
   const f = FONTS[key];
   const isDisplay = role === 'display';
@@ -102,6 +105,7 @@ export function text(ctx, role, str, box, o = {}) {
     lineHeight, caps, tracking,
     hanging: !!o.hanging, fits: r.fits, role,
     ...(o.maxLines === 1 ? { nowrap: true } : {}),
+    ...(o.group ? { group: o.group } : {}),
     seq: o.seq ?? (isDisplay ? 1 : 2), bleed: !!o.bleed,
     ...(o.rotate ? { rotate: o.rotate } : {}),
     ...(o.alpha != null ? { alpha: o.alpha } : {}),
@@ -465,9 +469,9 @@ function comparison(ctx, item, kick) {
     const x = b.x + i * (colW + gap) + pad;
     const w = colW - pad;
     const seq = 2 + i * 2;
-    const hd = text(ctx, 'display', side.heading, { x, y: b.y, w, h: 0.9 }, { max: 30, min: 18, color: c.accentText, maxLines: 2, italic: false, seq });
+    const hd = text(ctx, 'display', side.heading, { x, y: b.y, w, h: 0.9 }, { max: 30, min: 18, color: c.accentText, maxLines: 2, italic: false, seq, group: 'side-head' });
     const y = b.y + hd.height + 0.25;
-    text(ctx, 'body', side.points.join('\n'), { x, y, w, h: b.y + colH - y - 0.1 }, { max: Math.round(22 * dz), min: 14, lineHeight: 1.45, seq });
+    text(ctx, 'body', side.points.join('\n'), { x, y, w, h: b.y + colH - y - 0.1 }, { max: Math.round(22 * dz), min: 14, lineHeight: 1.45, seq, group: 'side-body' });
   });
   if (item.verdict) text(ctx, 'body', item.verdict, { x: b.x, y: b.y + b.h - verdictH + 0.2, w: b.w, h: verdictH - 0.2 }, { max: 18, min: 13, italic: true, color: c.muted, seq: 6 });
   footer(ctx);
@@ -500,8 +504,8 @@ function processForm(ctx, item, kick) {
       numberEl(ctx, i + 1, { x: b.x + indent + 0.25, y: y + 0.16, w: nw - 0.2, h: Math.min(rowH - 0.25, 0.8) }, { large: 30, seq });
       const tx = b.x + indent + nw + 0.1;
       const tw = b.w - indent - nw - 0.35;
-      const hd = text(ctx, 'display', s.title, { x: tx, y: y + 0.16, w: tw, h: rowH * 0.42 }, { max: 24, min: 15, italic: false, maxLines: 2, seq });
-      text(ctx, 'body', s.text, { x: tx, y: y + 0.2 + hd.height, w: tw, h: rowH - hd.height - 0.42 }, { max: Math.round(18 * dz), min: 13, color: c.muted, seq });
+      const hd = text(ctx, 'display', s.title, { x: tx, y: y + 0.16, w: tw, h: rowH * 0.42 }, { max: 24, min: 15, italic: false, maxLines: 2, seq, group: 'step-head' });
+      text(ctx, 'body', s.text, { x: tx, y: y + 0.2 + hd.height, w: tw, h: rowH - hd.height - 0.42 }, { max: Math.round(18 * dz), min: 13, color: c.muted, seq, group: 'step-body' });
     });
   } else if (L.steps === 'open') {
     // open columns without cards: numbers and space carry the order, and the step
@@ -514,9 +518,9 @@ function processForm(ctx, item, kick) {
     // numbers and headings first, so every column's text starts on the same line
     const nbs = steps.map((_, i) => label(ctx, String(i + 1).padStart(2, '0'), { x: xs[i], y: b.y, w: colW, h: 0.3 }, { max: 13, min: 10, color: c.accentText, maxLines: 1, align, seq: 2 + i }));
     const ty = b.y + Math.max(...nbs.map((r) => r.height)) + 0.2;
-    const hds = steps.map((s, i) => text(ctx, 'display', s.title, { x: xs[i], y: ty, w: colW, h: 1.0 }, { max: 22, min: 15, italic: false, maxLines: 3, align, seq: 2 + i }));
+    const hds = steps.map((s, i) => text(ctx, 'display', s.title, { x: xs[i], y: ty, w: colW, h: 1.0 }, { max: 22, min: 15, italic: false, maxLines: 3, align, seq: 2 + i, group: 'step-head' }));
     const by = ty + Math.max(...hds.map((r) => r.height)) + 0.15;
-    const bodies = steps.map((s, i) => text(ctx, 'body', s.text, { x: xs[i], y: by, w: colW, h: b.y + b.h - by - 0.2 }, { max: Math.round(17 * dz), min: 13, color: c.muted, align, seq: 2 + i }));
+    const bodies = steps.map((s, i) => text(ctx, 'body', s.text, { x: xs[i], y: by, w: colW, h: b.y + b.h - by - 0.2 }, { max: Math.round(17 * dz), min: 13, color: c.muted, align, seq: 2 + i, group: 'step-body' }));
     // then the group sits slightly above the middle of the free space
     const used = by + Math.max(...bodies.map((r) => r.height)) - b.y;
     const shift = Math.max(0, (b.h - used) * 0.4);
@@ -533,8 +537,8 @@ function processForm(ctx, item, kick) {
       rect(ctx, x, top, colW, b.y + b.h - top, i === n - 1 ? c.accent : c.soft, { seq, alpha: i === n - 1 ? 0.22 : 1 });
       const nb = numberEl(ctx, i + 1, { x: x + 0.25, y: top + 0.2, w: colW - 0.5, h: L.numbers === 'large' ? 0.8 : 0.35 }, { large: 40, seq });
       const ty = top + 0.3 + (nb.height || 0);
-      const hd = text(ctx, 'display', s.title, { x: x + 0.25, y: ty, w: colW - 0.5, h: 1.1 }, { max: 26, min: 16, italic: false, maxLines: 3, seq });
-      text(ctx, 'body', s.text, { x: x + 0.25, y: ty + hd.height + 0.15, w: colW - 0.5, h: b.y + b.h - (ty + hd.height + 0.15) - 0.2 }, { max: Math.round(19 * dz), min: 13, color: c.muted, seq });
+      const hd = text(ctx, 'display', s.title, { x: x + 0.25, y: ty, w: colW - 0.5, h: 1.1 }, { max: 26, min: 16, italic: false, maxLines: 3, seq, group: 'step-head' });
+      text(ctx, 'body', s.text, { x: x + 0.25, y: ty + hd.height + 0.15, w: colW - 0.5, h: b.y + b.h - (ty + hd.height + 0.15) - 0.2 }, { max: Math.round(19 * dz), min: 13, color: c.muted, seq, group: 'step-body' });
     });
   }
   footer(ctx);
@@ -555,8 +559,8 @@ function timeline(ctx, item, kick) {
       const seq = 2 + i;
       const y = b.y + i * rowH;
       rect(ctx, b.x, y + 0.06, 0.22, rowH - 0.12, c.accent, { alpha: alpha(i), seq });
-      text(ctx, 'display', e.date, { x: b.x + 0.5, y: y + 0.08, w: 1.9, h: Math.min(rowH - 0.1, 0.6) }, { max: 28, min: 15, color: c.accentText, italic: false, maxLines: 1, seq });
-      text(ctx, 'body', e.label, { x: b.x + 2.5, y: y + 0.1, w: b.w - 2.6, h: rowH - 0.15 }, { max: Math.round(19 * dz), min: 13, seq });
+      text(ctx, 'display', e.date, { x: b.x + 0.5, y: y + 0.08, w: 1.9, h: Math.min(rowH - 0.1, 0.6) }, { max: 28, min: 15, color: c.accentText, italic: false, maxLines: 1, seq, group: 'event-date' });
+      text(ctx, 'body', e.label, { x: b.x + 2.5, y: y + 0.1, w: b.w - 2.6, h: rowH - 0.15 }, { max: Math.round(19 * dz), min: 13, seq, group: 'event-label' });
     });
   } else {
     const ly = b.y + b.h * 0.36;
@@ -565,8 +569,8 @@ function timeline(ctx, item, kick) {
       const seq = 2 + i;
       const x = b.x + i * colW;
       rect(ctx, x, ly - 0.13, colW - 0.08, 0.26, c.accent, { alpha: alpha(i), seq });
-      text(ctx, 'display', e.date, { x, y: ly - 1.05, w: colW - 0.25, h: 0.8 }, { max: 32, min: 16, color: c.accentText, italic: false, valign: 'bottom', maxLines: 1, seq });
-      text(ctx, 'body', e.label, { x, y: ly + 0.38, w: colW - 0.3, h: b.y + b.h - ly - 0.42 }, { max: Math.round(19 * dz), min: 13, seq });
+      text(ctx, 'display', e.date, { x, y: ly - 1.05, w: colW - 0.25, h: 0.8 }, { max: 32, min: 16, color: c.accentText, italic: false, valign: 'bottom', maxLines: 1, seq, group: 'event-date' });
+      text(ctx, 'body', e.label, { x, y: ly + 0.38, w: colW - 0.3, h: b.y + b.h - ly - 0.42 }, { max: Math.round(19 * dz), min: 13, seq, group: 'event-label' });
     });
   }
   footer(ctx);
@@ -626,7 +630,6 @@ function listIn(ctx, item, b) {
   const { L, c, dz } = ctx;
   const list = item.points;
   const n = list.length;
-  const rowH = b.h / n;
   // a redesigned list keeps its own marker (item.marker): numbers only where the slide numbered its items
   const marker = item.marker ?? (L.numbers === 'none' ? 'none' : 'number');
   const nw = marker === 'number' ? (L.numbers === 'large' ? 1.0 : 0.7) : marker === 'bullet' && n > 1 ? 0.4 : 0;
@@ -635,21 +638,53 @@ function listIn(ctx, item, b) {
   const plain = list.every((p) => !p.text);
   const single = n === 1;
   const pad = plain && n > 6 ? 0.03 : 0.14; // long plain lists use their rows to the edge
+  // plain lines get room in proportion to their length (a long bullet needs three lines, a short one one),
+  // so all of them fit at one shared size; points with a detail line keep equal rows
+  const tw = b.w - nw;
+  const perLine = Math.max(10, (tw * 0.96) / ((20 / 72) * 0.5));
+  const weights = list.map((p) => (plain ? Math.max(1, Math.ceil(String(p.head).length / perLine)) + 0.6 : 1));
+  const total = weights.reduce((a, w) => a + w, 0);
+  const tops = weights.map((_, i) => b.y + (b.h * weights.slice(0, i).reduce((a, w) => a + w, 0)) / total);
+  // second pass (the shared size is known): plain lines are stacked with equal gaps between them
+  if (plain && n > 1 && ctx.caps?.['list-head']) {
+    const x = b.x + nw;
+    const items = list.map((p, i) => {
+      const t = text(ctx, 'body', p.head, { x, y: b.y, w: b.x + b.w - x, h: b.h }, {
+        max: Math.round(25 * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, maxLines: 6, align: centered ? 'center' : 'left', seq: 2 + i, group: 'list-head',
+      });
+      return t;
+    });
+    const used = items.reduce((a, t) => a + t.height, 0);
+    const gap = Math.min(0.55, Math.max(0.08, (b.h - used) / (n - 1)));
+    let y = b.y;
+    items.forEach((t, i) => {
+      const seq = 2 + i;
+      t.el.y = y;
+      t.el.h = t.height + 0.05;
+      if (isLedger(ctx) && i) line(ctx, b.x, y - gap / 2, b.x + b.w, y - gap / 2, c.muted, 0.6);
+      if (marker === 'number') numberEl(ctx, i + 1, { x: b.x, y: y + 0.02, w: nw, h: 0.3 }, { large: 34, min: 14, seq });
+      if (marker === 'bullet') ellipse(ctx, b.x + 0.05, y + (t.size / 72) * 0.62 - 0.05, 0.1, 0.1, c.accentText, { seq });
+      y += t.height + gap;
+    });
+    return;
+  }
   list.forEach((p, i) => {
     const seq = 2 + i;
-    const y = b.y + i * rowH;
+    const y = tops[i];
+    const rowH = (b.h * weights[i]) / total;
     if (isLedger(ctx) && !single) line(ctx, b.x, y, b.x + b.w, y, c.muted, 0.6);
     if (!single && marker === 'number') numberEl(ctx, i + 1, { x: b.x, y: y + Math.min(0.12, pad), w: nw, h: Math.max(0.3, Math.min(rowH - 0.2, 0.75)) }, { large: 34, ...(n > 6 ? { min: 14 } : {}), seq });
     const x = single ? b.x : b.x + nw;
     // a lone paragraph keeps a readable line length
     const lone = single && plain && !String(item.title ?? '').trim();
     const hd = text(ctx, 'body', p.head, { x, y: y + pad, w: lone ? Math.min(b.w, 9.6) : b.x + b.w - x, h: plain ? rowH - 2 * pad : rowH * 0.45 }, {
-      max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 3) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
+      max: Math.round((single ? 28 : 25) * dz), min: n > 8 ? 10 : n > 5 ? 12 : 15, bold: !plain, maxLines: plain ? (single ? 99 : 6) : 2, ...(single ? { lineHeight: 1.35 } : {}), align: centered ? 'center' : 'left', seq,
       // one block of text with no headline is the whole slide: it sits in the middle, not in a corner
       ...(lone ? { valign: 'middle' } : {}),
+      group: 'list-head',
     });
     if (marker === 'bullet' && !single) ellipse(ctx, b.x + 0.05, y + pad + (hd.size / 72) * 0.62 - 0.05, 0.1, 0.1, c.accentText, { seq });
-    if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq });
+    if (p.text) text(ctx, 'body', p.text, { x: b.x + nw, y: y + 0.2 + hd.height, w: b.w - nw, h: rowH - hd.height - 0.3 }, { max: Math.round(19 * dz), min: 13, color: c.muted, align: centered ? 'center' : 'left', seq, group: 'list-detail' });
   });
 }
 
@@ -829,8 +864,31 @@ const FORMS = {
 export const FORM_NAMES = Object.keys(FORMS);
 
 /** Lay out one planned slide. Returns its element list. */
+/** The smallest size each group of parallel texts needed on a laid-out slide. */
+function groupSizes(els) {
+  const caps = {};
+  for (const e of els) if (e.type === 'text' && e.group && String(e.text).trim()) caps[e.group] = Math.min(caps[e.group] ?? Infinity, e.size);
+  return caps;
+}
+
+/**
+ * Parallel texts on one slide (the points of a list, the two sides of a comparison, the steps
+ * of a process, the events of a timeline) share one size, so the type doesn't jump from line
+ * to line: the slide is laid out once to learn the smallest size each group needed, then
+ * again with that size as every member's maximum, so spacing and markers follow the final size.
+ */
 export function layoutSlide(dir, deck, slide, index, total, density = 'medium') {
-  const ctx = makeCtx(dir, deck, slide, index, total, density);
+  const once = (caps) => {
+    const ctx = makeCtx(dir, deck, slide, index, total, density);
+    ctx.caps = caps;
+    return layoutWith(ctx, dir, slide);
+  };
+  const first = once(null);
+  const caps = groupSizes(first);
+  return Object.keys(caps).length ? once(caps) : first;
+}
+
+function layoutWith(ctx, dir, slide) {
   const poster = posterForm(dir, slide.form);
   if (poster && poster(ctx, slide.item ?? slide, slide.kicker, slide) !== false) return applyAccent(ctx);
   const glass = glassForm(dir, slide.form);

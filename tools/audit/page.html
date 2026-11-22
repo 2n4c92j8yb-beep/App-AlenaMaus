@@ -69,6 +69,13 @@ function check(frame, slide) {
       placed.push({ label, ink: { left: ink.left, right: ink.right, top: ink.top + pad, bottom: ink.bottom - pad } });
     }
   }
+  // parallel texts (the points of one list, the sides of a comparison …) share one size
+  const groups = new Map();
+  for (const n of texts) if (n.dataset.group) groups.set(n.dataset.group, [...(groups.get(n.dataset.group) ?? []), n]);
+  for (const [g, list] of groups) {
+    const sizes = new Set(list.map((n) => getComputedStyle(n).fontSize));
+    if (sizes.size > 1) issues.push({ kind: 'font size varies within one list', text: list[0].textContent.trim().slice(0, 60), detail: `${g}: ${[...sizes].join(' / ')}` });
+  }
   for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
     const a = area(placed[i].ink, placed[j].ink);
     if (a > 60) issues.push({ kind: 'text overlaps text', text: placed[i].label, detail: placed[j].label });

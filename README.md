@@ -203,6 +203,11 @@ web addresses are fine), text overlapping text, and text the engine itself flags
 `audit-report/index.html` with a screenshot of every slide with a problem and exits with 1 if
 there is one. `npm run audit -- glass` checks only matching directions or looks.
 
+It also checks that parallel texts on a slide (the points of a list, the sides of a comparison,
+the steps of a process, the events of a timeline) have the same font size. The engine lays every
+slide out twice: once to find the size the longest item needs, then with that size for all of
+them; a plain list gives each line room in proportion to its length and even gaps between lines.
+
 Run it after every layout change. When a real deck shows a new kind of problem, add content
 like it to `tools/audit/decks.js` so it stays fixed.
 

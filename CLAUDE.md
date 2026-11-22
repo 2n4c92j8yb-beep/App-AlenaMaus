@@ -26,6 +26,10 @@ After adding a font, run `tools/glyphs.py` so its real glyph widths are known.
   behind content. Shapes may stay when they contain or frame information.
 - **Nothing spins, floats or drifts.** Entrances that show the order of content are fine; motion
   stops once the slide is shown.
+- **One size per level on a slide.** Parallel texts (the points of a list, the sides of a
+  comparison, the steps of a process, the events of a timeline) share one font size: the size
+  the longest needs. Long items get more room, not smaller type (`layoutSlide` lays a slide out
+  twice; texts with the same `group` share a size; the audit checks it).
 - **Text fits.** Words and figures that must stay on one line get smaller rather than being cut or
   broken; text is sized with real glyph widths (`src/library/glyphs.js`).
 

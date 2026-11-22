@@ -20,6 +20,10 @@ export const GERMAN = toPool({
       { head: 'Konzentrische Phase: explosive Kraftentfaltung' }, { head: 'Reaktivkraftindex als Leistungskennwert' },
       { head: 'Bodenkontaktzeiten unter 200 Millisekunden' }, { head: 'Sprunghöhe und Kontaktzeit gemeinsam betrachten' } ] },
     { slide: 3, title: '', marker: 'none', points: [{ head: long }] },
+    { slide: 13, title: 'Fazit', marker: 'bullet', points: [
+      { head: 'Plyometrisches Training allein oder ergänzend zum Handballtraining kann die Leistung von Elite- und nationalen Handballspielern verbessern und während der Saison explosive Kraft erhalten' },
+      { head: 'stärkste Ergebnisse nach 8-10 Wochen à 2-3 TE' }, { head: 'größte Fortschritte: Vertikalsprünge' },
+      { head: 'Ergebnisse mit Vorsicht zu bewerten: geringe Studienzahl, methodische Einschränkungen (niedrig bewertete Studien nicht ausgeschlossen, begrenzte Suche/ Auswahl)' } ] },
     { slide: 4, title: 'Trainingsinhalte', marker: 'number', points: [
       { head: 'Aufwärmen', text: 'Lockeres Einlaufen, Mobilisation und Koordinationsübungen' },
       { head: 'Drop Jumps', text: 'Aus 40 cm Höhe, drei Serien mit je acht Wiederholungen' },

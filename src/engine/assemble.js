@@ -65,6 +65,9 @@ function pick(items, role, n, used, density) {
 
 // ---------------------------------------------------------------- the order of an uploaded deck
 
+// pieces whose text sits beside the slide's own pictures (the pictureText form)
+const PICTURE_TEXT = new Set(['points', 'claim', 'question', 'definition', 'quote']);
+
 // Pieces with a fixed job that stay even in the lighter version
 const KEEP = new Set(['thesis', 'takeaway', 'hook']);
 
@@ -83,7 +86,9 @@ export function hasSlideOrder(pool) {
  * the original had its own rhythm. The lighter version keeps about three in five pieces.
  */
 export function assembleInOrder(pool, density = 'medium') {
-  const all = pool.items.filter((it) => it.kind !== 'sources' && it.kind !== 'image');
+  // the uploaded deck's own pictures (pool.verbatim) keep their place in the order; topic photos are spread
+  const own = (it) => it.kind === 'image' && pool.verbatim && it.slide > 0;
+  const all = pool.items.filter((it) => it.kind !== 'sources' && (it.kind !== 'image' || own(it)));
   let pieces = all
     .map((it, i) => ({ it, i, at: it.slide > 0 ? it.slide : Infinity }))
     .sort((a, b) => a.at - b.at || a.i - b.i)
@@ -95,14 +100,20 @@ export function assembleInOrder(pool, density = 'medium') {
     const keep = new Set([...pieces].sort((a, b) => rank(b) - rank(a)).slice(0, Math.max(3, Math.ceil(pieces.length * 0.6))));
     pieces = pieces.filter((it) => keep.has(it));
   }
-  const photos = pool.items.filter((it) => it.kind === 'image').slice(0, density === 'light' ? 1 : density === 'dense' ? 3 : 2);
+  const photos = pool.items.filter((it) => it.kind === 'image' && !own(it)).slice(0, density === 'light' ? 1 : density === 'dense' ? 3 : 2);
   const slides = [{ form: 'cover' }];
   let photoCount = 0;
   const photoSlide = (item) => ({ form: photoCount++ % 2 === 0 ? 'photo' : 'photoSplit', item, sectionNo: 0 });
   // a photo after every so many pieces, never first or last
   const every = photos.length ? Math.max(1, Math.round(pieces.length / (photos.length + 1))) : Infinity;
   pieces.forEach((item, i) => {
-    slides.push({ form: FORM_FOR_KIND[item.kind], item, sectionNo: 0 });
+    if (own(item)) slides.push({ form: 'photo', item, sectionNo: 0 }); // the deck's own picture slide: shown whole
+    // text with the slide's own pictures beside it; other forms keep their layout and the pictures follow
+    else if (item.pictures?.length && PICTURE_TEXT.has(item.kind)) slides.push({ form: 'pictureText', item, sectionNo: 0 });
+    else {
+      slides.push({ form: FORM_FOR_KIND[item.kind], item, sectionNo: 0 });
+      (item.pictures ?? []).forEach((pic, k) => slides.push({ form: 'photo', item: { id: `${item.id ?? 'p'}-pic-${k}`, kind: 'image', title: '', caption: '', ...pic }, sectionNo: 0 }));
+    }
     if ((i + 1) % every === 0 && i < pieces.length - 1 && photos.length) slides.push(photoSlide(photos.shift()));
   });
   const sources = pool.items.find((it) => it.kind === 'sources');

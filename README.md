@@ -111,7 +111,14 @@ general look (light or dark, type, accent colour, content) but dropping the AI t
    dropped. A deck with more than 40,000 characters of slide text is refused with a message
    instead of being cut (speaker notes are left out first). It adds no
    topic photos and no Works Cited slide the deck didn't have, and "Lighter" keeps every
-   slide. The deck also keeps its **hierarchy**: only a slide's own headline becomes a
+   slide. The deck's **own pictures** come back too, on the slide they came from: read on the
+   device (PowerPoint: each slide's pictures from the file; PDF: each picture cut out of the
+   rendered page where pdf.js paints it, cropping included), leaving out icons, slide-filling
+   backgrounds and logos repeated on most slides, at most two per slide. A list, statement,
+   question, definition or quote is set beside its pictures (`pictureText`); other forms keep
+   their layout and the pictures follow on their own slide, shown whole; pictures on the title
+   slide become the cover picture. They stay on the device and are not sent to Claude.
+   The deck also keeps its **hierarchy**: only a slide's own headline becomes a
    headline (a slide without one gets none, and its text takes the whole slide), body text
    is never promoted or split into heading and detail unless the slide sets a lead-in apart,
    and the app adds none of its own labels ("Thesis", "Question", "Key figure": `autoLabel()`

@@ -236,6 +236,7 @@ function drawText(el) {
     const p = document.createElement('p');
     p.textContent = para;
     p.style.margin = '0';
+    if (el.nowrap) p.style.whiteSpace = 'nowrap'; // set on the paragraph too: its own text-wrap would win
     if (el.hanging) { p.style.paddingLeft = '0.5in'; p.style.textIndent = '-0.5in'; }
     d.append(p);
   }

@@ -30,7 +30,8 @@ function brokenWords(node) {
   const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
   for (let t = walker.nextNode(); t; t = walker.nextNode()) {
     // a break after a hyphen is correct ("Dehnungs-|Verkürzungs-|Zyklus"): each part counts as a word
-    const re = /[^\s\-–]+[\-–]?/g;
+    // no-break spaces (between a number and its unit) join, they don't separate
+    const re = /[^ \t\n\r\f\v\-–]+[\-–]?/g;
     for (let m = re.exec(t.data); m; m = re.exec(t.data)) {
       const r = document.createRange();
       r.setStart(t, m.index); r.setEnd(t, m.index + m[0].length);

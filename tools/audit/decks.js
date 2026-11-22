@@ -45,4 +45,20 @@ export const STRESS = toPool({
   ],
 }, { verbatim: true });
 
-export const DECKS = { sample: SAMPLE_POOL, german: GERMAN, stress: STRESS };
+// a stand-in picture (a landscape and a portrait), as the upload would deliver the deck's own
+const svg = (w, h, fill) => ({ src: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="${fill}"/></svg>`)}`, w, h, alt: '', credit: '' });
+
+/** The German deck with the uploaded deck's own pictures on some slides. */
+export const PICTURES = {
+  ...GERMAN,
+  coverImage: svg(1600, 1000, '#8a9'),
+  items: [
+    ...GERMAN.items.map((it) => (it.slide === 2 ? { ...it, pictures: [svg(1600, 1067, '#a98')] }
+      : it.slide === 3 ? { ...it, pictures: [svg(900, 1200, '#89a'), svg(1200, 800, '#9a8')] }
+        : it.slide === 9 || it.slide === 10 || it.slide === 8 ? { ...it, pictures: [svg(1200, 900, '#aa8')] }
+          : it.slide === 6 ? { ...it, pictures: [svg(1600, 900, '#8aa')] } : it)),
+    { id: 'deck-picture-12-0', kind: 'image', slide: 12, weight: 2, title: '', caption: '', ...svg(1600, 900, '#998') },
+  ],
+};
+
+export const DECKS = { sample: SAMPLE_POOL, german: GERMAN, stress: STRESS, pictures: PICTURES };

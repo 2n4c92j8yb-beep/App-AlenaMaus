@@ -24,7 +24,7 @@ const FORM_LABELS = {
   cover: 'Cover', section: 'Section', statement: 'Statement', bigNumber: 'Key figure', comparison: 'Comparison',
   process: 'Process', timeline: 'Timeline', quote: 'Quote', definition: 'Definition', points: 'Points',
   pair: 'Before / after', question: 'Question', references: 'Works cited',
-  photo: 'Picture', photoSplit: 'Picture and text',
+  photo: 'Picture', photoSplit: 'Picture and text', pictureText: 'Text and picture',
 };
 
 const state = {
@@ -47,6 +47,7 @@ const state = {
   match: null,      // the best direction and two alternatives for it (src/engine/match.js)
   order: 'original', // matched decks: keep the uploaded slide order, or re-tell it in our story structures
   edits: emptyEdits(), // the person's changes to the slides (src/engine/edits.js), saved on this device
+  deckPictures: [], // the uploaded deck's own pictures { slide, src, w, h }, kept on the device
   chooser: null,    // "Help me choose": the rounds so far (src/engine/chooser.js)
   picked: null,     // id of the direction the person chose there; shown first among the three
   history: [],      // earlier edits, for Undo
@@ -181,7 +182,7 @@ function currentPool() {
 }
 
 function poolWithPictures() {
-  const base = withIds(state.pool ?? SAMPLE_POOL);
+  const base = withDeckPictures(withIds(state.pool ?? SAMPLE_POOL));
   if (!state.uploads.length) return base;
   const ups = [...state.uploads];
   const captions = [...(base.pictureCaptions ?? [])];
@@ -194,6 +195,34 @@ function poolWithPictures() {
   if (base.generated) items = [...items, ...ups.splice(0, 2).map((u, k) => ({ id: `upload-${k}`, kind: 'image', tags: ['evidence'], weight: 2, ...own(u) }))];
   const coverImage = ups.length ? { ...own(ups.shift()), citation: undefined } : base.coverImage;
   return { ...base, items, coverImage };
+}
+
+/**
+ * A redesigned deck gets its own pictures back, on the slides they came from: on the piece
+ * from that slide (item.pictures), as the cover picture for the title slide, or as a picture
+ * slide where the original slide had nothing else.
+ */
+function withDeckPictures(pool) {
+  if (!pool.verbatim || !state.deckPictures.length) return pool;
+  const bySlide = new Map();
+  for (const p of state.deckPictures) bySlide.set(p.slide, [...(bySlide.get(p.slide) ?? []), { src: p.src, w: p.w, h: p.h, alt: '', credit: '' }]);
+  const used = new Set();
+  const items = pool.items.map((it) => {
+    const pics = it.slide && bySlide.get(it.slide);
+    if (!pics || used.has(it.slide)) return it;
+    used.add(it.slide);
+    return { ...it, pictures: pics };
+  });
+  const first = Math.min(...pool.items.filter((it) => it.slide > 0).map((it) => it.slide), Infinity);
+  let coverImage = pool.coverImage;
+  for (const [slide, pics] of bySlide) {
+    if (used.has(slide)) continue;
+    // pictures on the title slide (before the first piece) are the cover's
+    if (slide < first && !coverImage) { coverImage = pics[0]; used.add(slide); continue; }
+    pics.forEach((pic, k) => items.push({ id: `deck-picture-${slide}-${k}`, kind: 'image', slide, weight: 2, title: '', caption: '', ...pic }));
+    used.add(slide);
+  }
+  return { ...pool, items, ...(coverImage ? { coverImage } : {}) };
 }
 
 // ---------- PowerPoint ----------
@@ -398,6 +427,8 @@ async function redesign() {
     state.pool = await attachPictures(data.pool);
     state.poolKey = '';
     state.style = data.style;
+    state.deckPictures = imp.pictures ?? [];
+    savePictures();
     state.original = { images: imp.images, name: imp.name, source: imp.source };
     state.analysedKey = key;
     rematch();
@@ -1053,6 +1084,15 @@ function resetEdits() {
 // ---------- saving on this device ----------
 
 const STORE = 'unprompted:project:v1';
+const PICTURES = 'unprompted:deck-pictures:v1';
+
+// the uploaded deck's own pictures, kept apart from the project: they may be too large to store
+function savePictures() {
+  try { localStorage.removeItem(PICTURES); if (state.deckPictures.length) localStorage.setItem(PICTURES, JSON.stringify(state.deckPictures)); } catch { /* too large or storage blocked: they last until the tab closes */ }
+}
+function loadPictures() {
+  try { const d = JSON.parse(localStorage.getItem(PICTURES) ?? '[]'); return Array.isArray(d) ? d : []; } catch { return []; }
+}
 
 function saveProject() {
   if (!state.pool && !hasEdits() && !state.uploads.length) { try { localStorage.removeItem(STORE); } catch { /* storage blocked */ } return; }
@@ -1083,6 +1123,7 @@ function offerResume() {
       occasionId: saved.occasionId ?? state.occasionId, density: saved.density ?? 'medium', formality: saved.formality ?? 'neutral',
       family: saved.family ?? 'glass', baseSeed: saved.baseSeed ?? state.baseSeed, round: saved.round ?? 0, order: saved.order ?? 'original', picked: saved.picked ?? null,
       pool: saved.pool ?? null, style: saved.style ?? null, edits: saved.edits ?? emptyEdits(), uploads: saved.uploads ?? [], history: [], future: [],
+      deckPictures: saved.pool?.verbatim ? loadPictures() : [],
     });
     $('notes').value = saved.notes ?? '';
     document.querySelectorAll('input[name="occasion"]').forEach((r) => { r.checked = r.value === state.occasionId; });
